@@ -169,9 +169,10 @@ void protobuf_AssignDesc_FzEventSet_2eproto() {
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(FzBlock));
   FzEvent_descriptor_ = file->message_type(6);
-  static const int FzEvent_offsets_[2] = {
+  static const int FzEvent_offsets_[3] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(FzEvent, ec_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(FzEvent, block_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(FzEvent, regid_),
   };
   FzEvent_reflection_ =
     new ::google::protobuf::internal::GeneratedMessageReflection(
@@ -282,10 +283,10 @@ void protobuf_AddDesc_FzEventSet_2eproto() {
     "FEC4\020\004\022\010\n\004FEC5\020\005\022\010\n\004FEC6\020\006\022\010\n\004FEC7\020\007\022\010\n\004"
     "ADCF\020\017\022\n\n\006UNKFEC\020\020\"W\n\007FzBlock\022\r\n\005blkid\030\001"
     " \002(\r\022\027\n\003fee\030\002 \003(\0132\n.DAQ.FzFee\022\021\n\tlen_err"
-    "or\030\003 \002(\010\022\021\n\tcrc_error\030\004 \002(\010\"2\n\007FzEvent\022\n"
-    "\n\002ec\030\001 \002(\r\022\033\n\005block\030\002 \003(\0132\014.DAQ.FzBlock\""
-    "&\n\nFzEventSet\022\030\n\002ev\030\001 \003(\0132\014.DAQ.FzEventB"
-    "\005H\001\200\001\000", 1126);
+    "or\030\003 \002(\010\022\021\n\tcrc_error\030\004 \002(\010\"A\n\007FzEvent\022\n"
+    "\n\002ec\030\001 \002(\r\022\033\n\005block\030\002 \003(\0132\014.DAQ.FzBlock\022"
+    "\r\n\005regid\030\003 \002(\r\"&\n\nFzEventSet\022\030\n\002ev\030\001 \003(\013"
+    "2\014.DAQ.FzEventB\005H\001\200\001\000", 1141);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "FzEventSet.proto", &protobuf_RegisterTypes);
   Energy::default_instance_ = new Energy();
@@ -2479,6 +2480,7 @@ void FzBlock::Swap(FzBlock* other) {
 #ifndef _MSC_VER
 const int FzEvent::kEcFieldNumber;
 const int FzEvent::kBlockFieldNumber;
+const int FzEvent::kRegidFieldNumber;
 #endif  // !_MSC_VER
 
 FzEvent::FzEvent()
@@ -2498,6 +2500,7 @@ FzEvent::FzEvent(const FzEvent& from)
 void FzEvent::SharedCtor() {
   _cached_size_ = 0;
   ec_ = 0u;
+  regid_ = 0u;
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
 }
 
@@ -2533,6 +2536,7 @@ FzEvent* FzEvent::New() const {
 void FzEvent::Clear() {
   if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
     ec_ = 0u;
+    regid_ = 0u;
   }
   block_.Clear();
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
@@ -2571,6 +2575,22 @@ bool FzEvent::MergePartialFromCodedStream(
           goto handle_uninterpreted;
         }
         if (input->ExpectTag(18)) goto parse_block;
+        if (input->ExpectTag(24)) goto parse_regid;
+        break;
+      }
+      
+      // required uint32 regid = 3;
+      case 3: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
+         parse_regid:
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   ::google::protobuf::uint32, ::google::protobuf::internal::WireFormatLite::TYPE_UINT32>(
+                 input, &regid_)));
+          set_has_regid();
+        } else {
+          goto handle_uninterpreted;
+        }
         if (input->ExpectAtEnd()) return true;
         break;
       }
@@ -2604,6 +2624,11 @@ void FzEvent::SerializeWithCachedSizes(
       2, this->block(i), output);
   }
   
+  // required uint32 regid = 3;
+  if (has_regid()) {
+    ::google::protobuf::internal::WireFormatLite::WriteUInt32(3, this->regid(), output);
+  }
+  
   if (!unknown_fields().empty()) {
     ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
         unknown_fields(), output);
@@ -2624,6 +2649,11 @@ void FzEvent::SerializeWithCachedSizes(
         2, this->block(i), target);
   }
   
+  // required uint32 regid = 3;
+  if (has_regid()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(3, this->regid(), target);
+  }
+  
   if (!unknown_fields().empty()) {
     target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
         unknown_fields(), target);
@@ -2640,6 +2670,13 @@ int FzEvent::ByteSize() const {
       total_size += 1 +
         ::google::protobuf::internal::WireFormatLite::UInt32Size(
           this->ec());
+    }
+    
+    // required uint32 regid = 3;
+    if (has_regid()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::UInt32Size(
+          this->regid());
     }
     
   }
@@ -2681,6 +2718,9 @@ void FzEvent::MergeFrom(const FzEvent& from) {
     if (from.has_ec()) {
       set_ec(from.ec());
     }
+    if (from.has_regid()) {
+      set_regid(from.regid());
+    }
   }
   mutable_unknown_fields()->MergeFrom(from.unknown_fields());
 }
@@ -2698,7 +2738,7 @@ void FzEvent::CopyFrom(const FzEvent& from) {
 }
 
 bool FzEvent::IsInitialized() const {
-  if ((_has_bits_[0] & 0x00000001) != 0x00000001) return false;
+  if ((_has_bits_[0] & 0x00000005) != 0x00000005) return false;
   
   for (int i = 0; i < block_size(); i++) {
     if (!this->block(i).IsInitialized()) return false;
@@ -2710,6 +2750,7 @@ void FzEvent::Swap(FzEvent* other) {
   if (other != this) {
     std::swap(ec_, other->ec_);
     block_.Swap(&other->block_);
+    std::swap(regid_, other->regid_);
     std::swap(_has_bits_[0], other->_has_bits_[0]);
     _unknown_fields_.Swap(&other->_unknown_fields_);
     std::swap(_cached_size_, other->_cached_size_);

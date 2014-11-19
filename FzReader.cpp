@@ -150,9 +150,9 @@ int FzReader::setup(std::string ch) {
          chunk.push_back(value);
 
          // debug:
-         // std::cout << std::setw(4) << std::setfill('0') << std::hex << value << std::endl;
+         //std::cout << std::setw(4) << std::setfill('0') << std::hex << value << std::endl;
 
-         if( (value & CRCBL_TAG) == CRCBL_TAG ) {
+         if( (value & REGHDR_FMT) == REGHDR_TAG ) {
 
             if(rec) {
 
@@ -172,8 +172,8 @@ int FzReader::setup(std::string ch) {
                myfile.close();
             }
 
-               cb->send(chunk);    // send data to thread FzParser 
-               chunk.clear();
+            cb->send(chunk);    // send data to thread FzParser 
+            chunk.clear();
          }
       }
 

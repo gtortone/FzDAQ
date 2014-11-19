@@ -918,15 +918,15 @@ struct Action16 {
       sm.rd_blkcrc = sm.w.getContent()[WC_CRC];
       sm.rd_blkcrc &= 0x00FF;	// convert to 8 bit
 
-      if( (sm.ev.block_size() == 1) && (sm.ev.block(0).fee_size() == 0) ) {	// empty event
+/*      if( (sm.ev.block_size() == 1) && (sm.ev.block(0).fee_size() == 0) ) {	// empty event
 
 #ifdef DEBUG_ALL
          ACTLOG->info("EMPTY EVENT with EC = %d", sm.ev.ec());
 #endif
          sm.event_empty_num++;
-         // do not write to disk 
+         // do not write to disk  
 
-      } else {		// not empty event
+      } else {		// not empty event */
 
          // verify block length
 
@@ -958,6 +958,49 @@ struct Action16 {
             sm.err_in_event = true;
          }
 
+/*         // copy event to write circular buffer
+         sm.cbw->send(sm.ev);
+
+#ifdef DEBUG_ALL
+         ACTLOG->debug("EVENT with EC = %d sent to write buffer", sm.ev.ec());
+#endif
+
+         if(sm.err_in_event) sm.event_witherr_num++;
+            else sm.event_clean_num++;         
+      } 
+
+      sm.ev.Clear();
+      sm.err_in_event = false; */
+   }
+};
+
+struct Action17 { 
+
+   // State10 -> idle
+   template <class Fsm>
+   void operator()(const gotREGHDR &e, Fsm &sm, State10&, IdleState&) const {
+
+      bool event_is_empty = true;
+
+      sm.w = e.getWord();
+
+      sm.ev.set_regid(sm.w.getContent()[WC_REGID]);
+
+      for(int i=0; i<sm.ev.block_size(); i++) {		// for each block
+
+         if(sm.ev.block(0).fee_size() > 0) {
+
+	    event_is_empty = false;
+            break; 
+         }
+      }	// end for
+
+      if(event_is_empty) {
+
+         sm.event_empty_num++;
+  
+      } else {
+
          // copy event to write circular buffer
          sm.cbw->send(sm.ev);
 
@@ -967,14 +1010,13 @@ struct Action16 {
 
          if(sm.err_in_event) sm.event_witherr_num++;
             else sm.event_clean_num++;         
-      }
 
-      sm.ev.Clear();
-      sm.err_in_event = false;
+         sm.ev.Clear();
+         sm.err_in_event = false;
+
+      }      
    }
 };
-
-// struct Action 17 { ... }
 
 struct Action18 {
 

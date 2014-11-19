@@ -1061,18 +1061,28 @@ class FzEvent : public ::google::protobuf::Message {
   inline ::google::protobuf::RepeatedPtrField< ::DAQ::FzBlock >*
       mutable_block();
   
+  // required uint32 regid = 3;
+  inline bool has_regid() const;
+  inline void clear_regid();
+  static const int kRegidFieldNumber = 3;
+  inline ::google::protobuf::uint32 regid() const;
+  inline void set_regid(::google::protobuf::uint32 value);
+  
   // @@protoc_insertion_point(class_scope:DAQ.FzEvent)
  private:
   inline void set_has_ec();
   inline void clear_has_ec();
+  inline void set_has_regid();
+  inline void clear_has_regid();
   
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
   
   ::google::protobuf::RepeatedPtrField< ::DAQ::FzBlock > block_;
   ::google::protobuf::uint32 ec_;
+  ::google::protobuf::uint32 regid_;
   
   mutable int _cached_size_;
-  ::google::protobuf::uint32 _has_bits_[(2 + 31) / 32];
+  ::google::protobuf::uint32 _has_bits_[(3 + 31) / 32];
   
   friend void  protobuf_AddDesc_FzEventSet_2eproto();
   friend void protobuf_AssignDesc_FzEventSet_2eproto();
@@ -1782,6 +1792,28 @@ FzEvent::block() const {
 inline ::google::protobuf::RepeatedPtrField< ::DAQ::FzBlock >*
 FzEvent::mutable_block() {
   return &block_;
+}
+
+// required uint32 regid = 3;
+inline bool FzEvent::has_regid() const {
+  return (_has_bits_[0] & 0x00000004u) != 0;
+}
+inline void FzEvent::set_has_regid() {
+  _has_bits_[0] |= 0x00000004u;
+}
+inline void FzEvent::clear_has_regid() {
+  _has_bits_[0] &= ~0x00000004u;
+}
+inline void FzEvent::clear_regid() {
+  regid_ = 0u;
+  clear_has_regid();
+}
+inline ::google::protobuf::uint32 FzEvent::regid() const {
+  return regid_;
+}
+inline void FzEvent::set_regid(::google::protobuf::uint32 value) {
+  set_has_regid();
+  regid_ = value;
 }
 
 // -------------------------------------------------------------------

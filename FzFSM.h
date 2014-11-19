@@ -99,7 +99,7 @@ struct FzFSM_:msmf::state_machine_def < FzFSM_ > {
       msmf::Row <  State7,     gotEC,      State1,       Action14,      msmf::none>,
       msmf::Row <  State8,     gotLENGTH,  State9,       Action15,      msmf::none>,
       msmf::Row <  State9,     gotCRCBL,   State10,      Action16,      msmf::none>,
-      msmf::Row <  State10,    gotREGHDR,  IdleState,    msmf::none,    msmf::none>,
+      msmf::Row <  State10,    gotREGHDR,  IdleState,    Action17,    	msmf::none>,
       msmf::Row <  State10,    gotEC,      State1,       Action18,      msmf::none>
    > { };
 

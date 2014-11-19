@@ -101,9 +101,9 @@ message FzBlock {
 
 message FzEvent {
 
-  //required uint32 regid = 1;
   required uint32 ec = 1;
   repeated FzBlock block = 2;
+  required uint32 regid = 3;
 }
 
 message FzEventSet {
