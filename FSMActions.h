@@ -988,7 +988,7 @@ struct Action17 {
 
       for(int i=0; i<sm.ev.block_size(); i++) {		// for each block
 
-         if(sm.ev.block(0).fee_size() > 0) {
+         if(sm.ev.block(i).fee_size() > 0) {
 
 	    event_is_empty = false;
             break; 
