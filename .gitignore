@@ -1,0 +1,16 @@
+/log4cpp.properties
+/*.o
+.deps/*
+FzDAQ-mt
+Makefile
+Makefile.in
+autom4te.cache/*
+config.log
+config.status
+configure
+depcomp
+install-sh
+logs/*
+missing
+pbout/*
+
