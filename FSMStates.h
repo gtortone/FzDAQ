@@ -27,12 +27,10 @@ struct State1:msmf::state <> {
       FSMLOG->debug("%s -> State1", getstate(sm).c_str());
    }
 
-   /*
    // Exit action 
    template <class Event, class Fsm > 
    void on_exit(Event const &, Fsm &) const {
    }
-   */
 
 #endif
 
@@ -49,13 +47,6 @@ struct State2:msmf::state <> {
       FSMLOG->debug("%s -> State2", getstate(sm).c_str());
    }
 
-   /*
-   // Exit action
-   template <class Event, class Fsm > 
-   void on_exit(Event const &, Fsm &) const {
-   }
-   */
-
 #endif
 
 };
@@ -71,13 +62,6 @@ struct State3:msmf::state <> {
       FSMLOG->debug("%s -> State3", getstate(sm).c_str());
    }
    
-   /*
-   // Exit action
-   template <class Event, class Fsm > 
-   void on_exit(Event const &, Fsm &) const {
-   }
-   */
-
 #endif
 
 };
@@ -92,13 +76,6 @@ struct State4:msmf::state <> {
 
       FSMLOG->debug("%s -> State4", getstate(sm).c_str());
    }
-
-   /*
-   // Exit action
-   template <class Event, class Fsm > 
-   void on_exit(Event const &, Fsm &) const {
-   }
-   */
 
 #endif
 
@@ -115,13 +92,6 @@ struct State5:msmf::state <> {
       FSMLOG->debug("%s -> State5", getstate(sm).c_str());
    }
  
-   /*
-   // Exit action
-   template <class Event, class Fsm > 
-   void on_exit(Event const &e, Fsm &sm) const {
-   }
-   */
-
 #endif
 
 };
@@ -136,13 +106,6 @@ struct State6:msmf::state <> {
 
       FSMLOG->debug("%s -> State6", getstate(sm).c_str());
    }
-
-   /*
-   // Exit action
-   template <class Event, class Fsm > 
-   void on_exit(Event const &, Fsm &) const {
-   }
-   */
 
 #endif
 
@@ -159,13 +122,6 @@ struct State7:msmf::state <> {
       FSMLOG->debug("%s -> State7", getstate(sm).c_str());
    }
 
-   /*
-   // Exit action
-   template <class Event, class Fsm > 
-   void on_exit(Event const &, Fsm &) const {
-   }
-   */
-
 #endif
 
 };
@@ -180,13 +136,6 @@ struct State8:msmf::state <> {
 
       FSMLOG->debug("%s -> State8", getstate(sm).c_str());
    }
-
-   /*
-   // Exit action
-   template <class Event, class Fsm > 
-   void on_exit(Event const &, Fsm &) const {
-   }
-   */
 
 #endif
 
@@ -203,13 +152,6 @@ struct State9:msmf::state <> {
       FSMLOG->debug("%s -> State9", getstate(sm).c_str());
    } 
 
-   /*
-   // Exit action
-   template <class Event, class Fsm > 
-   void on_exit(Event const &, Fsm &) const {
-   }
-   */
-
 #endif
 
 };
@@ -224,13 +166,6 @@ struct State10:msmf::state <> {
 
       FSMLOG->debug("%s -> State10", getstate(sm).c_str());
    }
-
-   /*
-   // Exit action
-   template <class Event, class Fsm > 
-   void on_exit(Event const &, Fsm &) const {
-   }
-   */
 
 #endif
 

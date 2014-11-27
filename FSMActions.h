@@ -918,59 +918,35 @@ struct Action16 {
       sm.rd_blkcrc = sm.w.getContent()[WC_CRC];
       sm.rd_blkcrc &= 0x00FF;	// convert to 8 bit
 
-/*      if( (sm.ev.block_size() == 1) && (sm.ev.block(0).fee_size() == 0) ) {	// empty event
+      // verify block length
 
-#ifdef DEBUG_ALL
-         ACTLOG->info("EMPTY EVENT with EC = %d", sm.ev.ec());
-#endif
-         sm.event_empty_num++;
-         // do not write to disk  
+      if ( ((sm.blklen & 0xFFF)  + 2 ) == sm.rd_blklen ) {	// module with 0xFFF due to 12 bit width of LENGTH word
 
-      } else {		// not empty event */
+         sm.blk->set_len_error(false);
 
-         // verify block length
+      } else {
 
-         if ( ((sm.blklen & 0xFFF)  + 2 ) == sm.rd_blklen ) {	// module with 0xFFF due to 12 bit width of LENGTH word
+         ACTLOG->warn("B%d - EC: %d BLOCK len error (value read: %X - value calc: %X)", sm.blk->blkid(), sm.ev.ec(), sm.rd_blklen, sm.blklen);
+         sm.blk->set_len_error(true);
+         sm.err_in_event = true;
+      }
 
-            sm.blk->set_len_error(false);
-
-         } else {
-
-            ACTLOG->warn("B%d - EC: %d BLOCK len error (value read: %X - value calc: %X)", sm.blk->blkid(), sm.ev.ec(), sm.rd_blklen, sm.blklen);
-            sm.blk->set_len_error(true);
-            sm.err_in_event = true;
-         }
-
-         // verify block CRC
+      // verify block CRC
          
-         crc_lsb = (sm.blkcrc & 0x00FF);
-         crc_msb = (sm.blkcrc & 0xFF00) >> 8;
-         crc_calc = (crc_lsb ^ crc_msb) & 0x00FF;
+      crc_lsb = (sm.blkcrc & 0x00FF);
+      crc_msb = (sm.blkcrc & 0xFF00) >> 8;
+      crc_calc = (crc_lsb ^ crc_msb) & 0x00FF;
 
-         if( sm.rd_blkcrc == crc_calc ) {		
+      if( sm.rd_blkcrc == crc_calc ) {		
  
-           sm.blk->set_crc_error(false);
+        sm.blk->set_crc_error(false);
     
-         } else {
+      } else {
 
-            ACTLOG->warn("B%d - EC: %d BLOCK crc error (value read: %X - value calc: %X)", sm.blk->blkid(), sm.ev.ec(), sm.rd_blkcrc, crc_calc);
-            sm.blk->set_crc_error(true);
-            sm.err_in_event = true;
-         }
-
-/*         // copy event to write circular buffer
-         sm.cbw->send(sm.ev);
-
-#ifdef DEBUG_ALL
-         ACTLOG->debug("EVENT with EC = %d sent to write buffer", sm.ev.ec());
-#endif
-
-         if(sm.err_in_event) sm.event_witherr_num++;
-            else sm.event_clean_num++;         
-      } 
-
-      sm.ev.Clear();
-      sm.err_in_event = false; */
+         ACTLOG->warn("B%d - EC: %d BLOCK crc error (value read: %X - value calc: %X)", sm.blk->blkid(), sm.ev.ec(), sm.rd_blkcrc, crc_calc);
+         sm.blk->set_crc_error(true);
+         sm.err_in_event = true;
+      }
    }
 };
 
@@ -998,6 +974,10 @@ struct Action17 {
       if(event_is_empty) {
 
          sm.event_empty_num++;
+
+#ifdef DEBUG_ALL
+         ACTLOG->info("EMPTY EVENT with EC = %d", sm.ev.ec());
+#endif
   
       } else {
 
