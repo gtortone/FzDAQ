@@ -51,12 +51,12 @@ int main(int argc, char *argv[]) {
    
    desc.add_options()
     ("help", "produce help message")
-    ("nt", po::value<unsigned int>(), "number of parser threads")
-    ("input", po::value<std::string>(), "input channel of raw data (usb or file)")
+    ("nt", po::value<unsigned int>(), "number of parser threads - default: 1")
+    ("input", po::value<std::string>(), "input channel of raw data (usb or file) - default: usb")
     ("subdir", po::value<std::string>(), "directory for output events")
     ("runtag", po::value<std::string>(), "tag for run identification (e.g. LNS, GANIL)")
     ("steptag", po::value<std::string>(), "tag for step identification (e.g. DEBUG, TEST, PROD)")
-    ("esize", po::value<unsigned long int>(), "[optional] max size of event file - default: 1000000 byte - 1 megabyte")
+    ("esize", po::value<unsigned long int>(), "[optional] max size of event file in Mbytes - default: 10 Mb")
    ;
 
    po::variables_map vm;
@@ -72,16 +72,14 @@ int main(int argc, char *argv[]) {
       nthreads = vm["nt"].as<unsigned int>();
       std::cout << "nt is " << nthreads << std::endl;
    } else {
-      std::cout << "input parameter error: nt not set" << std::endl;
-      return -1;
+      nthreads = 1;
    }
 
    if (vm.count("input")) {
       inputch = vm["input"].as<std::string>();
       std::cout << "input is " << inputch << std::endl;
    } else {
-      std::cout << "input parameter error: input not set" << std::endl;
-      return -1;
+      inputch = "usb";
    }
 
    if (vm.count("subdir")) {
@@ -128,7 +126,7 @@ int main(int argc, char *argv[]) {
    wr->init();
  
    if( vm.count("esize") )
-      wr->set_eventfilesize(vm["esize"].as<unsigned long int>()); 
+      wr->set_eventfilesize(vm["esize"].as<unsigned long int>() * 1000000); // in Mbytes
 
    for(int i=0; i < nthreads; i++) {
       psr_array.push_back(new FzParser(cbr, &cbw, i, logparser_prio));
