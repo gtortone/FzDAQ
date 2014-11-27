@@ -22,7 +22,9 @@ int main(int argc, char *argv[]) {
    std::string inputch;
    std::string subdir;
    std::string runtag;
-   std::string steptag;
+   long int runid;
+   bool subid;
+   unsigned long int esize, dsize;
 
    struct timeval tv_start, tv_stop;
    unsigned int diff_msec = 0;
@@ -51,12 +53,14 @@ int main(int argc, char *argv[]) {
    
    desc.add_options()
     ("help", "produce help message")
-    ("nt", po::value<unsigned int>(), "number of parser threads - default: 1")
-    ("input", po::value<std::string>(), "input channel of raw data (usb or file) - default: usb")
-    ("subdir", po::value<std::string>(), "directory for output events")
-    ("runtag", po::value<std::string>(), "tag for run identification (e.g. LNS, GANIL)")
-    ("steptag", po::value<std::string>(), "tag for step identification (e.g. DEBUG, TEST, PROD)")
-    ("esize", po::value<unsigned long int>(), "[optional] max size of event file in Mbytes - default: 10 Mb")
+    ("nt", po::value<unsigned int>(), "number of parser threads\ndefault: 1")
+    ("input", po::value<std::string>(), "input channel of raw data (usb or file)\ndefault: usb")
+    ("subdir", po::value<std::string>(), "base output directory")
+    ("runtag", po::value<std::string>(), "label for run directory identification (e.g. LNS, GANIL)\ndefault: run")
+    ("runid", po::value<unsigned long int>(), "id for run identification (e.g. 100, 205)")
+    ("esize", po::value<unsigned long int>(), "[optional] max size of event file in Mbytes\ndefault: 10 Mb")
+    ("dsize", po::value<unsigned long int>(), "[optional] max size of event directory in Mbytes\ndefault: 100 Mb")
+    ("ensubid", "enable subid for run identification (eg. run000220.0, run000220.1 ...)")
    ;
 
    po::variables_map vm;
@@ -64,7 +68,10 @@ int main(int argc, char *argv[]) {
    po::notify(vm);    
 
    if (vm.count("help")) {
-      std::cout << desc << "\n";
+      std::cout << desc << std::endl << std::endl;
+      std::cout << "example: ./FzDAQ-mt --subdir pbout --runid 150" << std::endl;
+      std::cout << " 'pbout' directory will contain event subdirectories starting from 'run000150'" << std::endl;
+      std::cout << " each eventset file has a max size of 10 Mb (default) and each event subdirectory has a max size of 100 Mb (default)" << std::endl << std::endl;
       return 0;
    }
 
@@ -94,17 +101,23 @@ int main(int argc, char *argv[]) {
       runtag = vm["runtag"].as<std::string>();
       std::cout << "runtag is " << runtag << std::endl;
    } else {
-      std::cout << "input parameter error: runtag not set" << std::endl;
-      return -1;
+      runtag = "run";
    }
    
-   if (vm.count("steptag")) {
-      steptag = vm["steptag"].as<std::string>();
-      std::cout << "steptag is " << steptag << std::endl;
+   if (vm.count("runid")) {
+      runid = vm["runid"].as<unsigned long int>();
+      std::cout << "runid is " << runid << std::endl;
    } else {
-      std::cout << "input parameter error: steptag not set" << std::endl;
+      std::cout << "input parameter error: runid not set" << std::endl;
       return -1;
    }
+
+   if (vm.count("ensubid"))
+      subid = true;
+   else
+      subid = false;
+
+   // create FzReader thread
 
    FzReader *rd = new FzReader(cbr);
 
@@ -120,14 +133,48 @@ int main(int argc, char *argv[]) {
       return(-1);
    }
 
-   FzWriter *wr = new FzWriter(cbw, subdir, runtag, steptag);
+   // create base directory
+
+   int status;
+   status = mkdir(subdir.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+
+   if(status == 0)
+      std::cout << "INFO: " << subdir << " directory created" << std::endl;
+   else if(errno == EEXIST)
+      std::cout << "WARNING: " << subdir << " directory already exist" << std::endl;
+   else if(status != 0)
+      perror("ERROR on base directory: ");
+
+   // create FzWriter thread 
+
+   FzWriter *wr = new FzWriter(cbw, subdir, runtag, runid, subid);
    std::vector<FzParser *> psr_array;	// vector of (Fzparser *)
 
    wr->init();
  
    if( vm.count("esize") )
-      wr->set_eventfilesize(vm["esize"].as<unsigned long int>() * 1000000); // in Mbytes
+      esize = vm["esize"].as<unsigned long int>() * 1000000;
+   else
+      esize = 10 * 1000000; // default is 10 Mbytes
 
+   if( vm.count("dsize") )
+      dsize = vm["dsize"].as<unsigned long int>() * 1000000;
+   else
+      dsize = 100 * 1000000; // default is 100 Mbytes
+
+   if(dsize > esize) {
+ 
+      wr->set_eventfilesize(esize);
+      wr->set_eventdirsize(dsize);
+
+   } else {
+
+      std::cout << "input parameter error: dsize must be greater than esize" << std::endl;
+      return(-1);
+   }
+
+   // create FzParser threads pool
+    
    for(int i=0; i < nthreads; i++) {
       psr_array.push_back(new FzParser(cbr, &cbw, i, logparser_prio));
       psr_array[i]->init();
@@ -156,8 +203,11 @@ int main(int argc, char *argv[]) {
               std::cout << std::endl;
            }
 
-           if(!line.compare("status"))
+           if(!line.compare("status")) {
               std::cout << "current DAQ status: " << state_labels[DAQstatus] << std::endl;
+              std::cout << "file eventset max size: " << esize/1000000 << " Mb" << std::endl;
+              std::cout << "directory eventset max size: " << dsize/1000000 << " Mb" << std::endl;
+           }
 
            if(!line.compare("start")) {
               std::cout << "sending start to FzReader and " << nthreads << "xFzParser" << std::endl;

@@ -13,11 +13,6 @@
 
 #include "zmq.hpp"
 
-/*#include "MessageTypes.h"
-#include "TSocket.h"
-#include "TH1.h"
-#include "TMessage.h" */
-
 class FzWriter {
 
 private:
@@ -33,25 +28,23 @@ private:
    log4cpp::PatternLayout *layout;
  
    unsigned long int event_file_size;
+   unsigned long int event_dir_size;
 
-   std::string subdir;
+   std::string basedir;
    std::string runtag;
-   std::string steptag;
 
    DAQstatus_t status;
-
-   /*TSocket *sock; 
-   TH1 *hist; */
 
    void process(void);
 
 public:
-   FzWriter(FzCbuffer<DAQ::FzEvent> &cb, std::string dir, std::string run, std::string step);
+   FzWriter(FzCbuffer<DAQ::FzEvent> &cb, std::string basedir, std::string run, long int id, bool subid);
 
    int init(void);
    void set_status(enum DAQstatus_t val);
 
    void set_eventfilesize(unsigned long int size);
+   void set_eventdirsize(unsigned long int size);
 };
 
 #endif

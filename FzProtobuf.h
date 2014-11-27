@@ -2,6 +2,7 @@
 #define FZPROTOBUF_H_
 
 #include <iostream>
+#include <iomanip>
 #include <fstream>
 #include <string>
 #include <sstream>
@@ -14,23 +15,30 @@
 class FzProtobuf {
 
 private:
-   std::string subdir;
+   std::string basedir;
    std::string runtag;
-   std::string steptag;
+   bool subid;
 
    unsigned int fileid;
+   unsigned int dirid;
+   unsigned int dirsubid;
+   std::string dirstr;
+
    std::stringstream filename;
    std::fstream output;
 
 public:
 
-FzProtobuf (std::string dir, std::string run, std::string step) {
+FzProtobuf (std::string dir, std::string run, long int id, bool sid) {
 
-   subdir = dir;
+   basedir = dir;
    runtag = run;
-   steptag = step;
+
+   subid = sid;
 
    fileid = 0;
+   dirid = id;
+   dirsubid = 0;
 }
 
 void setup_newfile(void) {
@@ -40,11 +48,40 @@ void setup_newfile(void) {
 
    // setup of filename and output stream
    filename.str("");
-   filename << subdir << '/' << runtag << '-' << time(NULL) << '-' << steptag << '-' << fileid << ".pb";
+   filename << dirstr << '/' << "FzEventSet-" << time(NULL) << '-' << fileid << ".pb";
    output.open(filename.str().c_str(), std::ios::out | std::ios::trunc | std::ios::binary);
 
    fileid++;
 };
+
+void setup_newdir(void) {
+
+   int status;
+   std::ostringstream ss;
+
+   if(!subid)
+      ss << runtag << std::setw(6) << std::setfill('0') << dirid;
+   else
+      ss << runtag << std::setw(6) << std::setfill('0') << dirid << '.' << dirsubid;
+       
+   dirstr = basedir + '/' + ss.str();
+
+   // create directory
+   errno = 0;
+   status = mkdir(dirstr.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+
+   if(errno == EEXIST)
+      std::cout << "WARNING: " << dirstr << " directory already exist" << std::endl;
+   else if(status != 0)
+      perror("ERROR on eventset directory: ");
+
+   // prepare for next directory name
+ 
+   if(subid)
+      dirsubid++;
+   else
+      dirid++;
+}
 
 bool serialize_delimited(std::ostream& stream, DAQ::FzEventSet &message, uint32_t bsize) {
 

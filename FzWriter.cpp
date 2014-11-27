@@ -1,13 +1,13 @@
 #include "FzWriter.h"
 #include "FzLogger.h"
 
-FzWriter::FzWriter(FzCbuffer<DAQ::FzEvent> &cb, std::string dir, std::string run, std::string step) :
+FzWriter::FzWriter(FzCbuffer<DAQ::FzEvent> &cb, std::string basedir, std::string run, long int id, bool subid) :
    cbw(cb),
    logwriter(log4cpp::Category::getInstance("fzwriter")) {
 
-   pb = new FzProtobuf(dir, run, step);
+   pb = new FzProtobuf(basedir, run, id, subid);
 
-   event_file_size = 1000000LL;
+   pb->setup_newdir();
    pb->setup_newfile();
 
    appender = new log4cpp::FileAppender("fzwriter", "logs/fzwriter.log");
@@ -40,6 +40,10 @@ void FzWriter::set_eventfilesize(unsigned long int size) {
    event_file_size = size;
 };
 
+void FzWriter::set_eventdirsize(unsigned long int size) {
+   event_dir_size = size;
+};
+
 void FzWriter::process(void) {
 
    static zmq::context_t zmq_ctx(1);
@@ -53,7 +57,8 @@ void FzWriter::process(void) {
 
       if(status == START) {
 
-         static unsigned long size;
+         static unsigned long esize;	// current eventset file dize
+         static unsigned long dsize;	// current eventset directory size
 
          signed int supp;
          unsigned long i;
@@ -76,10 +81,19 @@ void FzWriter::process(void) {
 
          pb->WriteDataset(eventset);
 
-         size += eventset.ByteSize();
-         if(size > event_file_size) {
+         esize += eventset.ByteSize();
+         dsize += eventset.ByteSize();
+         
+         if(dsize > event_dir_size) {
+
+            pb->setup_newdir();
             pb->setup_newfile();
-            size = 0;
+            esize = dsize = 0;
+
+         } else if(esize > event_file_size) {
+
+            pb->setup_newfile();
+            esize = 0;
          }
 
          eventset.Clear(); 
