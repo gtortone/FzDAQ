@@ -130,7 +130,8 @@ int FzReader::setup(std::string ch) {
    static double tmp_bw_bytes = 0;
 
    static FzRawData chunk;
-   unsigned int value;
+   unsigned short int *bufusint;
+   unsigned short int value;
 
    struct cb_data *pdata = (struct cb_data *) xfr->user_data;
 
@@ -144,9 +145,13 @@ int FzReader::setup(std::string ch) {
 
    if(xfr->status == LIBUSB_TRANSFER_COMPLETED) {
 
-      for (int i=0; i < (unsigned)(xfr->actual_length - 1); i=i+2) {
+      bufusint = reinterpret_cast<unsigned short int*>(xfr->buffer);
+      //std::cout << std::setw(4) << std::setfill('0') << std::hex << bufusint[0] << std::endl;
 
-         value = (xfr->buffer[i] << 8) + (xfr->buffer[i + 1]);
+      long int evlen = ((xfr->actual_length/2 * 2) == xfr->actual_length)?xfr->actual_length/2:xfr->actual_length/2 + 1;
+      for (long int i=0; i < evlen; i++) {
+
+         value = bufusint[i];
          chunk.push_back(value);
 
          // debug:
