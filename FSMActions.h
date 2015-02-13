@@ -659,7 +659,7 @@ struct Action11 {
 
          if(!sm.energy1_done) {
 
-            sm.en->set_value(0, (sm.en->value(0) << 16) + sm.w.getContent()[WC_DATA]);
+            sm.en->set_value(0, (sm.en->value(0) << 15) + sm.w.getContent()[WC_DATA]);
             sm.energy1_done = true;
 
          } else if(!sm.pretrig_done) {
@@ -684,7 +684,7 @@ struct Action11 {
 
          if(!sm.energy1_done) {
 
-            sm.en->set_value(0, (sm.en->value(0) << 16) + sm.w.getContent()[WC_DATA]);
+            sm.en->set_value(0, (sm.en->value(0) << 15) + sm.w.getContent()[WC_DATA]);
             sm.energy1_done = true;
          
          } else if(!sm.energy2_done) {
@@ -692,7 +692,7 @@ struct Action11 {
             if (sm.en->value_size() == 1)		// only first energy is acquired
                sm.en->add_value(sm.w.getContent()[WC_DATA]);
             else {
-               sm.en->set_value(1, (sm.en->value(1) << 16) + sm.w.getContent()[WC_DATA]);
+               sm.en->set_value(1, (sm.en->value(1) << 15) + sm.w.getContent()[WC_DATA]);
                sm.energy2_done = true;
             }
 
