@@ -11,45 +11,50 @@
 #include "log4cpp/FileAppender.hh"
 #include <log4cpp/PropertyConfigurator.hh>
 
+#include "FzConfig.h"
 #include "FzTypedef.h"
-#include "FzEventWord.h"
 #include "FzFSM.h"
-#include "FzCbuffer.h"
 #include "FzProtobuf.h"
 #include "FzLogger.h"
+#include "FzNodeReport.pb.h"
+#include "zmq.hpp"
 
 class FzParser {
 
 private:
 
+   libconfig::Config cfg;
+   bool hascfg;
+
    boost::thread *thr;
    bool thread_init;
 
-   FzCbuffer<FzRawData> &cbr;  	  // circular buffer of array of raw data
-   FzRawData chunk;
+   zmq::context_t &context;
+   zmq::socket_t *parser;
+   zmq::socket_t *writer;
 
    FzFSM sm;
+   DAQ::FzEvent ev;
    log4cpp::Appender *appender;
    log4cpp::PatternLayout *layout;
  
+   Report::FzParser psr_report;
+
    DAQstatus_t status;
 
    void process(void);
 
 public:
    log4cpp::Category &logparser;
-   FzCbuffer<DAQ::FzEvent> *cbw;  // circular buffer of parsed events
 
-   FzParser(FzCbuffer<FzRawData> &cb_r, FzCbuffer <DAQ::FzEvent> *cb_w, unsigned int id, log4cpp::Priority::Value log_priority);
+   FzParser(unsigned int id, log4cpp::Priority::Value log_priority, std::string cfgfile, zmq::context_t &ctx);
 
    void init(void);
+   void close(void);
    void set_status(enum DAQstatus_t val);
 
-   uint32_t get_fsm_tr_invalid_tot(void);
-   uint32_t *get_fsm_tr_invalid_stats(void);
-   uint32_t get_fsm_event_clean_num(void);
-   uint32_t get_fsm_event_witherr_num(void);
-   uint32_t get_fsm_event_empty_num(void);
+   Report::FzParser get_report(void);
+   Report::FzFSM get_fsm_report(void);
 }; 
 
 #endif

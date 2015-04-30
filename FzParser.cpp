@@ -1,9 +1,16 @@
 #include "FzParser.h"
+#include "FzProtobuf.h"
 #include "FzLogger.h"
 
-FzParser::FzParser(FzCbuffer<FzRawData> &cb_r, FzCbuffer <DAQ::FzEvent> *cb_w, unsigned int id, log4cpp::Priority::Value log_priority) :
-   cbr(cb_r),
-   logparser(log4cpp::Category::getInstance("fzparser" + id)) {
+FzParser::FzParser(unsigned int id, log4cpp::Priority::Value log_priority, std::string cfgfile, zmq::context_t &ctx) :
+   context(ctx), logparser(log4cpp::Category::getInstance("fzparser" + id)) {
+
+   if(!cfgfile.empty()) {
+
+      hascfg = true;
+      cfg.readFile(cfgfile.c_str());    // syntax checks on main
+
+   } else hascfg = false;
 
    std::stringstream filename;
 
@@ -19,19 +26,105 @@ FzParser::FzParser(FzCbuffer<FzRawData> &cb_r, FzCbuffer <DAQ::FzEvent> *cb_w, u
 
    logparser << INFO << "FzParser::constructor - success";
 
-   chunk.reserve(MAX_EVENT_SIZE);    // reserve space to avoid memory reallocation
-
-   cbw = cb_w;
-
    sm.initlog(&logparser);
-   sm.initcbw(cbw);
-   sm.start();
+   sm.init();
+
+   std::string ep;
+
+   try {
+
+      parser = new zmq::socket_t(context, ZMQ_PULL);
+      int tval = 1000;
+      parser->setsockopt(ZMQ_RCVTIMEO, &tval, sizeof(tval));            // 1 second timeout on recv
+      int linger = 0;
+      parser->setsockopt(ZMQ_LINGER, &linger, sizeof(linger));   // linger equal to 0 for a fast socket shutdown
+
+   }  catch (zmq::error_t &e) {
+
+        std::cout << ERRTAG << "FzParser: failed to start ZeroMQ consumer: " << e.what () << std::endl;
+        exit(1);
+   }
+
+   if(hascfg) {
+
+      ep = getZMQEndpoint(cfg, "fzdaq.fzparser.consumer");
+
+      if(ep.empty()) {
+
+         std::cout << ERRTAG << "FzParser: consumer endpoint not present in config file" << std::endl;
+         exit(1);
+      }
+
+      std::cout << INFOTAG << "FzParser: consumer endpoint: " << ep << " [cfg file]" << std::endl;
+
+   } else {
+
+      ep = "inproc://fzreader";
+      std::cout << INFOTAG << "FzParser: consumer endpoint: " << ep << " [default]" << std::endl;
+   }
+
+   try {
+
+      parser->connect(ep.c_str());
+
+   } catch (zmq::error_t &e) {
+
+        std::cout << ERRTAG << "FzParser: failed to connect ZeroMQ endpoint " << ep << ": " << e.what () << std::endl;
+        exit(1);
+   }
+
+   try {
+
+      writer = new zmq::socket_t(context, ZMQ_PUSH);
+      int linger = 0;
+      writer->setsockopt(ZMQ_LINGER, &linger, sizeof(linger));   // linger equal to 0 for a fast socket shutdown
+
+   }  catch (zmq::error_t &e) {
+
+        std::cout << ERRTAG << "FzParser: failed to start ZeroMQ producer: " << e.what () << std::endl;
+        exit(1);
+   }
+
+   if(hascfg) {
+
+      ep = getZMQEndpoint(cfg, "fzdaq.fzparser.producer");
+
+      if(ep.empty()) {
+
+         std::cout << ERRTAG << "FzParser: producer endpoint not present in config file" << std::endl;
+         exit(1);
+      }
+
+      std::cout << INFOTAG << "FzParser: producer endpoint: " << ep << " [cfg file]" << std::endl;
+
+   } else {
+
+      ep = "inproc://fzwriter";
+      std::cout << INFOTAG << "FzParser: producer endpoint: " << ep << " [default]" << std::endl;
+   }
+
+   try {
+
+      writer->connect(ep.c_str());
+
+   } catch (zmq::error_t &e) {
+
+        std::cout << ERRTAG << "FzParser: failed to connect ZeroMQ endpoint " << ep << ": " << e.what () << std::endl;
+        exit(1);
+   }
 
    thread_init = false;
    status = STOP;
 
    logparser << INFO << "FzParser - state machine started";
+
+   psr_report.Clear();
 };
+
+void FzParser::close(void) {
+   thr->interrupt();
+   thr->join();
+}
 
 void FzParser::init(void) {
 
@@ -51,97 +144,73 @@ void FzParser::process(void) {
 
    while(true) {
 
-      if(status == START) {
+      try {    
 
-         unsigned long i;
-         wtype_t wtype;
+         if(status == START) {
+
+            zmq::message_t message;
+            std::string str;
+            bool rc;
      
-         chunk.clear();
-         chunk = cbr.receive();
+            rc = parser->recv(&message);
 
-         for(i=0; i<chunk.size(); i++) {
+            if(rc) {
 
-               // debug:
-               // std::cout << std::setw(4) << std::setfill('0') << std::hex << chunk[i] << std::endl; 
+               unsigned short int *bufusint = reinterpret_cast<unsigned short int*>(message.data());
+               uint32_t bufsize = message.size() / 2;
 
-               FzEventWord w(chunk[i]);
-               wtype = w.getType();
+               psr_report.set_in_bytes( psr_report.in_bytes() + message.size() );
+               psr_report.set_in_events( psr_report.in_events() + 1 );
+           
+               sm.init();
+               sm.import(bufusint, bufsize, &ev);
 
-               switch(wtype) {
+               // check if process from FSM is ok...
+               if( (sm.process() == PARSE_OK) && (sm.event_is_empty == false) ) {
+   
+                  bool retval;
 
-                  case WT_UNKNOWN:
-                     sm.process_event(gotUNKNOWN(w));
-                     break; 
+                  retval = ev.SerializeToString(&str);
 
-                  case WT_REGHDR:
-                     sm.process_event(gotREGHDR(w));
-                     break; 
+                  if(retval == false)
+                     std::cout << "FzParser: serialization error - EC: " << ev.ec() << std::endl;
 
-                  case WT_BLKHDR:
-                     sm.process_event(gotBLKHDR(w));
-                     break;
+                  writer->send(str.data(), str.size());
 
-                  case WT_EC:
-                     sm.process_event(gotEC(w));
-                     break;
+                  str.clear();
+               }
 
-                  case WT_TELHDR:
-                     sm.process_event(gotTELHDR(w));
-                     break;
+               psr_report.set_out_bytes( psr_report.out_bytes() + str.size() );
+               psr_report.set_out_events( psr_report.out_events() + 1 );
 
-                  case WT_DETHDR:
-                     sm.process_event(gotDETHDR(w));
-                     break;
+               ev.Clear();
+            }
 
-                  case WT_DATA:
-                     sm.process_event(gotDATA(w));
-                     break;
+            boost::this_thread::interruption_point();
 
-                  case WT_LENGTH:
-                     sm.process_event(gotLENGTH(w));
-                     break;
+         } else if (status == STOP) {
 
-                  case WT_CRCFE:
-                     sm.process_event(gotCRCFE(w));
-                     break;
+              boost::this_thread::sleep(boost::posix_time::seconds(1));
+              boost::this_thread::interruption_point();
 
-                  case WT_CRCBL:
-                     sm.process_event(gotCRCBL(w));
-                     break;
+         } 
 
-                  case WT_EMPTY:
-                     //sm.process_event(gotEMPTY(w));
-                     break; 
-               } // end of switch 
-            }  // end of for(i)  
+      } catch(boost::thread_interrupted& interruption) {
 
-      } else if (status == STOP) {
+         parser->close();
+         writer->close();
+         break;
 
-           boost::this_thread::sleep(boost::posix_time::seconds(1));
+      } catch(std::exception& e) {
 
-      } else if(status == QUIT) {
-
-           break;
-      }
-   }	// end of while
+      }	
+   }	// end while
 }
 
-uint32_t FzParser::get_fsm_tr_invalid_tot(void) {
-   return(sm.tr_invalid_tot);
+Report::FzParser FzParser::get_report(void) {
+   return(psr_report);
 }
 
-uint32_t* FzParser::get_fsm_tr_invalid_stats(void) {
-   return(sm.tr_invalid_stats);
-}
-
-uint32_t FzParser::get_fsm_event_clean_num(void) {
-   return(sm.event_clean_num);
-}
-
-uint32_t FzParser::get_fsm_event_witherr_num(void) {
-   return(sm.event_witherr_num);
-} 
-
-uint32_t FzParser::get_fsm_event_empty_num(void) {
-   return(sm.event_empty_num);
+Report::FzFSM FzParser::get_fsm_report(void) {
+   return(sm.get_report());
 }

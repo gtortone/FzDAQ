@@ -1,14 +1,32 @@
 #include "FzWriter.h"
 #include "FzLogger.h"
+#include "FzUtils.h"	// debug
 
-FzWriter::FzWriter(FzCbuffer<DAQ::FzEvent> &cb, std::string basedir, std::string run, long int id, bool subid) :
-   cbw(cb),
-   logwriter(log4cpp::Category::getInstance("fzwriter")) {
+#include <fstream>
+#include <sstream>
 
-   pb = new FzProtobuf(basedir, run, id, subid);
+FzWriter::FzWriter(std::string bdir, std::string run, long int id, bool subid, std::string cfgfile, zmq::context_t &ctx) :
+   context(ctx), logwriter(log4cpp::Category::getInstance("fzwriter")) {
 
-   pb->setup_newdir();
-   pb->setup_newfile();
+   int status;
+
+   basedir = bdir;
+   runtag = run;
+   dirid = id;
+   dirsubid = subid;
+
+   if(!cfgfile.empty()) {
+
+      hascfg = true;
+      cfg.readFile(cfgfile.c_str());    // syntax checks on main
+
+   } else hascfg = false;
+
+   pb = new FzProtobuf();
+   
+   // prevent init method run thread
+   status = STOP;
+   thread_init = false;
 
    appender = new log4cpp::FileAppender("fzwriter", "logs/fzwriter.log");
    layout = new log4cpp::PatternLayout();
@@ -16,13 +34,114 @@ FzWriter::FzWriter(FzCbuffer<DAQ::FzEvent> &cb, std::string basedir, std::string
    appender->setLayout(layout);
    logwriter.addAppender(appender);
 
+   status = setup_newdir();
+
+   if(status == DIR_EXISTS)
+      logwriter << INFO << "FzWriter: directory " << dirstr << " already exists";   
+   else if(status == DIR_FAIL)
+      logwriter << INFO << "FzWriter: directory " << dirstr << " filesystem  error";
+
+   setup_newfile();
+
    logwriter << INFO << "FzWriter::constructor - success";
 
-   thread_init = false;
-   status = STOP;
+   std::string ep;
+
+   try {
+
+      writer = new zmq::socket_t(context, ZMQ_PULL);
+      int tval = 1000;
+      writer->setsockopt(ZMQ_RCVTIMEO, &tval, sizeof(tval));		// 1 second timeout on recv
+
+   } catch (zmq::error_t &e) {
+
+      std::cout << ERRTAG << "FzWriter: failed to start ZeroMQ consumer: " << e.what () << std::endl;
+      exit(1);
+
+   }
+
+   if(hascfg) {
+
+      ep = getZMQEndpoint(cfg, "fzdaq.fzwriter.consumer");
+      
+      if(ep.empty()) {
+
+         std::cout << ERRTAG << "FzWriter: consumer endpoint not present in config file" << std::endl;
+         exit(1);
+      }
+
+      std::cout << INFOTAG << "FzParser: consumer endpoint: " << ep << " [cfg file]" << std::endl;
+
+   } else {
+
+      ep = "inproc://fzwriter";
+      std::cout << INFOTAG << "FzWriter: consumer endpoint: " << ep << " [default]" << std::endl;
+ 
+   }
+
+   try {
+
+      writer->bind(ep.c_str());
+
+   } catch (zmq::error_t &e) {
+
+        std::cout << ERRTAG << "FzWriter: failed to bind ZeroMQ endpoint " << ep << ": " << e.what () << std::endl;
+        exit(1);
+   }
+
+   try {
+
+      pub = new zmq::socket_t(context, ZMQ_PUB);
+      int linger = 0;
+      pub->setsockopt(ZMQ_LINGER, &linger, sizeof(linger));   // linger equal to 0 for a fast socket shutdown
+
+   } catch (zmq::error_t &e) {
+
+      std::cout << ERRTAG << "FzWriter: failed to start ZeroMQ event spy: " << e.what () << std::endl;
+      exit(1);
+
+   }
+
+   if(hascfg) {
+
+      ep = getZMQEndpoint(cfg, "fzdaq.fzwriter.spy");
+
+      if(ep.empty()) {
+
+         std::cout << ERRTAG << "FzWriter: event spy endpoint not present in config file" << std::endl;
+         exit(1);
+      }
+   
+      std::cout << INFOTAG << "FzParser: event spy endpoint: " << ep << " [cfg file]" << std::endl;
+
+   } else {
+   
+      ep = "tcp://*:5563";
+      std::cout << INFOTAG << "FzWriter: event spy endpoint: " << ep << " [default]" << std::endl;
+
+   }
+
+   try {
+
+      pub->bind(ep.c_str());
+
+   } catch (zmq::error_t &e) {
+
+        std::cout << ERRTAG << "FzWriter: failed to bind ZeroMQ endpoint " << ep << ": " << e.what () << std::endl;
+        exit(1);
+   }
+
+   std::cout << INFOTAG << "FzWriter: initialization done" << std::endl;
+
+   report.Clear();
 };
 
-int FzWriter::init(void) {
+void FzWriter::close(void) {
+   thr->interrupt();
+   thr->join();
+}
+
+void FzWriter::init(void) {
 
     if (!thread_init) {
 
@@ -44,67 +163,137 @@ void FzWriter::set_eventdirsize(unsigned long int size) {
    event_dir_size = size;
 };
 
+void FzWriter::setup_newfile(void) {
+
+   if(output.good())
+      output.close();
+
+   // setup of filename and output stream
+   filename.str("");
+   filename << dirstr << '/' << "FzEventSet-" << time(NULL) << '-' << fileid << ".pb";
+   output.open(filename.str().c_str(), std::ios::out | std::ios::trunc | std::ios::binary);
+
+   fileid++;
+};
+
+int FzWriter::setup_newdir(void) {
+
+   int status = DIR_OK;
+   std::ostringstream ss;
+
+   if(!subid)
+      ss << runtag << std::setw(6) << std::setfill('0') << dirid;
+   else
+      ss << runtag << std::setw(6) << std::setfill('0') << dirid << '.' << dirsubid;
+
+   dirstr = basedir + '/' + ss.str();
+
+   // create directory
+   errno = 0;
+   mkdir(dirstr.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+
+   if(errno == EEXIST)
+      status = DIR_EXISTS;
+   else if(status != 0)
+      status = DIR_FAIL;
+
+   // prepare for next directory name
+   if(subid)
+      dirsubid++;
+   else
+      dirid++;
+
+   return(status);
+}
+
 void FzWriter::process(void) {
-
-   static zmq::context_t zmq_ctx(1);
-   static zmq::socket_t zmq_pub(zmq_ctx, ZMQ_PUB);
-
-   static std::string str;
-
-   zmq_pub.bind("tcp://*:5563");
 
    while(true) {
 
-      if(status == START) {
+      try {
 
-         static unsigned long esize;	// current eventset file dize
-         static unsigned long dsize;	// current eventset directory size
+         boost::this_thread::interruption_point();
 
-         signed int supp;
-         unsigned long i;
-         DAQ::FzEventSet eventset;
-         DAQ::FzEvent *tmpev;
-         DAQ::FzEvent event;
+         if(status == START) {
 
-         // local copy 
-         event = cbw.receive();
+            bool rc;
+            static unsigned long esize;	// current eventset file dize
+            static unsigned long dsize;	// current eventset directory size
 
-         event.SerializeToString(&str);
+            DAQ::FzEventSet eventset;
+            DAQ::FzEvent *tmpev;
+            DAQ::FzEvent event;
 
-         int sz = str.length();
-         zmq::message_t *query = new zmq::message_t(sz);
-         memcpy(query->data(), str.c_str(), sz);
-         zmq_pub.send(*query);
+            zmq::message_t message;
+
+            rc = writer->recv(&message);
+
+            if(rc) {
+
+               report.set_in_bytes( report.in_bytes() + message.size() );
+               report.set_in_events( report.in_events() + 1 );
+
+               bool retval;
+
+               retval = event.ParseFromArray(message.data(), message.size()); 
+
+               if(retval == false) {
+
+                  std::cout << "FzWriter: parse error - EC: " << std::hex << event.ec() << std::dec << std::endl;
+                  dumpEventOnScreen(&event);
+               }
+
+               // to fazia-spy
+               pub->send(message);
  
-         tmpev = eventset.add_ev();
-         tmpev->MergeFrom(event);
+               tmpev = eventset.add_ev();
+               tmpev->MergeFrom(event);
 
-         pb->WriteDataset(eventset);
+               pb->WriteDataset(output, eventset);
 
-         esize += eventset.ByteSize();
-         dsize += eventset.ByteSize();
+               report.set_out_bytes( report.out_bytes() + eventset.ByteSize() );
+               report.set_out_events( report.out_events() + 1 );
+
+               esize += eventset.ByteSize();
+               dsize += eventset.ByteSize();
          
-         if(dsize > event_dir_size) {
+               if(dsize > event_dir_size) {
 
-            pb->setup_newdir();
-            pb->setup_newfile();
-            esize = dsize = 0;
+                  setup_newdir();
+                  setup_newfile();
+                  esize = dsize = 0;
 
-         } else if(esize > event_file_size) {
+               } else if(esize > event_file_size) {
 
-            pb->setup_newfile();
-            esize = 0;
-         }
+                  setup_newfile();
+                  esize = 0;
+               }
 
-         eventset.Clear(); 
+               eventset.Clear(); 
+            }
 
-      } else if(status == STOP) {
+            boost::this_thread::interruption_point();
 
-           boost::this_thread::sleep(boost::posix_time::seconds(1));
+         } else if(status == STOP) {
 
-      } else if(status == QUIT) {
+            boost::this_thread::sleep(boost::posix_time::seconds(1));
+            boost::this_thread::interruption_point();
 
-           break;
+         } 
+
+      } catch(boost::thread_interrupted& interruption) { 
+
+         writer->close();
+         pub->close();
+         break;
+
+      } catch(std::exception& e) {
+
       }
-   }
+
+   } // end while 
+};
+
+Report::FzWriter FzWriter::get_report(void) {
+   return(report);
 };

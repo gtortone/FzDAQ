@@ -7,10 +7,12 @@
 #include <log4cpp/PropertyConfigurator.hh>
 #include "boost/thread.hpp"
 
+#include "FzConfig.h"
 #include "FzTypedef.h"
-#include "FzEventWord.h"
-#include "FzCbuffer.h"
 #include "FzParser.h"
+#include "FzNodeReport.pb.h"
+#include "zmq.hpp"
+#include "fossa.h"
 
 #define CYPRESS_VID     0x04B4
 #define CYPRESS_PID     0x8613 
@@ -22,12 +24,11 @@
 #include <vector>
 #include <libusb-1.0/libusb.h>
 
-struct cb_data {
+struct _cb_data {
 
-   std::clock_t start_time;
-   FzCbuffer<FzRawData> *cb_ptr;
-   uint64_t *tot_bytes_ptr;
-   uint64_t *persec_bytes_ptr;
+   log4cpp::Category *logreader_ptr;
+   zmq::socket_t *reader_ptr;
+   Report::FzReader *report_ptr;
    bool rec;
 };
 
@@ -35,43 +36,59 @@ class FzReader {
 
 private:
 
+   std::string devname;
+   std::string neturl;
+   libconfig::Config cfg;
+   bool hascfg;
+
    boost::thread *thr;
    bool thread_init;
+   zmq::context_t &context;
+   zmq::socket_t *reader;
 
-   FzCbuffer<FzRawData> &cbr;
-   uint64_t persec_bytes;
-   uint64_t tot_bytes;
- 
    libusb_device_handle *usbh;
+   libusb_context *ctx;
    libusb_transfer *xfr;
    unsigned char ubuf[BUFFER_SIZE];
    int usbstatus;
 
-   struct cb_data usb_cb_data;
+   struct _cb_data cb_data;
 
    log4cpp::Category &logreader;
    log4cpp::Appender *appender;
    log4cpp::PatternLayout *layout;
 
+   struct ns_mgr udpserver;
+
+   Report::FzReader report;
+
    DAQstatus_t status;
+
+   int setupUsb(void);
+   int setupNet(void);
+
+   int initUsb(void);
+   int initNet(void);
+
+   static void cb_usbin(struct libusb_transfer *xfr);
+   static void udp_handler(struct ns_connection *nc, int ev, void *ev_data);
 
    void process(void);
 
 public:
 
-   FzReader(FzCbuffer<FzRawData> &cb);
+   FzReader(std::string dname, std::string nurl, std::string cfgfile, zmq::context_t &ctx);
 
-   int setup(std::string ch);
+   int setup(void);
    int init(void);
+   void close(void);
    void record(bool val);
 
    void set_status(enum DAQstatus_t val);
 
-   static void cb_usbin(struct libusb_transfer *xfr);
-   void usb_close(void);
+   Report::FzReader get_report(void); 
 
-   uint64_t get_tot_bytes(void);
-   uint64_t get_persec_bytes(void);
+   void usb_close(void);
 };
 
 #endif
