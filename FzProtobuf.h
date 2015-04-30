@@ -1,6 +1,10 @@
 #ifndef FZPROTOBUF_H_
 #define FZPROTOBUF_H_
 
+#define DIR_OK		0
+#define DIR_EXISTS	1
+#define DIR_FAIL	2
+
 #include <iostream>
 #include <iomanip>
 #include <fstream>
@@ -10,78 +14,13 @@
 #include "FzEventSet.pb.h"
 
 #include <google/protobuf/io/zero_copy_stream_impl.h>
+// header for compatibility - libprotobuf 2.6.1
+#include <google/protobuf/io/coded_stream.h>
 #include <google/protobuf/io/zero_copy_stream.h>
 
 class FzProtobuf {
 
-private:
-   std::string basedir;
-   std::string runtag;
-   bool subid;
-
-   unsigned int fileid;
-   unsigned int dirid;
-   unsigned int dirsubid;
-   std::string dirstr;
-
-   std::stringstream filename;
-   std::fstream output;
-
 public:
-
-FzProtobuf (std::string dir, std::string run, long int id, bool sid) {
-
-   basedir = dir;
-   runtag = run;
-
-   subid = sid;
-
-   fileid = 0;
-   dirid = id;
-   dirsubid = 0;
-}
-
-void setup_newfile(void) {
-
-   if(output.good())
-      output.close();
-
-   // setup of filename and output stream
-   filename.str("");
-   filename << dirstr << '/' << "FzEventSet-" << time(NULL) << '-' << fileid << ".pb";
-   output.open(filename.str().c_str(), std::ios::out | std::ios::trunc | std::ios::binary);
-
-   fileid++;
-};
-
-void setup_newdir(void) {
-
-   int status;
-   std::ostringstream ss;
-
-   if(!subid)
-      ss << runtag << std::setw(6) << std::setfill('0') << dirid;
-   else
-      ss << runtag << std::setw(6) << std::setfill('0') << dirid << '.' << dirsubid;
-       
-   dirstr = basedir + '/' + ss.str();
-
-   // create directory
-   errno = 0;
-   status = mkdir(dirstr.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-
-   if(errno == EEXIST)
-      std::cout << "WARNING: " << dirstr << " directory already exist" << std::endl;
-   else if(status != 0)
-      perror("ERROR on eventset directory: ");
-
-   // prepare for next directory name
- 
-   if(subid)
-      dirsubid++;
-   else
-      dirid++;
-}
 
 bool serialize_delimited(std::ostream& stream, DAQ::FzEventSet &message, uint32_t bsize) {
 
@@ -96,10 +35,7 @@ bool serialize_delimited(std::ostream& stream, DAQ::FzEventSet &message, uint32_
    //codedOStream.WriteLittleEndian32(bsize);
 
    // Write the message.
-
-   // new code
    message.SerializeToCodedStream(&codedOStream);
-   // new code
 
    // message.SerializeWithCachedSizes(&codedOStream);
 
@@ -139,11 +75,11 @@ bool parse_delimited(std::istream& stream, DAQ::FzEventSet *message) {
    return stream.good();
 };
 
-void WriteDataset(DAQ::FzEventSet &ev) {
+void WriteDataset(std::fstream &output, DAQ::FzEventSet &ev) {
 
    serialize_delimited(output, ev, ev.ByteSize());
 };
 
-};
+};	//end of class
 
 #endif
