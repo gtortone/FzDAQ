@@ -1,44 +1,164 @@
-#ifndef FZFSM_H_
-#define FZFSM_H_
+#ifndef FSM_H_
+#define FSM_H_
 
-#include <iostream>
+#include <stdint.h>
+#include "FzEventSet.pb.h"
+#include "FzNodeReport.pb.h"
 
-#define FUSION_MAX_VECTOR_SIZE 20
+#include <log4cpp/Category.hh>
+#include "log4cpp/Appender.hh"
+#include <log4cpp/PatternLayout.hh>
+#include "log4cpp/FileAppender.hh"
+#include <log4cpp/PropertyConfigurator.hh>
 
-#include <boost/msm/back/state_machine.hpp>
-#include <boost/msm/front/state_machine_def.hpp>
-#include <boost/msm/front/functor_row.hpp>
+#define WORDTYPE_NUM	18
+#define TRANSITION_NUM	19
+#define STATES_NUM	11
 
-#include "FSMStates.h"
-#include "FSMActions.h"
-#include "FSMEvents.h"
-#include "FzParser.h"
-#include "FzLogger.h"
-#include "FzEventWord.h"
-#include "FzCbuffer.h"
+#define REGID_MASK	0x07FF
+#define BLKID_MASK      0x07FF
+#define EC_MASK         0x0FFF
+#define TELID_MASK      0x0001
+#define FEEID_MASK      0x000E
+#define ADC_MASK        0x001F
+#define DTYPE_MASK      0x0700  
+#define DETID_MASK      0x00E0  
+#define LENGTH_MASK     0x0FFF
+#define CRCFE_MASK      0x0FF0
+#define CRCBL_MASK      0x0FF0
 
-#define LOG	*logfsm
+#define nibble(n,word)	((word >> (n*4)) & 0x000F)
+#define bit(n,word)	((word >> n) & 0x0001)
 
-namespace msm = boost::msm;
-namespace msmf = boost::msm::front;
-namespace mpl = boost::mpl;
+#define PARSE_OK 	1
+#define PARSE_FAIL	0
 
-// ----- State machine
+// word type id
+//
+//	 0	DATA
+//	 1	DATA
+//	 2	DATA
+//	 3	DATA
+//	 4	DATA
+//	 5	DATA
+//	 6	DATA
+//	 7	DATA
+//	 8	EMPTY
+//	 9	TELID
+//	10	LENGTH
+//	11	CRCFE
+//	12	REGID
+//	13	CRCBL
+//	14	EC
+//	15	EOE
+//	16	DETID
+//	17	BLKID
 
-struct FzFSM_:msmf::state_machine_def < FzFSM_ > {
+static char const* const word_names[] = { "DATA", "DATA", "DATA", "DATA", "DATA", "DATA", "DATA", "DATA", "EMPTY", "TELID", "LENGTH", "CRCFE", "REGID", "CRCBL", "EC", "EOE", "DETID", "BLKID" };
 
-   log4cpp::Category *logfsm;
-   FzCbuffer <DAQ::FzEvent> *cbw;
+static char const* const state_names[] = { "IdleState", "State1", "State2", "State3", "State4", "State5", "State6", "State7", "State8", "State9", "State10" };
 
-   DAQ::FzEvent ev;
+// state transitions id
+// 
+//	0	TRANSITION NOT VALID
+//	1	idle 	->	(*)		-> idle
+//	2	idle 	-> 	(EC) 		-> S1
+//	3	S1 	-> 	(TELID) 	-> S2
+//	4	S2 	-> 	(DATA)		-> S3
+//	5	S3 	-> 	(DATA)		-> S3
+//	6	S3 	-> 	(DETID)		-> S4
+//	7	S4 	->	(DATA)		-> S5
+//	8	S5 	-> 	(DATA)		-> S5
+//	9	S5 	->	(DETID)		-> S4
+//     10	S5 	->	(TELID)		-> S2
+//     11	S5 	->	(LENGTH)	-> S6
+//     12	S6 	->	(CRCFE)		-> S7
+//     13	S7 	->	(EC)		-> S1
+//     14	S1 	->	(BLKID)		-> S8
+//     15	S8 	-> 	(LENGTH)	-> S9
+//     16	S9 	->	(CRCBL)		-> S10
+//     17	S10 	->	(EC)		-> S1
+//     18	S10 	->	(REGID)		-> idle
+
+static char const* const transition_names[] = { "not valid", "idle", "idle->S1", "S1->S2", "S2->S3", "S3->S3", "S3->S4", "S4->S5", "S5->S5", "S5->S4", "S5->S2", "S5->S6", "S6->S7", "S7->S1", "S1->S8", "S8->S9", "S9->S10", "S10->S1", "S10->idle" };
+
+// matrix of state transition (row = current word_id, col = current state_id, ttable[row][col] = transition_id)
+
+static const uint8_t ttable[WORDTYPE_NUM][STATES_NUM] = 
+
+// 					idle	S1	S2	S3	S4	S5	S6	S7	S8	S9	S10  
+
+   {	
+
+/* id =  0 - DATA */     	{	 1,	 0,	 4,	 5,	 7,	 8,	 0,	 0,	 0,	 0,	 0 	},
+/* id =  1 - DATA */     	{	 1,	 0,	 4,	 5,	 7,	 8,	 0,	 0,	 0,	 0,	 0 	},
+/* id =  2 - DATA */     	{	 1,	 0,	 4,	 5,	 7,	 8,	 0,	 0,	 0,	 0,	 0 	},
+/* id =  3 - DATA */     	{	 1,	 0,	 4,	 5,	 7,	 8,	 0,	 0,	 0,	 0,	 0 	},
+/* id =  4 - DATA */		{	 1,	 0,	 4,	 5,	 7,	 8,	 0,	 0,	 0,	 0,	 0 	},
+/* id =  5 - DATA */     	{	 1,	 0,	 4,	 5,	 7,	 8,	 0,	 0,	 0,	 0,	 0 	},
+/* id =  6 - DATA */     	{	 1,	 0,	 4,	 5,	 7,	 8,	 0,	 0,	 0,	 0,	 0 	},
+/* id =  7 - DATA */     	{	 1,	 0,	 4,	 5,	 7,	 8,	 0,	 0,	 0,	 0,	 0 	},
+/* id =  8 - EMPTY */		{	 0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0      }, // case inside 'process' loop	
+/* id =  9 - TELID */ 		{	 1,	 3,	 0,	 0,	 0,	10,	 0,	 0,	 0,	 0,	 0	},
+/* id = 10 - LENGTH */		{	 1,	 0,	 0,	 0,	 0,	11,	 0,	 0,	15,	 0,	 0	},
+/* id = 11 - CRCFE */		{	 1,	 0,	 0,	 0,	 0,	 0,	12,	 0,	 0,	 0,	 0	},
+/* id = 12 - REGID */		{	 1,	 0,	 0,	 0,	 0,	 0,	 0,	 0,	 0,	 0,	18	},
+/* id = 13 - CRCBL */		{	 1,	 0,	 0,	 0,	 0,	 0,	 0,	 0,	 0,	16,	 0	},
+/* id = 14 - EC */	 	{	 2,	 0,	 0,	 0,	 0,	 0,	 0,	13,	 0, 	 0,	17	},
+/* id = 15 - EOE */ 	 	{	 1,	 0,	 0,	 0,	 0,	 0,	 0,	 0,	 0,	 0,	 0	}, //
+/* id = 16 - DETID */		{	 1,	 0,	 0,	 6,	 0,	 9,	 0,	 0,	 0,	 0,	 0	},
+/* id = 17 - BLKID */		{	 1,	14,	 0,	 0,	 0,	 0,	 0,	 0,	 0,	 0,	 0	}
+
+   };	
+
+static char const* const FzFec_str[] = { "FEC#0", "FEC#1", "FEC#2", "FEC#3", "FEC#4", "FEC#5", "FEC#6", "FEC#7", "", "", "", "", "", "", "", "ADC", "UNK"  };
+static char const* const FzDataType_str[] = { "QH1", "I1", "QL1", "Q2", "I2", "Q3", "ADC", "UNK" };
+static char const* const FzTelescope_str[] = { "A", "B", "UNK" };
+static char const* const FzDetector_str[] = { "Si1", "Si2", "CsI", "UNK" };
+
+class FzFSM {
+
+private:
+
+   uint8_t state_id;
+   uint8_t word_id;
+   uint8_t trans_id;
+
+   unsigned short int *event;
+   uint32_t event_size; 
+   uint32_t event_index;
+
+   uint8_t getword_id(unsigned short int word);
+
+   void trans00(void);
+   void trans01(void);
+   void trans02(void);
+   void trans03(void);
+   void trans04(void);
+   void trans05(void);
+   void trans06(void);
+   void trans07(void);
+   void trans08(void);
+   void trans09(void);
+   void trans10(void);
+   void trans11(void);
+   void trans12(void);
+   void trans13(void);
+   void trans14(void);
+   void trans15(void);
+   void trans16(void);
+   void trans17(void);
+   void trans18(void);
+
+   // support variables
+
+   DAQ::FzEvent *ev;
    DAQ::FzBlock *blk;
    DAQ::FzFee *fee;
    DAQ::FzHit *hit;
    DAQ::FzData *d;
    DAQ::Energy *en;
    DAQ::Waveform *wf;
-
-   FzEventWord w;
 
    uint16_t tmp_ec;
    uint16_t tmp_rawec;
@@ -50,9 +170,9 @@ struct FzFSM_:msmf::state_machine_def < FzFSM_ > {
 
    uint16_t rd_wflen;
 
-   uint16_t blklen;
+   uint32_t blklen;
    uint16_t rd_blklen;
-   uint16_t feelen;
+   uint32_t feelen;
    uint16_t rd_feelen;
 
    uint16_t blkcrc;
@@ -60,89 +180,28 @@ struct FzFSM_:msmf::state_machine_def < FzFSM_ > {
    uint16_t feecrc;
    uint16_t rd_feecrc;
 
+   uint16_t save_blkcrc, save_feecrc;
+
    bool err_in_event;
 
-   void initlog(log4cpp::Category *lc) {
+   log4cpp::Category *logfsm;
 
-      logfsm = lc;
-   };
-
-   void initcbw(FzCbuffer <DAQ::FzEvent> *cb_w) {
-
-      cbw = cb_w;
-   };
-
-   // no need for exception handling or message queue
-   typedef int no_exception_thrown;
-   typedef int no_message_queue;
-   // also manually enable deferred events
-   typedef int activate_deferred_events;
-
-   // Set initial state
-   typedef IdleState initial_state;
-
-   // Transition table
-   struct transition_table:mpl::vector17 <
-   //              Start       Event       Next          Action         Guard
-      msmf::Row <  IdleState,  gotEC,      State1,       Action1,       msmf::none>,
-      msmf::Row <  State1,     gotBLKHDR,  State8,       Action2,       msmf::none>,
-      msmf::Row <  State1,     gotTELHDR,  State2,       Action3,       msmf::none>,
-      msmf::Row <  State2,     gotDATA,    State3,       Action4,       msmf::none>,
-      msmf::Row <  State3,     gotDATA,    State3,       Action5,       msmf::none>,
-      msmf::Row <  State3,     gotDETHDR,  State4,       Action6,       msmf::none>,
-      msmf::Row <  State4,     gotDATA,    State5,       Action8,       msmf::none>,
-      msmf::Row <  State5,     gotTELHDR,  State2,       Action9,       msmf::none>,
-      msmf::Row <  State5,     gotDETHDR,  State4,       Action10,      msmf::none>,
-      msmf::Row <  State5,     gotDATA,    State5,       Action11,      msmf::none>,
-      msmf::Row <  State5,     gotLENGTH,  State6,       Action12,      msmf::none>,
-      msmf::Row <  State6,     gotCRCFE,   State7,       Action13,      msmf::none>,
-      msmf::Row <  State7,     gotEC,      State1,       Action14,      msmf::none>,
-      msmf::Row <  State8,     gotLENGTH,  State9,       Action15,      msmf::none>,
-      msmf::Row <  State9,     gotCRCBL,   State10,      Action16,      msmf::none>,
-      msmf::Row <  State10,    gotREGHDR,  IdleState,    Action17,    	msmf::none>,
-      msmf::Row <  State10,    gotEC,      State1,       Action18,      msmf::none>
-   > { };
-
-   // Replaces the default no-transition response
-   template <class FSM, class Event> void
-   no_transition(Event const &e, FSM &sm, int state) {
-
-      FzEventWord w = e.getWord();
-
-      LOG << DEBUG << "invalid transition from state " << state << " on event " << e.getName() << " (FSM RESET) " << w.getType_str() << " -- " << std::setw(4) << std::setfill('0') << std::hex << w.getWord(); 
-
-      // update stats
-      tr_invalid_tot++;      
-      tr_invalid_stats[state]++;
-
-      // reset FSM
-      sm.start(); 
-
-      // clear incomplete event
-      sm.ev.Clear();
-   } 
+   Report::FzFSM fsm_report;
 
 public:
 
-      // invalid transitions: total number and counter for each state
-      uint32_t tr_invalid_tot;
-      uint32_t tr_invalid_stats[16];
+   FzFSM(void);
 
-      // parsed events without errors and with errors
-      uint32_t event_empty_num;
-      uint32_t event_clean_num;
-      uint32_t event_witherr_num;   
+   bool event_is_empty;
+
+   void init(void);
+   void initlog(log4cpp::Category *lc);
+
+   void import(unsigned short int *evraw, uint32_t size, DAQ::FzEvent *e);
+
+   int process(void);
+
+   Report::FzFSM get_report(void);
 };
-
-// Pick a back-end
-typedef msm::back::state_machine < FzFSM_ > FzFSM;
-
-// additional methods and vars
-
-static char const* const state_names[] = { "IdleState", "State1", "State2", "State3", "State4", "State5", "State6", "State7", "State8", "State9", "State10" };
-
-/*std::string getstate(FzFSM const& sm) {
-   return (state_names[sm.current_state()[0]]);
-}*/
 
 #endif
