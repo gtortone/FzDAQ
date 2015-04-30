@@ -1,6 +1,17 @@
+space:
+	@echo -e "removing event files..."
+	@rm -rf pbout/* 
+	@echo -e "removing record files..."
+	@rm -rf record/*
+	@echo -e "removing log files..."
+	@rm -rf logs/*
+	@echo -e "OK"
+
 proto: 
 	protoc FzEventSet.proto --cpp_out=.
 	mv FzEventSet.pb.cc FzEventSet.pb.cpp
+	protoc FzNodeReport.proto --cpp_out=.
+	mv FzNodeReport.pb.cc FzNodeReport.pb.cpp
 
 deploy:
 	ssh daq@fzdaq01 "rm -rf devel/Fazia/miniDAQ-mt/*"
