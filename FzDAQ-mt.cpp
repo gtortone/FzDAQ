@@ -7,34 +7,47 @@
 #include <google/protobuf/io/zero_copy_stream_impl.h>
 #include "FzEventSet.pb.h"
 
+#include "FzConfig.h"
 #include "FzTypedef.h"
-#include "FzCbuffer.h"
+#include "FzUtils.h"
 #include "FzLogger.h"
+#include "FzNodeManager.h"
 #include "FzReader.h"
 #include "FzParser.h"
 #include "FzWriter.h"
+#include "zmq.hpp"
 
 namespace po = boost::program_options;
 
 int main(int argc, char *argv[]) {
 
+   zmq::context_t context(1);	// for ZeroMQ communications
+
+   unsigned int i;
+   std::string devname;
+   std::string neturl;
    unsigned int nthreads;
-   std::string inputch;
    std::string subdir;
    std::string runtag;
-   long int runid;
-   bool subid;
-   unsigned long int esize, dsize;
+   uint32_t runid;
+   bool subid = false;
+   uint32_t esize, dsize;
 
-   struct timeval tv_start, tv_stop;
-   unsigned int diff_msec = 0;
-   uint64_t curr_num_bytes = 0;
-   uint64_t persec_num_bytes = 0;
-   unsigned long prev_num_bytes = 0;
-   unsigned long diff_num_bytes = 0;
-   unsigned long curr_num_ev = 0;
-   unsigned long prev_num_ev = 0;
-   unsigned long diff_num_ev = 0;
+   libconfig::Config cfg;
+   bool hascfg = false;
+   bool iscompute = false;
+   bool isstorage = false;
+   std::string cfgfile;
+   std::string profile;
+   std::string netdev, devip;
+   unsigned int port;
+
+   FzReader *rd;
+   std::vector<FzParser *> psr_array;	// vector of (Fzparser *)
+   FzWriter *wr;
+   FzNodeManager *mon;
+
+   Report::Node nodereport;
 
    bool rec = false;
    DAQstatus_t DAQstatus = STOP;
@@ -45,142 +58,380 @@ int main(int argc, char *argv[]) {
    log4cpp::PropertyConfigurator::configure("log4cpp.properties");
    logparser_prio = log4cpp::Category::getInstance(std::string("fzparser")).getChainedPriority();
 
-   FzCbuffer<FzRawData> cbr(1500);	// circular buffer of array of raw data
-   FzCbuffer<DAQ::FzEvent> cbw(10000);	// circular buffer of parsed events
-
    // handling of command line parameters
-   po::options_description desc("\nFzDAQ - allowed options");
+   po::options_description desc("\nFzDAQ - allowed options", 100);
    
    desc.add_options()
     ("help", "produce help message")
+    ("dev", po::value<std::string>(), "acquisition device {usb, net} (default: usb)")
+    ("neturl", po::value<std::string>(), "network UDP consumer url (default: udp://eth0:50000)")
     ("nt", po::value<unsigned int>(), "number of parser threads\ndefault: 1")
-    ("input", po::value<std::string>(), "input channel of raw data (usb or file)\ndefault: usb")
     ("subdir", po::value<std::string>(), "base output directory")
     ("runtag", po::value<std::string>(), "label for run directory identification (e.g. LNS, GANIL)\ndefault: run")
-    ("runid", po::value<unsigned long int>(), "id for run identification (e.g. 100, 205)")
-    ("esize", po::value<unsigned long int>(), "[optional] max size of event file in Mbytes\ndefault: 10 Mb")
-    ("dsize", po::value<unsigned long int>(), "[optional] max size of event directory in Mbytes\ndefault: 100 Mb")
-    ("ensubid", "enable subid for run identification (eg. run000220.0, run000220.1 ...)")
+    ("runid", po::value<uint32_t>(), "id for run identification (e.g. 100, 205)")
+    ("esize", po::value<uint32_t>(), "[optional] max size of event file in Mbytes\ndefault: 10 Mb")
+    ("dsize", po::value<uint32_t>(), "[optional] max size of event directory in Mbytes\ndefault: 100 Mb")
+    ("ensubid", "[optional] enable subid for run identification (eg. run000220.0, run000220.1 ...)")
+    ("cfg", po::value<std::string>(), "[optional] configuration file")
+    ("profile", po::value<std::string>(), "[optional] profile to start {compute, storage, all}")
    ;
 
    po::variables_map vm;
    po::store(po::parse_command_line(argc, argv, desc), vm);
    po::notify(vm);    
 
+
    if (vm.count("help")) {
       std::cout << desc << std::endl << std::endl;
-      std::cout << "example: ./FzDAQ-mt --subdir pbout --runid 150" << std::endl;
-      std::cout << " 'pbout' directory will contain event subdirectories starting from 'run000150'" << std::endl;
-      std::cout << " each eventset file has a max size of 10 Mb (default) and each event subdirectory has a max size of 100 Mb (default)" << std::endl << std::endl;
-      return 0;
+      //std::cout << "example: ./FzDAQ-mt --subdir pbout --runid 150" << std::endl;
+      //std::cout << " 'pbout' directory will contain event subdirectories starting from 'run000150'" << std::endl;
+      //std::cout << " each eventset file has a max size of 10 MB (default) and each event subdirectory has a max size of 100 MB (default)" << std::endl << std::endl;
+      exit(0);
    }
+ 
+   std::cout << std::endl;
+   std::cout << BOLDMAGENTA << "FzDAQ - START configuration" << RESET << std::endl;
 
-   if (vm.count("nt")) {
-      nthreads = vm["nt"].as<unsigned int>();
-      std::cout << "nt is " << nthreads << std::endl;
-   } else {
-      nthreads = 1;
-   }
+   // by default run all profile on single machine
+   profile = "all";
+   iscompute = isstorage = true;
 
-   if (vm.count("input")) {
-      inputch = vm["input"].as<std::string>();
-      std::cout << "input is " << inputch << std::endl;
-   } else {
-      inputch = "usb";
-   }
+   if (vm.count("cfg")) {
+      
+      hascfg = true;
+      cfgfile = vm["cfg"].as<std::string>();
 
-   if (vm.count("subdir")) {
-      subdir = vm["subdir"].as<std::string>();
-      std::cout << "subdir is " << subdir << std::endl;
-   } else {
-      std::cout << "input parameter error: subdir not set" << std::endl;
-      return -1;
-   }
+      std::cout << INFOTAG << "FzDAQ configuration file: " << cfgfile << std::endl;
+ 
+      try {
 
-   if (vm.count("runtag")) {
-      runtag = vm["runtag"].as<std::string>();
-      std::cout << "runtag is " << runtag << std::endl;
-   } else {
-      runtag = "run";
+         cfg.readFile(cfgfile.c_str());
+
+      } catch(libconfig::ParseException& ex) {
+
+         std::cout << ERRTAG << "configuration file line " << ex.getLine() << ": " << ex.getError() << std::endl;
+         exit(1);
+
+      } catch(libconfig::FileIOException& ex) {
+
+         std::cout << ERRTAG << "cannot open configuration file " << cfgfile << std::endl;
+         exit(1);
+      }
    }
+ 
+   if(hascfg) {
+ 
+      if(!vm.count("profile")) {
+
+         std::cout << ERRTAG << "if configuration file is specified profile is mandatory" << std::endl;
+         exit(1);
+
+      } else {
+
+         profile = vm["profile"].as<std::string>();
+         iscompute = isstorage =  false;	// check parameter for profile to run
+
+         if(profile == "compute")
+            iscompute = true;
+         else if(profile == "storage")
+            isstorage = true;
+         else if(profile == "all")
+            iscompute = isstorage = true;
+         else {
    
-   if (vm.count("runid")) {
-      runid = vm["runid"].as<unsigned long int>();
-      std::cout << "runid is " << runid << std::endl;
-   } else {
-      std::cout << "input parameter error: runid not set" << std::endl;
-      return -1;
-   }
+            std::cout << ERRTAG << "profile unknown" << std::endl;
+            exit(1);
+         }
+      }
+   }  
 
-   if (vm.count("ensubid"))
-      subid = true;
-   else
-      subid = false;
+   /*
+     options will be set by priority:
+        - command line parameter
+        - configuration file
+        - default value
+   */
 
-   // create FzReader thread
+   std::cout << INFOTAG << "FzDAQ profile selected: " << profile << std::endl;
 
-   FzReader *rd = new FzReader(cbr);
+   if(iscompute) {		
 
-   // setup of USB channel
-   if (rd->setup(inputch) != 0) {
-      std::cout << "FATAL ERROR: DAQ channel setup failed" << std::endl;
-      return(-1);
-   }
+      devname = neturl = "";
 
-   if (rd->init() != 0) {
-  
-      std::cout << "FATAL ERROR: DAQ channel initialization failed" << std::endl;
-      return(-1);
-   }
+      // configure FzReader and FzParser
 
-   // create base directory
+      if(vm.count("dev")) {
 
-   int status;
-   status = mkdir(subdir.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+        devname = vm["dev"].as<std::string>();
+        if( (devname == "usb") || (devname == "net") ) {
 
-   if(status == 0)
-      std::cout << "INFO: " << subdir << " directory created" << std::endl;
-   else if(errno == EEXIST)
-      std::cout << "WARNING: " << subdir << " directory already exist" << std::endl;
-   else if(status != 0)
-      perror("ERROR on base directory: ");
+           std::cout << INFOTAG << "FzReader device: " << devname << "\t[cmd param]" << std::endl;
 
-   // create FzWriter thread 
+        } else {
 
-   FzWriter *wr = new FzWriter(cbw, subdir, runtag, runid, subid);
-   std::vector<FzParser *> psr_array;	// vector of (Fzparser *)
+           std::cout << ERRTAG << "FzReader device unknown: " << devname << "\t[cmd param]" << std::endl;
+           exit(1);
+        }
 
-   wr->init();
- 
-   if( vm.count("esize") )
-      esize = vm["esize"].as<unsigned long int>() * 1000000;
-   else
-      esize = 10 * 1000000; // default is 10 Mbytes
+      } else if(cfg.lookupValue("fzdaq.fzreader.consumer.device", devname)) {
 
-   if( vm.count("dsize") )
-      dsize = vm["dsize"].as<unsigned long int>() * 1000000;
-   else
-      dsize = 100 * 1000000; // default is 100 Mbytes
+         std::cout << INFOTAG << "FzReader device: " << devname << "\t[cfg file]" << std::endl;
 
-   if(dsize > esize) {
- 
-      wr->set_eventfilesize(esize);
-      wr->set_eventdirsize(dsize);
+      } else {
 
-   } else {
+         devname = "usb";
+         std::cout << INFOTAG << "FzReader device: usb\t[default]" << std::endl;
+      }
 
-      std::cout << "input parameter error: dsize must be greater than esize" << std::endl;
-      return(-1);
-   }
+      if(devname == "net") {  	// fetch neturl parameter
 
-   // create FzParser threads pool
+         if(vm.count("neturl")) {
+
+            neturl = vm["neturl"].as<std::string>();
+            if(neturl.substr(0,3) == "udp") {
+
+               std::cout << INFOTAG << "FzReader network UDP url: " << neturl << "\t[cmd param]" << std::endl;
+
+            } else {
+
+               std::cout << ERRTAG << "FzReader network UDP url not valid: " << neturl << "\t[cmd param]" << std::endl;
+               exit(1);
+            }
+
+         } else if(cfg.lookupValue("fzdaq.fzreader.consumer.url", neturl)) {
+
+            std::cout << INFOTAG << "FzReader network UDP url: " << neturl << "\t[cfg file]" << std::endl;
+
+         } else {
+
+            neturl = "udp://eth0:50000";
+            std::cout << INFOTAG << "FzReader network UDP url: udp://eth0:5000\t[default]" << std::endl;
+         }
+
+         if(!urlparse(neturl, &netdev, &port)) {
+
+            std::cout << ERRTAG << "FzReader: unable to parse UDP url" << std::endl;
+            exit(1);
+         }
+
+         devip = devtoip(netdev);
+
+         if(devip.empty()) {
+
+            std::cout << ERRTAG << "FzReader: unable to get ip address of " << netdev << std::endl;
+            exit(1);
+         }
+
+         // reassemble neturl with IP 
+         std::ostringstream s;
+         s << "udp://" << devip << ":" << port;
+         neturl = s.str();
     
-   for(int i=0; i < nthreads; i++) {
-      psr_array.push_back(new FzParser(cbr, &cbw, i, logparser_prio));
-      psr_array[i]->init();
+         std::cout << INFOTAG << "FzReader: UDP socket will be bind on IP " << devip << " (" << netdev << ")" << std::endl;
+      }
+
+      if (vm.count("nt")) {
+
+         nthreads = vm["nt"].as<unsigned int>();
+         std::cout << INFOTAG << "FzParser nthreads: " << nthreads << "\t[cmd param]" << std::endl;
+
+      } else if(cfg.lookupValue("fzdaq.fzparser.nthreads", nthreads)) {
+
+         std::cout << INFOTAG << "FzParser nthreads: " << nthreads << "\t[cfg file]" << std::endl;
+
+      } else {
+
+         nthreads = 1;
+         std::cout << INFOTAG << "FzParser nthreads: " << nthreads << "\t[default]" << std::endl;
+      }
    }
 
-   gettimeofday(&tv_start, NULL);
+   if(isstorage) {         
+
+      // configure FzWriter
+
+      if (vm.count("subdir")) {
+
+         subdir = vm["subdir"].as<std::string>();
+         std::cout << INFOTAG << "FzWriter subdir: " << subdir << "\t[cmd param]" << std::endl;
+
+      } else if(cfg.lookupValue("fzdaq.fzwriter.subdir", subdir)) {
+
+         std::cout << INFOTAG << "FzWriter subdir: " << subdir << "\t[cfg file]" << std::endl;
+
+      } else {
+
+         std::cout << ERRTAG << "FzWriter subdir not set" << std::endl;
+         exit(1);
+      }
+
+      if (vm.count("runtag")) {
+
+         runtag = vm["runtag"].as<std::string>();
+         std::cout << INFOTAG << "FzWriter runtag: " << runtag << "\t[cmd param]" << std::endl;
+
+      } else if(cfg.lookupValue("fzdaq.fzwriter.runtag", runtag)) {
+
+         std::cout << INFOTAG << "FzWriter runtag: " << runtag << "\t[cfg file]" << std::endl;
+
+      } else {
+
+         runtag = "run";
+         std::cout << INFOTAG << "FzWriter runtag: " << runtag << "\t[default]" << std::endl;
+      }
+   
+      if (vm.count("runid")) {
+
+         //runid = vm["runid"].as<unsigned long int>();
+         runid = vm["runid"].as<uint32_t>();
+         std::cout << INFOTAG << "FzWriter runid: " << runid << "\t[cmd param]" << std::endl;
+
+      } else if(cfg.lookupValue("fzdaq.fzwriter.runid", runid)) {
+  
+          std::cout << INFOTAG << "FzWriter runid: " << runid << "\t[cfg file]" << std::endl;
+
+      } else {
+
+         std::cout << ERRTAG << "FzWriter runid not set" << std::endl;
+         exit(1);
+      }
+
+      if (vm.count("esize")) {
+
+         esize = vm["esize"].as<uint32_t>();
+         std::cout << INFOTAG << "FzWriter esize: " << esize << "\t[cmd param]" << std::endl;
+
+      } else if(cfg.lookupValue("fzdaq.fzwriter.esize", esize)) {
+
+         std::cout << INFOTAG << "FzWriter esize: " << esize << "\t[cfg file]" << std::endl;
+
+      } else {
+
+         esize = 10; // default is 10 MBytes
+         std::cout << INFOTAG << "FzWriter esize: " << esize << "\t[default]" << std::endl;
+      } 
+
+      if (vm.count("dsize")) {
+
+         esize = vm["dsize"].as<uint32_t>();
+         std::cout << INFOTAG << "FzWriter dsize: " << dsize << "\t[cmd param]" << std::endl;
+
+      } else if(cfg.lookupValue("fzdaq.fzwriter.dsize", dsize)) {
+
+         std::cout << INFOTAG << "FzWriter dsize: " << dsize << "\t[cfg file]" << std::endl;
+
+      } else {
+
+         dsize = 100; // default is 100 MBytes
+         std::cout << INFOTAG << "FzWriter dsize: " << dsize << "\t[default]" << std::endl;
+      } 
+
+      if (vm.count("ensubid"))
+         subid = true;
+      else
+         subid = false;
+
+      // create FzWriter base directory
+
+      int status;
+      status = mkdir(subdir.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+
+      if(status == 0)
+         std::cout << INFOTAG << "FzWriter: " << subdir << " directory created" << std::endl;
+      else if(errno == EEXIST)
+         std::cout << WARNTAG << "FzWriter: " << subdir << " directory already exist" << std::endl;
+      else if(status != 0) {
+         std::cout << ERRTAG << "FzWriter: ";
+         perror("on base directory: ");
+      }
+   }
+
+   std::cout << BOLDMAGENTA << "FzDAQ - END configuration" << RESET << std::endl;
+   std::cout << std::endl;  
+
+   std::cout << BOLDMAGENTA << "FzDAQ - START threads allocation" << RESET << std::endl;
+
+   if(iscompute) {
+
+      // create FzReader thread
+      rd = new FzReader(devname, neturl, cfgfile, context);
+
+      if(!rd) {
+         std::cout << ERRTAG << "FzReader: thread allocation failed" << std::endl;
+         exit(1);
+      }
+
+      rd->set_status(STOP);
+
+      std::cout << INFOTAG << "FzReader: thread ready" << std::endl;
+
+      // create FzParser threads pool
+      for(i=0; i < nthreads; i++) {
+
+         psr_array.push_back(new FzParser(i, logparser_prio, cfgfile, context));
+
+         if(!psr_array[i]) {
+
+            std::cout << ERRTAG << "FzParser: threads allocation failed" << std::endl;
+            exit(1);
+         }
+
+         psr_array[i]->init();
+         psr_array[i]->set_status(STOP);
+      }
+
+      std::cout << INFOTAG << "FzParser: threads ready" << std::endl;
+  }
+
+   if(isstorage) {
+
+      // create FzWriter thread 
+      wr = new FzWriter(subdir, runtag, runid, subid, cfgfile, context);
+
+      if(!wr) {
+         std::cout << ERRTAG << "FzWriter: thread allocation failed" << std::endl;
+         exit(1);
+      }
+
+      wr->init();
+
+      if(dsize > esize) {
+ 
+         wr->set_eventfilesize(esize * 1000000);
+         wr->set_eventdirsize(dsize * 1000000);
+
+      } else {
+
+         std::cout << ERRTAG << "FzWriter: dsize must be greater than esize" << std::endl;
+         exit(1);
+      }
+
+      wr->set_status(STOP);
+
+      std::cout << INFOTAG << "FzWriter: thread ready" << std::endl;
+   }
+
+   // create FzNodeManager thread
+
+   mon = new FzNodeManager(rd, psr_array, wr, cfgfile, profile, context);
+
+   if(!mon) {
+      std::cout << ERRTAG << "FzNodeManager: thread allocation failed" << std::endl;
+      exit(1);
+   }
+
+   mon->init();
+   mon->set_status(START);
+
+   std::cout << INFOTAG << "FzNodeManager: thread ready" << std::endl;
+
+   std::cout << BOLDMAGENTA << "FzDAQ - END threads allocation" << RESET << std::endl;
+   std::cout << std::endl;  
+
+   // start command line interface 
+
+   std::cout << BOLDMAGENTA << "FzDAQ - START command line interface " << RESET << std::endl;
+   std::cout << std::endl;  
 
    std::string line, lastcmd;
    for ( ; std::cout << "FzDAQ > " && std::getline(std::cin, line); ) {
@@ -205,82 +456,195 @@ int main(int argc, char *argv[]) {
 
            if(!line.compare("status")) {
               std::cout << "current DAQ status: " << state_labels[DAQstatus] << std::endl;
-              std::cout << "file eventset max size: " << esize/1000000 << " Mb" << std::endl;
-              std::cout << "directory eventset max size: " << dsize/1000000 << " Mb" << std::endl;
+              //std::cout << "file eventset max size: " << esize/1000000 << " MB" << std::endl;
+              //std::cout << "directory eventset max size: " << dsize/1000000 << " MB" << std::endl;
            }
 
            if(!line.compare("start")) {
-              std::cout << "sending start to FzReader and " << nthreads << "xFzParser" << std::endl;
-              rd->set_status(START);
- 
-              for(int i=0; i < nthreads; i++)
-                 psr_array[i]->set_status(START);
 
-              wr->set_status(START);
+              if(iscompute) {
+
+                 std::cout << "sending start to FzReader and " << nthreads << "xFzParser" << std::endl;
+                 rd->set_status(START);
+ 
+                 for(i=0; i < nthreads; i++)
+                    psr_array[i]->set_status(START);
+              }
+ 
+              if(isstorage) {
+
+                 std::cout << "sending start to FzWriter" << std::endl;
+                 wr->set_status(START);
+              }
 
               DAQstatus = START;
            }
 
            if(!line.compare("stop")) {
-              std::cout << "sending stop to FzReader and " << nthreads << "xFzParser" << std::endl;
-              rd->set_status(STOP);
 
-              for(int i=0; i < nthreads; i++)
-                 psr_array[i]->set_status(STOP);
+              if(iscompute) {
 
-              wr->set_status(STOP);
+                 std::cout << "sending stop to FzReader and " << nthreads << "xFzParser" << std::endl;
+                 rd->set_status(STOP);
+
+                 for(i=0; i < nthreads; i++)
+                    psr_array[i]->set_status(STOP);
+              }
+
+              if(isstorage) {
+
+                 std::cout << "sending stop to FzWriter" << std::endl;
+                 wr->set_status(STOP);
+              }
 
               DAQstatus = STOP;
            }
 
-           if(!line.compare("stats")) {
+          if(!line.compare("stats")) {
 
-              uint32_t tr_invalid_tot = 0;
-              uint32_t event_clean_num = 0;
-              uint32_t event_witherr_num = 0;
-              uint32_t event_empty_num = 0;
- 
-              for(int i=0; i < nthreads; i++) {
-                 tr_invalid_tot += psr_array[i]->get_fsm_tr_invalid_tot();
-                 event_clean_num += psr_array[i]->get_fsm_event_clean_num();
-                 event_witherr_num += psr_array[i]->get_fsm_event_witherr_num();
-                 event_empty_num += psr_array[i]->get_fsm_event_empty_num();
+              std::stringstream in_evbw, out_evbw, in_databw, out_databw;
+
+              if(!mon->has_data()) {
+
+                 std::cout << "FzNodeManager is collecting statistics... try later" << std::endl;
+                 lastcmd = line;
+                 continue;
               }
 
-              curr_num_bytes = rd->get_tot_bytes();
-              diff_num_bytes = curr_num_bytes - prev_num_bytes;
-              prev_num_bytes = curr_num_bytes;
-
-              curr_num_ev = event_clean_num + event_witherr_num + event_empty_num;
-              diff_num_ev = curr_num_ev - prev_num_ev;
-              prev_num_ev = curr_num_ev;
-
-              gettimeofday(&tv_stop, NULL);
-              diff_msec = (tv_stop.tv_sec - tv_start.tv_sec)*1000;
-              diff_msec += (tv_stop.tv_usec - tv_start.tv_usec)/1000;
-   	      gettimeofday(&tv_start, NULL);
-
-              std::cout << std::endl;
-              std::cout << "=== USB data transfer statistics ===" << std::endl;
-              std::cout << "total bytes transferred: " << curr_num_bytes << std::endl;
-              std::cout << "current bandwith in bytes/s: " << rd->get_persec_bytes() << std::endl;
+              nodereport = mon->get_nodereport(); 
               std::cout << std::endl;
 
-              std::cout << "=== QUEUED events statistics ===" << std::endl;
-              std::cout << "total number of events ready to be parsed: " << cbr.size() << std::endl;
-              std::cout << std::endl;
+              if(iscompute) {
 
-              std::cout << "=== PARSED events statistics ===" << std::endl;
-              std::cout << "event bandwith in events/s: " << (diff_num_ev*1000)/diff_msec << std::endl;
-              std::cout << "total number of invalid state machine transitions: " << tr_invalid_tot << std::endl;
-              std::cout << "total number of parsed empty events: " << event_empty_num << std::endl;
-              std::cout << "total number of parsed events without errors: " << event_clean_num << std::endl;
-              std::cout << "total number of parsed events with one or more errors: " << event_witherr_num << std::endl; 
-              std::cout << std::endl;
+                 std::stringstream psrname;
 
-              std::cout << "=== STORED event statistics ===" << std::endl;
-              std::cout << "total number of events ready to be stored: " << cbw.size() << std::endl;
-              std::cout << std::endl;
+                 Report::FzReader rd_report;
+                 Report::FzParser psr_report;
+                 Report::FzFSM fsm_report;
+
+                 std::cout << std::left << std::setw(15) << "thread" << 
+			std::setw(30) << "          IN events" << 
+			std::setw(30) << "           IN data" << 
+			std::setw(30) << "          OUT events" << 
+			std::setw(30) << "           OUT data" << 
+		 std::endl;
+
+                 std::cout << std::left << std::setw(15) << "-" << 
+		 	std::setw(15) << "     num" << 
+		 	std::setw(15) << "    rate" << 
+			std::setw(15) << "    size" << 
+			std::setw(15) << "     bw" << 
+			std::setw(15) << "     num" << 
+		 	std::setw(15) << "    rate" << 
+			std::setw(15) << "    size" << 
+			std::setw(15) << "     bw" << 
+		 std::endl;
+
+		 // FzReader statistics
+                 rd_report = nodereport.reader();
+
+                 in_evbw << rd_report.in_events_bw() << " ev/s";
+                 in_databw << human_byte(rd_report.in_bytes_bw()) << "/s"; // << " (" << human_bit(rd_report.in_bytes_bw() * 8) << "/s)";
+
+                 std::cout << std::left << std::setw(15) << "FzReader" <<
+			std::setw(15) << std::right << rd_report.in_events() <<
+			std::setw(15) << std::right << in_evbw.str() <<
+			std::setw(15) << std::right << human_byte(rd_report.in_bytes()) <<
+			std::setw(15) << std::right << in_databw.str() <<
+		 std::endl;
+
+                 in_evbw.str("");
+                 in_databw.str("");
+ 
+		 std::cout << "---" << std::endl;
+
+                 for(i=0; i<nthreads; i++) {
+ 
+		    // FzParser statistics
+                    psr_report = nodereport.parser(i);
+
+                    in_evbw << psr_report.in_events_bw() << " ev/s";
+                    in_databw << human_byte(psr_report.in_bytes_bw()) << "/s"; // << " (" << human_bit(psr_report.in_bytes_bw() * 8) << "/s)"; 
+                    out_evbw << psr_report.in_events_bw() << " ev/s";
+                    out_databw << human_byte(psr_report.in_bytes_bw()) << "/s"; // << " (" << human_bit(psr_report.in_bytes_bw() * 8) << "/s)"; 
+
+                    psrname << "FzParser #" << i; 
+		    std::cout << std::left << std::setw(15) << psrname.str() <<
+                    	std::setw(15) << std::right << psr_report.in_events() <<
+	                std::setw(15) << std::right << in_evbw.str() <<
+	                std::setw(15) << std::right << human_byte(psr_report.in_bytes()) <<
+	                std::setw(15) << std::right << in_databw.str() <<
+	                std::setw(15) << std::right << psr_report.out_events() <<
+	                std::setw(15) << std::right << out_evbw.str() <<
+	                std::setw(15) << std::right << human_byte(psr_report.in_bytes()) <<
+	                std::setw(15) << std::right << out_databw.str() <<
+	            std::endl;
+
+                    psrname.str("");	// clear stringstream
+		    in_evbw.str("");
+                    in_databw.str("");
+                    out_evbw.str("");
+                    out_databw.str("");
+
+                    // FSM statistics
+                    fsm_report = nodereport.fsm(i);
+
+                    in_evbw << fsm_report.in_events_bw() << " ev/s";
+                    in_databw << human_byte(fsm_report.in_bytes_bw()) << "/s"; // << " (" << human_bit(fsm_report.in_bytes_bw() * 8) << "/s)"; 
+                    out_evbw << fsm_report.in_events_bw() << " ev/s";
+                    out_databw << human_byte(fsm_report.in_bytes_bw()) << "/s"; // << " (" << human_bit(fsm_report.in_bytes_bw() * 8) << "/s)"; 
+
+                    std::cout << std::left << std::setw(15) << "  FSM" <<
+			std::setw(15) << std::right << fsm_report.in_events() <<
+	                std::setw(15) << std::right << in_evbw.str() <<
+	                std::setw(15) << std::right << human_byte(fsm_report.in_bytes()) <<
+	                std::setw(15) << std::right << in_databw.str() <<
+	                std::setw(15) << std::right << fsm_report.out_events() <<
+	                std::setw(15) << std::right << out_evbw.str() <<
+	                std::setw(15) << std::right << human_byte(fsm_report.in_bytes()) <<
+	                std::setw(15) << std::right << out_databw.str() <<
+	            std::endl;
+
+                    psrname.str("");    // clear stringstream
+                    in_evbw.str("");
+                    in_databw.str("");
+                    out_evbw.str("");
+                    out_databw.str("");
+
+		    std::cout << "---" << std::endl;
+                 } 
+              }			// end if(iscompute)
+
+              if(isstorage) {
+
+                 // FzWriter statistics
+                 Report::FzWriter wr_report;
+
+                 wr_report = nodereport.writer();
+
+                 in_evbw << wr_report.in_events_bw() << " ev/s";
+                 in_databw << human_byte(wr_report.in_bytes_bw()) << "/s"; // << " (" << human_bit(fsm_report.in_bytes_bw() * 8) << "/s)"; 
+                 out_evbw << wr_report.in_events_bw() << " ev/s";
+                 out_databw << human_byte(wr_report.in_bytes_bw()) << "/s"; // << " (" << human_bit(fsm_report.in_bytes_bw() * 8) << "/s)"; 
+
+                 std::cout << std::left << std::setw(15) << "FzWriter" <<
+                     std::setw(15) << std::right << wr_report.in_events() <<
+                     std::setw(15) << std::right << in_evbw.str() <<
+                     std::setw(15) << std::right << human_byte(wr_report.in_bytes()) <<
+                     std::setw(15) << std::right << in_databw.str() <<
+                     std::setw(15) << std::right << wr_report.out_events() <<
+                     std::setw(15) << std::right << out_evbw.str() <<
+                     std::setw(15) << std::right << human_byte(wr_report.in_bytes()) <<
+                     std::setw(15) << std::right << out_databw.str() <<
+                 std::endl;
+
+                 in_evbw.str("");
+                 in_databw.str("");
+                 out_evbw.str("");
+                 out_databw.str("");
+
+                 std::cout << "---" << std::endl;
+              }
            }
 
            if(!line.compare("rec")) {
@@ -300,7 +664,6 @@ int main(int argc, char *argv[]) {
            }
 
            if(!line.compare("quit")) {
-              std::cout << "quit from FzDAQ" << std::endl;
               DAQstatus = QUIT;
               break;
            }
@@ -309,20 +672,39 @@ int main(int argc, char *argv[]) {
         }
     }
 
-   std::cout << "closing FzReader thread: \t";
-   rd->set_status(QUIT);
+   std::cout << INFOTAG << "FzNodeManager: closing thread: \t";
+   mon->close();
    std::cout << " DONE" << std::endl;
 
-   std::cout << "closing FzParser threads: \t";
-   for(int i=0; i < nthreads; i++)
-      psr_array[i]->set_status(STOP);
-   std::cout << " DONE" << std::endl;
-
-   std::cout << "closing FzWriter thread: \t";
-   wr->set_status(QUIT);
-   std::cout << " DONE" << std::endl; 
+   if(iscompute) {
    
+      std::cout << INFOTAG << "FzReader: closing thread: \t";
+      rd->set_status(STOP);
+      rd->close();
+      std::cout << " DONE" << std::endl;
+
+      std::cout << INFOTAG << "FzParser: closing threads: \t";
+      for(i=0; i < nthreads; i++) {		// STOP and CLOSE each FzParser to do a fast exit
+         psr_array[i]->set_status(STOP);
+      }
+      for(i=0; i < nthreads; i++) {
+         psr_array[i]->close();
+      }
+      std::cout << " DONE" << std::endl;
+   }
+
+   if(isstorage) {
+
+      std::cout << INFOTAG << "FzWriter: closing thread: \t";
+      wr->set_status(STOP);
+      wr->close();
+      std::cout << " DONE" << std::endl; 
+   }
+   
+   context.close();
+   std::cout << INFOTAG << "ZeroMQ shutdown" << std::endl;
+
    std::cout << "Goodbye.\n";
 
-   return 0;
+   return(0);
 }
