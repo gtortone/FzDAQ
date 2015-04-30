@@ -1,0 +1,75 @@
+package Report;
+
+option optimize_for = SPEED;
+option cc_generic_services = false;
+
+message FzReader {
+
+  required uint64 in_bytes = 1;  
+  optional uint32 in_bytes_bw = 2;	// per second
+  optional uint64 out_bytes = 3;  
+  optional uint32 out_bytes_bw = 4;	// per second
+  required uint64 in_events = 5;
+  optional uint32 in_events_bw = 6;	// per second
+  optional uint64 out_events = 7;
+  optional uint32 out_events_bw = 8;	// per second
+
+  optional string consumer_ip = 9; 
+}
+
+message FzParser {
+
+  required uint64 in_bytes = 1;  
+  optional uint32 in_bytes_bw = 2;	// per second
+  required uint64 out_bytes = 3;  
+  optional uint32 out_bytes_bw = 4;	// per second
+  required uint64 in_events = 5;
+  optional uint32 in_events_bw = 6;	// per second
+  required uint64 out_events = 7;
+  optional uint32 out_events_bw = 8;	// per second
+}
+
+message FzFSM {
+
+  required uint64 in_bytes = 1;  
+  optional uint32 in_bytes_bw = 2;	// per second
+  required uint64 out_bytes = 3;  
+  optional uint32 out_bytes_bw = 4;	// per second
+  required uint64 in_events = 5;
+  optional uint32 in_events_bw = 6;	// per second
+  required uint64 out_events = 7;
+  optional uint32 out_events_bw = 8;	// per second
+
+  required uint64 state_invalid = 9;
+  required uint64 events_empty = 10;
+  required uint64 events_good = 11;
+  required uint64 events_bad = 12;
+}
+
+message FzWriter {
+
+  required uint64 in_bytes = 1;  
+  optional uint32 in_bytes_bw = 2;	// per second
+  required uint64 out_bytes = 3;  
+  optional uint32 out_bytes_bw = 4;	// per second
+  required uint64 in_events = 5;
+  optional uint32 in_events_bw = 6;	// per second
+  required uint64 out_events = 7;
+  optional uint32 out_events_bw = 8;	// per second
+}
+
+// node report sent by FzNodeManger
+message Node {
+
+  required string hostname = 1;
+  required string profile = 2;		// compute, storage or all
+
+  optional uint32 parser_num = 3;
+  optional uint32 parser_busy = 4;
+  optional uint32 parser_free = 5;
+
+  optional FzReader reader = 6;
+  repeated FzParser parser = 7; 
+  repeated FzFSM fsm = 8;
+  optional FzWriter writer = 9;
+}
