@@ -1,0 +1,35 @@
+<html>
+<body>
+<head></head>
+
+<div id="id01"></div>
+
+<script>
+var xmlhttp = new XMLHttpRequest();
+var url = "http://nblupo:8080/report";
+
+xmlhttp.onreadystatechange = function() {
+    if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+        var report = JSON.parse(xmlhttp.responseText);
+        myFunction(report);
+    }
+}
+xmlhttp.open("GET", url, true);
+xmlhttp.send();
+
+function myFunction(report) {
+
+    var out = "";
+    var i;
+
+    for(i = 0; i < report.length; i++) {
+        out += report[i].hostname + '<br>';
+        out += report[i].reader.in.data + '<br>';
+        out += report[i].reader.in.databw + '<br>';
+    } 
+    document.getElementById("id01").innerHTML = out;
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Fazia DAQ - control panel</title>
+    <link rel="stylesheet" type="text/css" href="http://w2ui.com/src/w2ui-1.4.2.min.css" />
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.1.0/jquery.min.js"></script>
+    <script type="text/javascript" src="http://w2ui.com/src/w2ui-1.4.2.min.js"></script>
+    <script src="/web/js/highcharts.js"></script>
+    <script src="/web/js/themes/dark-unica.js"></script>
+    <script src="/web/js/modules/exporting.js"></script>
+</head>
+<body>
+
+<div id="layout" style="width: 100%; height: 400px;"></div>
+
+<script type="text/javascript">
+
+   var xmlhttp = new XMLHttpRequest();
+   var url = "http://nblupo:8080/report";  // url from Mongoose ??
+   var report;
+   var pstyle = 'border: 1px solid #dfdfdf; padding: 5px;';
+
+   $('#layout').w2layout({
+       name: 'layout',
+       panels: [
+           { type: 'top', size: 50, style: pstyle, content: 'top' },
+           { type: 'left', size: 200, style: pstyle, content: 'left' },
+           { type: 'main', style: pstyle }
+       ]
+   });
+
+
+   var sbar = {	
+		name: 'sidebar',
+                nodes: [ ]
+              };
+
+   var plot =  {           
+	chart: {
+                type: 'spline',
+                animation: Highcharts.svg, // don't animate in old IE
+                marginRight: 10,
+                events: {
+                    load: function () {
+
+                        // set up the updating of the chart each 2 seconds
+                        var series = this.series[0];
+                        setInterval(function () {
+                            var x = (new Date()).getTime(), // current time
+                                y = report[0].reader.in.databw;
+                            series.addPoint([x, y], true, true);
+                        }, 2000);
+                    }
+                }
+            },
+            renderTo: 'container',
+            credits: {
+               enabled: false
+            },
+            title: {
+                text: 'FzReader data bandwith'
+            },
+            xAxis: {
+                type: 'datetime',
+                tickPixelInterval: 150
+            },
+            yAxis: {
+                title: {
+                    text: 'bytes'
+                },
+                plotLines: [{
+                    value: 0,
+                    width: 1,
+                }]
+            },
+            tooltip: {
+                formatter: function () {
+                    return '<b>' + this.series.name + '</b><br/>' +
+                        Highcharts.dateFormat('%Y-%m-%d %H:%M:%S', this.x) + '<br/>' +
+                        Highcharts.numberFormat(this.y, 2);
+                }
+            },
+            legend: {
+                enabled: false
+            },
+            exporting: {
+                enabled: false 
+            },
+            series: [{
+                name: 'data bandwith (bytes)',
+                color: '#FFFF00',
+                data: (function () {
+                    // generate an array of initial data
+                    var data = [],
+                        time = (new Date()).getTime(),
+                        i;
+                    for (i = -19; i <= 0; i += 1) {
+                        data.push({
+                            x: time + i * 1000,
+                            y: 0
+                        });
+                    }
+                    return data;
+
+                    return data;
+                }())
+            }]
+        };	// end of chart
+
+   w2ui['layout'].load('main', '/web/html/hc-backup.html');
+   w2ui['layout'].content('left', $().w2sidebar(sbar));
+
+   // end
+
+   setInterval(function () {
+      xmlhttp.onreadystatechange = function() {
+         if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+            report = JSON.parse(xmlhttp.responseText);
+         }
+      }
+   
+      // w2ui.sidebar.add({ id: 'new-1', text: 'New Item 1', icon: 'w2ui-icon-check' });
+   
+      xmlhttp.open("GET", url, true);
+      xmlhttp.send();
+   }, 1000);
+
+</script>
+
+</body>
+</html>
