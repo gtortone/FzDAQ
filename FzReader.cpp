@@ -389,7 +389,10 @@ int FzReader::initNet(void) {
    static unsigned int fileno = 0;
 
    static FzRawData chunk;
+   unsigned short int *bufusint;
    unsigned short int value;
+   long int evlen;
+   int offset;
 
    struct iobuf *io = &nc->recv_iobuf;
 
@@ -405,17 +408,25 @@ int FzReader::initNet(void) {
 
       case NS_RECV:
 
-         // temporary solution...
-         for (unsigned int i=4; i<io->len; i = i + 2) {
+         bufusint = reinterpret_cast<unsigned short int*>(io->buf);
+         
+         evlen = ((io->len/2 * 2) == io->len)?io->len/2:io->len/2 + 1;
 
-            // modify FPGA firmware to avoid this...
-            value = (io->buf[i] << 8) + io->buf[i+1];
+         offset = 2;
+         if( (bufusint[0] == 0x8080) || (bufusint[1] == 0x8080) || (bufusint[2] == 0x8080) )
+            offset++;
+
+         for (long int i=offset; i < evlen; i++) {
+
+            value = bufusint[i];
             chunk.push_back(value);
 
             // debug:
             //std::cout << std::setw(4) << std::setfill('0') << std::hex << value << std::endl;
 
             if( (value & REGHDR_FMT) == REGHDR_TAG ) {
+
+               std::cout << "FzReader: end of event" << std::endl;
 
                if(rec) {
 
@@ -443,19 +454,20 @@ int FzReader::initNet(void) {
 
                chunk.clear();
            }                       // end if eoe
-         }         // end for
 
-         report->set_in_bytes( report->in_bytes() + io->len );
+        }	// end for
 
-         // Discard data from recv buffer
-         iobuf_remove(io, io->len);      
+        report->set_in_bytes( report->in_bytes() + io->len );
+
+        // Discard data from recv buffer
+        iobuf_remove(io, io->len);      
   
-         // if total event received data is greater than maximum discard event
-         if(chunk.size() >= MAX_EVENT_SIZE) {
+        // if total event received data is greater than maximum discard event
+        if(chunk.size() >= MAX_EVENT_SIZE) {
  
-            chunk.clear();
-            logreader->error("data discarded due to overcoming maximum event size: %d bytes", MAX_EVENT_SIZE);
-         }
+           chunk.clear();
+           logreader->error("data discarded due to overcoming maximum event size: %d bytes", MAX_EVENT_SIZE);
+        }
 
       break;
 

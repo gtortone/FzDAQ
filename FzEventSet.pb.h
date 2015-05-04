@@ -1329,7 +1329,7 @@ inline ::DAQ::FzData_FzDataType FzData::type() const {
   return static_cast< ::DAQ::FzData_FzDataType >(type_);
 }
 inline void FzData::set_type(::DAQ::FzData_FzDataType value) {
-  assert(::DAQ::FzData_FzDataType_IsValid(value));
+  //assert(::DAQ::FzData_FzDataType_IsValid(value));
   set_has_type();
   type_ = value;
 }
@@ -1454,7 +1454,7 @@ inline ::DAQ::FzHit_FzTelescope FzHit::telid() const {
   return static_cast< ::DAQ::FzHit_FzTelescope >(telid_);
 }
 inline void FzHit::set_telid(::DAQ::FzHit_FzTelescope value) {
-  assert(::DAQ::FzHit_FzTelescope_IsValid(value));
+  //assert(::DAQ::FzHit_FzTelescope_IsValid(value));
   set_has_telid();
   telid_ = value;
 }
@@ -1477,7 +1477,7 @@ inline ::DAQ::FzHit_FzDetector FzHit::detid() const {
   return static_cast< ::DAQ::FzHit_FzDetector >(detid_);
 }
 inline void FzHit::set_detid(::DAQ::FzHit_FzDetector value) {
-  assert(::DAQ::FzHit_FzDetector_IsValid(value));
+  //assert(::DAQ::FzHit_FzDetector_IsValid(value));
   set_has_detid();
   detid_ = value;
 }
@@ -1500,7 +1500,7 @@ inline ::DAQ::FzHit_FzFec FzHit::feeid() const {
   return static_cast< ::DAQ::FzHit_FzFec >(feeid_);
 }
 inline void FzHit::set_feeid(::DAQ::FzHit_FzFec value) {
-  assert(::DAQ::FzHit_FzFec_IsValid(value));
+  //assert(::DAQ::FzHit_FzFec_IsValid(value));
   set_has_feeid();
   feeid_ = value;
 }
@@ -1596,7 +1596,7 @@ inline ::DAQ::FzFee_FzFec FzFee::feeid() const {
   return static_cast< ::DAQ::FzFee_FzFec >(feeid_);
 }
 inline void FzFee::set_feeid(::DAQ::FzFee_FzFec value) {
-  assert(::DAQ::FzFee_FzFec_IsValid(value));
+  //assert(::DAQ::FzFee_FzFec_IsValid(value));
   set_has_feeid();
   feeid_ = value;
 }
