@@ -426,7 +426,7 @@ int FzReader::initNet(void) {
 
             if( (value & REGHDR_FMT) == REGHDR_TAG ) {
 
-               std::cout << "FzReader: end of event" << std::endl;
+               //std::cout << "FzReader: end of event" << std::endl;
 
                if(rec) {
 
