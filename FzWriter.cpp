@@ -239,8 +239,8 @@ void FzWriter::process(void) {
 
                if(retval == false) {
 
-                  std::cout << "FzWriter: parse error - EC: " << std::hex << event.ec() << std::dec << std::endl;
-                  dumpEventOnScreen(&event);
+                  logwriter.warn("FzWriter: parse error - EC: %X", event.ec());
+                  //dumpEventOnScreen(&event);
                }
 
                // to fazia-spy
