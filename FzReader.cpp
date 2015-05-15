@@ -392,6 +392,8 @@ int FzReader::initNet(void) {
    unsigned short int *bufusint;
    unsigned short int value;
    long int evlen;
+   uint32_t seqno;
+   static uint32_t old_seqno;
    int offset;
 
    struct iobuf *io = &nc->recv_iobuf;
@@ -411,6 +413,15 @@ int FzReader::initNet(void) {
          bufusint = reinterpret_cast<unsigned short int*>(io->buf);
          
          evlen = ((io->len/2 * 2) == io->len)?io->len/2:io->len/2 + 1;
+
+         seqno = bufusint[1] + (bufusint[0] << 16);
+
+         if(seqno != old_seqno + 1) {
+
+            logreader->error("FzReader: UDP out of sequence prev: %u - curr: %u", old_seqno, seqno);
+         }
+
+         old_seqno = seqno;
 
          offset = 2;
          if( (bufusint[0] == 0x8080) || (bufusint[1] == 0x8080) || (bufusint[2] == 0x8080) )
@@ -491,7 +502,7 @@ void FzReader::process(void) {
 
             } else if(devname == "net") {
 
-               ns_mgr_poll(&udpserver, 1000);
+               ns_mgr_poll(&udpserver, 5);
             }
  
             boost::this_thread::interruption_point();
