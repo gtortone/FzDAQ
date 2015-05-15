@@ -185,7 +185,7 @@ void FzParser::process(void) {
                   if(retval == false)
                      logparser << WARN << "FzParser: serialization error - EC: " << ev.ec();
 
-                  //writer->send(str.data(), str.size());
+                  writer->send(str.data(), str.size());
 
                   str.clear();
 
