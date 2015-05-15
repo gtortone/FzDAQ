@@ -349,8 +349,6 @@ static int ev_handler(struct mg_connection *conn, enum mg_event ev) {
          filename = uri;
          filename.erase(0,1);
 
-         std::cout << "uri = " << uri << std::endl;
-
          if(uri == "/") {
 
             mg_send_file(conn, "web/html/index.html", s_no_cache_header);
@@ -386,7 +384,6 @@ std::string JsonReport(void) {
    it = map.begin();
    while(it != map.end()) {
 
-      std::cout << i << std::endl;
       i++;
 
       // check if first entry
