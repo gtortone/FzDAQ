@@ -190,8 +190,8 @@ void iobuf_resize(struct iobuf *io, size_t new_size) {
  */
 
 
-#define NS_CTL_MSG_MESSAGE_SIZE     8192
-#define NS_READ_BUFFER_SIZE         2048
+#define NS_CTL_MSG_MESSAGE_SIZE     60000
+#define NS_READ_BUFFER_SIZE         60000
 #define NS_UDP_RECEIVE_BUFFER_SIZE  65000
 #define NS_VPRINTF_BUFFER_SIZE      500
 #define NS_MAX_HOST_LEN             200
