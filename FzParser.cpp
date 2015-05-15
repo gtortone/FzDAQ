@@ -142,6 +142,8 @@ void FzParser::set_status(enum DAQstatus_t val) {
 
 void FzParser::process(void) {
 
+   bool rc = false;
+
    while(true) {
 
       try {    
@@ -150,34 +152,46 @@ void FzParser::process(void) {
 
             zmq::message_t message;
             std::string str;
-            bool rc;
      
-            rc = parser->recv(&message);
+            try {
+
+               rc = parser->recv(&message);
+
+            } catch (zmq::error_t &e) {
+
+                logparser << WARN << "FzParser: error receiving from FzReader: " << e.what ();
+            }
 
             if(rc) {
 
                unsigned short int *bufusint = reinterpret_cast<unsigned short int*>(message.data());
                uint32_t bufsize = message.size() / 2;
+               int retval;
 
                psr_report.set_in_bytes( psr_report.in_bytes() + message.size() );
                psr_report.set_in_events( psr_report.in_events() + 1 );
            
                sm.init();
                sm.import(bufusint, bufsize, &ev);
+               retval = sm.process();
 
                // check if process from FSM is ok...
-               if( (sm.process() == PARSE_OK) && (sm.event_is_empty == false) ) {
+               if( (retval == PARSE_OK) && (sm.event_is_empty == false) ) {
    
                   bool retval;
 
                   retval = ev.SerializeToString(&str);
 
                   if(retval == false)
-                     std::cout << "FzParser: serialization error - EC: " << ev.ec() << std::endl;
+                     logparser << WARN << "FzParser: serialization error - EC: " << ev.ec();
 
-                  writer->send(str.data(), str.size());
+                  //writer->send(str.data(), str.size());
 
                   str.clear();
+
+               } else if (retval == PARSE_FAIL) {
+
+                  logparser << WARN << "FzParser: serialization error - EC: " << ev.ec();
                }
 
                psr_report.set_out_bytes( psr_report.out_bytes() + str.size() );
