@@ -5,6 +5,6 @@ FzDAQ_mt_LDADD = -L/usr/local/lib -lusb-1.0 -lprotobuf -lpthread -lz -lboost_thr
 
 FzController_SOURCES = FzController.cpp FzConfig.cpp FzNodeReport.pb.cpp mongoose.c
 FzController_CXXFLAGS = -std=c++0x -Wall
-FzController_LDADD = -lboost_thread -lboost_system -lboost_program_options -lprotobuf -lzmq -lconfig++ -lpthread
+FzController_LDADD = -L/usr/local/lib -lboost_thread -lboost_system -lboost_program_options -lprotobuf -lzmq -lconfig++ -lpthread
 
 include Makefile.pb
