@@ -10,6 +10,7 @@ space:
 proto: 
 	protoc FzEventSet.proto --cpp_out=.
 	mv FzEventSet.pb.cc FzEventSet.pb.cpp
+	sed -i 's/assert/\/\/assert/' FzEventSet.pb.h
 	protoc FzNodeReport.proto --cpp_out=.
 	mv FzNodeReport.pb.cc FzNodeReport.pb.cpp
 
