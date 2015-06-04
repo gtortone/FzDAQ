@@ -159,6 +159,7 @@ void FzNodeManager::process(void) {
 
             nodereport.set_hostname(hostname);
             nodereport.set_profile(profile);
+            nodereport.set_parser_num(nparsers);
 
             if( (profile == "compute") || (profile == "all") ) {
 
