@@ -9,7 +9,10 @@
 #include "FzConfig.h"
 #include "FzTypedef.h"
 #include "FzNodeReport.pb.h"
+#include "FzHttpPost.h"
 #include "zmq.hpp"
+
+#define WL_SEND_INTERVAL	10	// Weblog report frequency (seconds)
 
 namespace po = boost::program_options;
 
@@ -23,6 +26,11 @@ void httpd(void);
 static int ev_handler(struct mg_connection *conn, enum mg_event ev);
 std::string JsonReport(void);
 
+void weblog(void);
+bool haswl;
+std::string wl_url, wl_user;
+boost::thread *thrwl;
+
 // global vars 
 Report::Node nodereport;
 static double const EXPIRY = 10; 	// seconds
@@ -32,6 +40,7 @@ std::deque<std::pair<std::map<std::string, Report::Node>::iterator, time_t>> deq
 static const char *s_no_cache_header =
   "Cache-Control: max-age=0, post-check=0, "
   "pre-check=0, no-store, no-cache, must-revalidate\r\n";
+
 
 int main(int argc, char *argv[]) {
 
@@ -123,6 +132,8 @@ int main(int argc, char *argv[]) {
    thrmon->join();  
    thrweb->interrupt();
    thrweb->join();
+   thrwl->interrupt();
+   thrwl->join();
    std::cout << " DONE" << std::endl;
    
    context.close();
@@ -222,15 +233,46 @@ void process(std::string cfgfile) {
 
    try {
 
-      //pullmon->connect(ep.c_str());
       pullmon->bind(ep.c_str());
 
    } catch (zmq::error_t &e) {
 
-        //std::cout << ERRTAG << "FzController: failed to connect ZeroMQ endpoint " << ep << ": " << e.what () << std::endl;
         std::cout << ERRTAG << "FzController: failed to bind ZeroMQ endpoint " << ep << ": " << e.what () << std::endl;
         exit(1);
    }
+
+   // parse weblog parameters
+     
+   haswl = false;
+
+   if(hascfg) {
+
+      if(cfg.lookupValue("fzdaq.fzcontroller.weblog.url", wl_url)) {
+
+         haswl = true;
+         std::cout << INFOTAG << "Weblog URL: " << wl_url << std::endl;
+
+      } else {
+
+         std::cout << INFOTAG << "Weblog URL not defined" << std::endl;
+      }
+   }
+
+   if(haswl) {
+
+      if(cfg.lookupValue("fzdaq.fzcontroller.weblog.username", wl_user)) {
+
+         std::cout << INFOTAG << "Weblog username: " << wl_user << std::endl;
+
+      } else {
+
+         std::cout << ERRTAG << "Weblog username not defined" << std::endl;
+         haswl = false;
+      }
+   }   
+
+   if(haswl)
+      thrwl = new boost::thread(weblog); 
 
    while(true) {	// thread loop
 
@@ -241,6 +283,7 @@ void process(std::string cfgfile) {
 
          boost::this_thread::interruption_point();
 
+         // receive protobuf
          rc = pullmon->recv(&repmsg);
 
          if(rc) {
@@ -412,6 +455,58 @@ std::string JsonReport(void) {
         str << " \"ev\": " << rep.reader().out_events() << ", ";
         str << " \"evbw\": " << rep.reader().out_events_bw();
         str << " } } , ";
+
+        str << " \"parser\": [ ";
+        for(unsigned int i=0; i<rep.parser_num();i++) {
+
+           str << " { ";
+           str << " \"in\": { ";
+           str << " \"data\": " << rep.parser(i).in_bytes() <<  ", ";
+           str << " \"databw\": " << rep.parser(i).in_bytes_bw() << ", ";
+           str << " \"ev\": " << rep.parser(i).in_events() << ", ";
+           str << " \"evbw\": " << rep.parser(i).in_events_bw();
+           str << " } , ";
+
+           str << " \"out\": { ";
+           str << " \"data\": " << rep.parser(i).out_bytes() <<  ", ";
+           str << " \"databw\": " << rep.parser(i).out_bytes_bw() << ", ";
+           str << " \"ev\": " << rep.parser(i).out_events() << ", ";
+           str << " \"evbw\": " << rep.parser(i).out_events_bw();
+           str << " } ";
+           str << " } ";
+
+           if(i != rep.parser_num() - 1)
+              str << " ,";
+        }
+        str << " ],";		// end of parsers list
+
+        str << " \"fsm\": [ ";
+        for(unsigned int i=0; i<rep.parser_num();i++) {
+
+           str << " { ";
+           str << " \"state_invalid\": " << rep.fsm(i).state_invalid() << ", ";
+           str << " \"events_empty\": " << rep.fsm(i).events_empty() << ", ";
+           str << " \"events_good\": " << rep.fsm(i).events_good() << ", ";
+           str << " \"events_bad\": " << rep.fsm(i).events_bad() << ", ";
+           str << " \"in\": { ";
+           str << " \"data\": " << rep.fsm(i).in_bytes() <<  ", ";
+           str << " \"databw\": " << rep.fsm(i).in_bytes_bw() << ", ";
+           str << " \"ev\": " << rep.fsm(i).in_events() << ", ";
+           str << " \"evbw\": " << rep.fsm(i).in_events_bw();
+           str << " } , ";
+
+           str << " \"out\": { ";
+           str << " \"data\": " << rep.fsm(i).out_bytes() <<  ", ";
+           str << " \"databw\": " << rep.fsm(i).out_bytes_bw() << ", ";
+           str << " \"ev\": " << rep.fsm(i).out_events() << ", ";
+           str << " \"evbw\": " << rep.fsm(i).out_events_bw();
+           str << " } ";
+           str << " } ";
+
+           if(i != rep.parser_num() - 1)
+              str << " ,";
+        }
+         str << " ]";           // end of fsm list
       }
 
       if(rep.has_writer()) {
@@ -439,4 +534,106 @@ std::string JsonReport(void) {
    str << " ]";   
 
    return(str.str());
+}
+
+void weblog(void) {
+
+   std::map<std::string, Report::Node>::iterator it;
+   Report::Node rep;
+   uint32_t tot_state_invalid, tot_events_empty, tot_events_good, tot_events_bad;
+   bool send = false;
+
+   FZHttpPost post;
+   post.SetServerURL(wl_url);
+   post.SetPHPArrayName("par");
+   post.SetDBUserName(wl_user);
+
+   while(1) {
+
+         try {
+  
+            boost::this_thread::interruption_point();
+
+            send = false;
+            it = map.begin();
+            while(it != map.end()) {
+
+               rep = it->second;
+
+               if(rep.has_reader()) {
+
+                  if(!send) {
+ 
+                     send = true;
+                     post.NewPost();
+                  }                    
+
+                  post.SetDBCategory("daq_reader");
+
+                  post.AddToPost("hostname", rep.hostname());
+                  post.AddToPost("in_data", std::to_string(rep.reader().in_bytes()));
+                  post.AddToPost("in_databw", std::to_string(rep.reader().in_bytes_bw()));
+                  post.AddToPost("in_event", std::to_string(rep.reader().in_events()));
+                  post.AddToPost("in_eventbw", std::to_string(rep.reader().in_events_bw()));
+
+                  tot_state_invalid = tot_events_empty = tot_events_good = tot_events_bad = 0;
+
+                  for(unsigned int i=0; i<rep.parser_num();i++) {
+
+                     tot_state_invalid += rep.fsm(i).state_invalid();
+                     tot_events_empty += rep.fsm(i).events_empty();
+                     tot_events_good += rep.fsm(i).events_good();
+                     tot_events_bad += rep.fsm(i).events_bad();
+                  }
+
+                  post.AddToPost("state_invalid", std::to_string(tot_state_invalid));
+                  post.AddToPost("events_empty", std::to_string(tot_events_empty));
+                  post.AddToPost("events_good", std::to_string(tot_events_good));
+                  post.AddToPost("events_bad", std::to_string(tot_events_bad));
+
+                  post.NewLine();
+               }
+
+               it++;
+            }
+
+            if(send)
+               post.SendPost();
+
+            send = false;
+            it = map.begin();
+            while(it != map.end()) {
+
+               if(rep.has_writer()) {
+
+                  if(!send) {
+ 
+                     send = true;
+                     post.NewPost();
+                  }                    
+ 
+                  post.SetDBCategory("daq_writer");
+
+                  post.AddToPost("hostname", rep.hostname());
+                  post.AddToPost("out_data", std::to_string(rep.writer().out_bytes()));
+                  post.AddToPost("out_databw", std::to_string(rep.writer().out_bytes_bw()));
+                  post.AddToPost("out_event", std::to_string(rep.writer().out_events()));
+                  post.AddToPost("out_eventbw", std::to_string(rep.writer().out_events_bw()));
+
+                  post.NewLine();
+               }
+              
+               it++;
+            }
+
+            if(send)
+               post.SendPost();
+
+            boost::this_thread::sleep(boost::posix_time::seconds(WL_SEND_INTERVAL));
+
+        } catch(boost::thread_interrupted& interruption) {
+
+           break;
+        }
+   }	// end while
 }
