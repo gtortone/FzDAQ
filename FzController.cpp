@@ -12,8 +12,6 @@
 #include "FzHttpPost.h"
 #include "zmq.hpp"
 
-#define WL_SEND_INTERVAL	10	// Weblog report frequency (seconds)
-
 namespace po = boost::program_options;
 
 zmq::context_t context(1);
@@ -29,6 +27,7 @@ std::string JsonReport(void);
 void weblog(void);
 bool haswl;
 std::string wl_url, wl_user;
+int wl_interval;
 boost::thread *thrwl;
 
 // global vars 
@@ -267,6 +266,16 @@ void process(std::string cfgfile) {
       } else {
 
          std::cout << ERRTAG << "Weblog username not defined" << std::endl;
+         haswl = false;
+      }
+
+      if(cfg.lookupValue("fzdaq.fzcontroller.weblog.interval", wl_interval)) {
+
+         std::cout << INFOTAG << "Weblog report time interval: " << wl_interval << " seconds" << std::endl;
+
+      } else {
+
+         std::cout << ERRTAG << "Weblog report time interval not defined" << std::endl;
          haswl = false;
       }
    }   
@@ -629,7 +638,7 @@ void weblog(void) {
             if(send)
                post.SendPost();
 
-            boost::this_thread::sleep(boost::posix_time::seconds(WL_SEND_INTERVAL));
+            boost::this_thread::sleep(boost::posix_time::seconds(wl_interval));
 
         } catch(boost::thread_interrupted& interruption) {
 
