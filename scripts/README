@@ -1,0 +1,12 @@
+- copy fzdaq.default in /etc/default/fazia/fzdaq
+- copy screenrc in /etc
+- copy fzdaq to /etc/init.d/fzdaq
+
+content of /etc/default/fazia:
+
+Fazia-C.db
+Fazia-NM.db
+fzdaq
+log4cpp.properties
+softIoc.dbd
+

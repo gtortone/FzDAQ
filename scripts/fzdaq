@@ -1,0 +1,40 @@
+#!/bin/sh
+
+# FzDAQ start-stop-daemon 
+set -e
+
+export PATH="$PATH:/opt/FzDAQ:/usr/sbin:/sbin"
+
+if test -f /etc/default/fazia/fzdaq; then
+    . /etc/default/fazia/fzdaq
+fi
+
+SCREEN_OPTS=" -d -m -S fzdaq FzDAQ-mt --cfg $CFGFILE --profile $PROFILE"
+
+case "$1" in
+  start)
+        echo -n "Starting FzDAQ: "
+        if pgrep FzDAQ-mt > /dev/null; then
+           echo -n "DAQ instance already exists !"
+        else 
+           /usr/bin/screen $SCREEN_OPTS
+           echo -n "DAQ instance created"
+        fi
+        echo "."
+	;;
+  stop)
+        echo -n "Stopping FzDAQ: "
+        /usr/bin/screen -r fzdaq -X quit
+        echo "."
+	;;
+  status)
+        echo -n "FzDAQ instances: "
+        /usr/bin/screen -list
+        echo "."
+        ;;
+  *)
+	echo "Usage: "$1" {start|stop|status}"
+	exit 1
+esac
+
+exit 0
