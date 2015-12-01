@@ -1,0 +1,257 @@
+# Run Control FSM
+# for central FzController
+
+record(bo,"DAQ:RC:mode") {
+  field(SCAN,"Passive")
+  field(DTYP,"Soft Channel")
+  field(ZNAM,"unlock")
+  field(ONAM,"lock")
+  field(OMSL, "supervisory")
+  field(PINI,"YES")
+  field(VAL,"1")
+}
+
+record(bo,"DAQ:RC:configure") {
+  field(SCAN,"Passive")
+  field(DTYP,"Soft Channel")
+  field(HIGH,"1")
+  field(PINI,"YES")
+  field(VAL,"0")
+}
+
+record(bo,"DAQ:RC:start") {
+  field(SCAN,"Passive")
+  field(DTYP,"Soft Channel")
+  field(HIGH,"1")
+  field(PINI,"YES")
+  field(VAL,"0")
+}
+
+record(bo,"DAQ:RC:stop") {
+  field(SCAN,"Passive")
+  field(DTYP,"Soft Channel")
+  field(HIGH,"1")
+  field(PINI,"YES")
+  field(VAL,"0")
+}
+
+record(bo,"DAQ:RC:reset") {
+  field(SCAN,"Passive")
+  field(DTYP,"Soft Channel")
+  field(HIGH,"1")
+  field(PINI,"YES")
+  field(VAL,"0")
+}
+
+record(mbbo, "DAQ:RC:state") {
+  field(SCAN,"Passive")
+  field(DTYP,"Soft Channel")
+  field(ZRST,"IDLE")
+  field(ONST,"READY")
+  field(TWST,"RUNNING")
+  field(THST,"PAUSED")
+  field(DISP,"1")
+  field(PINI,"YES")
+  field(VAL,"0")
+}
+
+record(mbbo, "DAQ:RC:transition") {
+  field(SCAN,"Passive")
+  field(DTYP,"Soft Channel")
+  field(ZRST,"ERROR")
+  field(ONST,"OK")
+  field(PINI,"YES")
+  field(DISP,"1")
+  field(PINI,"YES")
+  field(VAL,"1")
+}
+
+record(stringout, "DAQ:nodelist") {
+  field(SCAN,"Passive")
+  field(DTYP,"Soft Channel")
+  field(PINI,"YES")
+  field(VAL,"")
+}
+
+#
+# FzReader IN data flow
+#
+
+record(ao, "DAQ:reader:in:data") {
+  field(SCAN,"Passive")
+  field(DTYP,"Soft Channel")
+  field(PINI,"YES")
+  field(VAL,"0")
+}
+
+record(ao, "DAQ:reader:in:databw") {
+  field(SCAN,"Passive")
+  field(DTYP,"Soft Channel")
+  field(PINI,"YES")
+  field(EGU,"Mbit/s")
+  field(LOPR,"0")
+  field(HOPR,"1000")
+  field(VAL,"0")
+}
+
+record(ao, "DAQ:reader:in:ev") {
+  field(SCAN,"Passive")
+  field(DTYP,"Soft Channel")
+  field(EGU,"ev")
+  field(PINI,"YES")
+  field(VAL,"0")
+}
+
+record(ao, "DAQ:reader:in:evbw") {
+  field(SCAN,"Passive")
+  field(DTYP,"Soft Channel")
+  field(EGU,"ev/s")
+  field(PINI,"YES")
+  field(VAL,"0")
+}
+
+#
+# FzReader OUT data flow
+#
+
+record(ao, "DAQ:reader:out:data") {
+  field(SCAN,"Passive")
+  field(DTYP,"Soft Channel")
+  field(PINI,"YES")
+  field(VAL,"0")
+}
+
+record(ao, "DAQ:reader:out:databw") {
+  field(SCAN,"Passive")
+  field(DTYP,"Soft Channel")
+  field(PINI,"YES")
+  field(EGU,"Mbit/s")
+  field(LOPR,"0")
+  field(HOPR,"1000")
+  field(VAL,"0")
+}
+
+record(ao, "DAQ:reader:out:ev") {
+  field(SCAN,"Passive")
+  field(DTYP,"Soft Channel")
+  field(EGU,"ev")
+  field(PINI,"YES")
+  field(VAL,"0")
+}
+
+record(ao, "DAQ:reader:out:evbw") {
+  field(SCAN,"Passive")
+  field(DTYP,"Soft Channel")
+  field(EGU,"ev/s")
+  field(PINI,"YES")
+  field(VAL,"0")
+}
+
+#
+# FzFSM cumulative status report
+#
+
+record(ao, "DAQ:fsm:states:invalid") {
+  field(SCAN,"Passive")
+  field(DTYP,"Soft Channel")
+  field(PINI,"YES")
+  field(VAL,"0")
+}
+
+record(ao, "DAQ:fsm:events:empty") {
+  field(SCAN,"Passive")
+  field(DTYP,"Soft Channel")
+  field(EGU,"ev")
+  field(PINI,"YES")
+  field(VAL,"0")
+}
+
+record(ao, "DAQ:fsm:events:good") {
+  field(SCAN,"Passive")
+  field(DTYP,"Soft Channel")
+  field(EGU,"ev")
+  field(PINI,"YES")
+  field(VAL,"0")
+}
+
+record(ao, "DAQ:fsm:events:bad") {
+  field(SCAN,"Passive")
+  field(DTYP,"Soft Channel")
+  field(EGU,"ev")
+  field(PINI,"YES")
+  field(VAL,"0")
+}
+
+#
+# FzWriter IN data flow
+# 
+
+record(ao, "DAQ:writer:in:data") {
+  field(SCAN,"Passive")
+  field(DTYP,"Soft Channel")
+  field(PINI,"YES")
+  field(VAL,"0")
+}
+
+record(ao, "DAQ:writer:in:databw") {
+  field(SCAN,"Passive")
+  field(DTYP,"Soft Channel")
+  field(PINI,"YES")
+  field(EGU,"Mbit/s")
+  field(LOPR,"0")
+  field(HOPR,"10000")	# 10 Gbit/s interface
+  field(VAL,"0")
+}
+
+record(ao, "DAQ:writer:in:ev") {
+  field(SCAN,"Passive")
+  field(DTYP,"Soft Channel")
+  field(EGU,"ev")
+  field(PINI,"YES")
+  field(VAL,"0")
+}
+
+record(ao, "DAQ:writer:in:evbw") {
+  field(SCAN,"Passive")
+  field(DTYP,"Soft Channel")
+  field(EGU,"ev/s")
+  field(PINI,"YES")
+  field(VAL,"0")
+}
+
+#
+# FzWriter OUT data flow
+# 
+
+record(ao, "DAQ:writer:out:data") {
+  field(SCAN,"Passive")
+  field(DTYP,"Soft Channel")
+  field(PINI,"YES")
+  field(VAL,"0")
+}
+
+record(ao, "DAQ:writer:out:databw") {
+  field(SCAN,"Passive")
+  field(DTYP,"Soft Channel")
+  field(PINI,"YES")
+  field(EGU,"Mbyte/s")
+  field(LOPR,"0")
+  field(HOPR,"500")	# 500 Mbyte/s RAID disk
+  field(VAL,"0")
+}
+
+record(ao, "DAQ:writer:out:ev") {
+  field(SCAN,"Passive")
+  field(DTYP,"Soft Channel")
+  field(EGU,"ev")
+  field(PINI,"YES")
+  field(VAL,"0")
+}
+
+record(ao, "DAQ:writer:out:evbw") {
+  field(SCAN,"Passive")
+  field(DTYP,"Soft Channel")
+  field(EGU,"ev/s")
+  field(PINI,"YES")
+  field(VAL,"0")
+}
