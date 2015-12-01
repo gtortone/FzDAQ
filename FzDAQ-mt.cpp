@@ -2,7 +2,6 @@
 
 #include "boost/program_options.hpp"
 #include "boost/thread.hpp"
-#include <log4cpp/PropertyConfigurator.hh>
 
 #include <google/protobuf/io/zero_copy_stream_impl.h>
 #include "FzEventSet.pb.h"
@@ -15,6 +14,7 @@
 #include "FzReader.h"
 #include "FzParser.h"
 #include "FzWriter.h"
+#include "FzJMS.h"
 #include "zmq.hpp"
 
 namespace po = boost::program_options;
@@ -41,22 +41,20 @@ int main(int argc, char *argv[]) {
    std::string profile;
    std::string netdev, devip;
    unsigned int port;
+   std::string brokerURI;
 
-   FzReader *rd;
+   FzReader *rd = NULL;
    std::vector<FzParser *> psr_array;	// vector of (Fzparser *)
-   FzWriter *wr;
-   FzNodeManager *mon;
+   FzWriter *wr = NULL;
+   FzNodeManager *nm;
 
    Report::Node nodereport;
 
    bool rec = false;
-   DAQstatus_t DAQstatus = STOP;
 
-   log4cpp::Priority::Value logparser_prio;
-
-   // configure log 
-   log4cpp::PropertyConfigurator::configure("log4cpp.properties");
-   logparser_prio = log4cpp::Category::getInstance(std::string("fzparser")).getChainedPriority();
+   activemq::core::ActiveMQConnectionFactory JMSfactory;
+   //std::shared_ptr<cms::Connection> JMSconn;
+   cms::Connection *JMSconn = NULL;
 
    // handling of command line parameters
    po::options_description desc("\nFzDAQ - allowed options", 100);
@@ -151,6 +149,32 @@ int main(int argc, char *argv[]) {
         - configuration file
         - default value
    */
+
+   // configure ActiveMQ JMS log
+   if(cfg.lookupValue("fzdaq.global.log.url", brokerURI)) {
+
+      std::cout << INFOTAG << "FzDAQ global logging URI: " << brokerURI << "\t[cfg file]" << std::endl;
+
+      activemq::library::ActiveMQCPP::initializeLibrary();
+      JMSfactory.setBrokerURI(brokerURI);
+
+      try {
+ 
+        JMSconn = JMSfactory.createConnection();
+
+      } catch (cms::CMSException e) {
+
+        std::cout << ERRTAG << "log server error" << std::endl; 
+        JMSconn = NULL;
+        //activemq::library::ActiveMQCPP::shutdownLibrary();
+      } 
+   } 
+
+   if(JMSconn) {
+    
+      JMSconn->start();
+      std::cout << INFOTAG << "log server connection successfully" << std::endl;
+   }
 
    std::cout << INFOTAG << "FzDAQ profile selected: " << profile << std::endl;
 
@@ -354,21 +378,19 @@ int main(int argc, char *argv[]) {
    if(iscompute) {
 
       // create FzReader thread
-      rd = new FzReader(devname, neturl, cfgfile, context);
+      rd = new FzReader(devname, neturl, cfgfile, context, JMSconn);
 
       if(!rd) {
          std::cout << ERRTAG << "FzReader: thread allocation failed" << std::endl;
          exit(1);
       }
 
-      rd->set_status(STOP);
-
       std::cout << INFOTAG << "FzReader: thread ready" << std::endl;
 
       // create FzParser threads pool
       for(i=0; i < nthreads; i++) {
 
-         psr_array.push_back(new FzParser(i, logparser_prio, cfgfile, context));
+         psr_array.push_back(new FzParser(i, cfgfile, context, JMSconn));
 
          if(!psr_array[i]) {
 
@@ -377,7 +399,6 @@ int main(int argc, char *argv[]) {
          }
 
          psr_array[i]->init();
-         psr_array[i]->set_status(STOP);
       }
 
       std::cout << INFOTAG << "FzParser: threads ready" << std::endl;
@@ -386,7 +407,7 @@ int main(int argc, char *argv[]) {
    if(isstorage) {
 
       // create FzWriter thread 
-      wr = new FzWriter(subdir, runtag, runid, subid, cfgfile, context);
+      wr = new FzWriter(subdir, runtag, runid, subid, cfgfile, context, JMSconn);
 
       if(!wr) {
          std::cout << ERRTAG << "FzWriter: thread allocation failed" << std::endl;
@@ -406,22 +427,19 @@ int main(int argc, char *argv[]) {
          exit(1);
       }
 
-      wr->set_status(STOP);
-
       std::cout << INFOTAG << "FzWriter: thread ready" << std::endl;
    }
 
    // create FzNodeManager thread
 
-   mon = new FzNodeManager(rd, psr_array, wr, cfgfile, profile, context);
+   nm = new FzNodeManager(rd, psr_array, wr, cfgfile, profile, context, JMSconn);
 
-   if(!mon) {
+   if(!nm) {
       std::cout << ERRTAG << "FzNodeManager: thread allocation failed" << std::endl;
       exit(1);
    }
 
-   mon->init();
-   mon->set_status(START);
+   nm->init();
 
    std::cout << INFOTAG << "FzNodeManager: thread ready" << std::endl;
 
@@ -434,6 +452,8 @@ int main(int argc, char *argv[]) {
    std::cout << std::endl;  
 
    std::string line, lastcmd;
+   RCtransition rcerr;
+
    for ( ; std::cout << "FzDAQ > " && std::getline(std::cin, line); ) {
         if (!line.empty()) { 
 
@@ -445,8 +465,10 @@ int main(int argc, char *argv[]) {
               std::cout << std::endl;
               std::cout << "help:   \tprint usage" << std::endl;
               std::cout << "status: \tprint acquisition status" << std::endl;
-              std::cout << "start:  \tstart acquisition" << std::endl;
+              std::cout << "configure:  \tconfigure acquisition" << std::endl;
+              std::cout << "start:  \tconfigure and start acquisition" << std::endl;
               std::cout << "stop:   \tstop acquisition" << std::endl;
+              std::cout << "reset:   \treset acquisition" << std::endl;
               std::cout << "stats:  \tprint event data acquisition statistics" << std::endl;
               std::cout << "r:      \trepeat last command" << std::endl;
               std::cout << "rec:    \trecord raw data to files" << std::endl;
@@ -455,63 +477,61 @@ int main(int argc, char *argv[]) {
            }
 
            if(!line.compare("status")) {
-              std::cout << "current DAQ status: " << state_labels[DAQstatus] << std::endl;
+              std::cout << "current DAQ status: " << state_labels[nm->rc_state()] << std::endl;
               //std::cout << "file eventset max size: " << esize/1000000 << " MB" << std::endl;
               //std::cout << "directory eventset max size: " << dsize/1000000 << " MB" << std::endl;
            }
 
+           if(!line.compare("configure")) {
+
+              rcerr = nm->rc_process(configure);
+ 
+              if(rcerr == RCOK)
+                 std::cout << INFOTAG << "Fazia DAQ configured" << std::endl;
+              else
+                 std::cout << ERRTAG << "configure RC command failed" << std::endl;
+           }
+
            if(!line.compare("start")) {
 
-              if(iscompute) {
+              // to simplify start
+              rcerr = nm->rc_process(configure);
+              rcerr = nm->rc_process(start);
 
-                 std::cout << "sending start to FzReader and " << nthreads << "xFzParser" << std::endl;
-                 rd->set_status(START);
- 
-                 for(i=0; i < nthreads; i++)
-                    psr_array[i]->set_status(START);
-              }
- 
-              if(isstorage) {
-
-                 std::cout << "sending start to FzWriter" << std::endl;
-                 wr->set_status(START);
-              }
-
-              DAQstatus = START;
+              if(rcerr == RCOK)
+                 std::cout << INFOTAG << "Fazia DAQ configured and started" << std::endl;
+              else
+                 std::cout << ERRTAG << "configure/start RC command failed" << std::endl;
            }
 
            if(!line.compare("stop")) {
 
-              if(iscompute) {
-
-                 std::cout << "sending stop to FzReader and " << nthreads << "xFzParser" << std::endl;
-                 rd->set_status(STOP);
-
-                 for(i=0; i < nthreads; i++)
-                    psr_array[i]->set_status(STOP);
-              }
-
-              if(isstorage) {
-
-                 std::cout << "sending stop to FzWriter" << std::endl;
-                 wr->set_status(STOP);
-              }
-
-              DAQstatus = STOP;
+              rcerr = nm->rc_process(stop);
+        
+              if(rcerr == RCOK)
+                 std::cout << INFOTAG << "Fazia DAQ stopped" << std::endl;
+              else
+                 std::cout << ERRTAG << "stop RC command failed" << std::endl;
            }
 
-          if(!line.compare("stats")) {
+           if(!line.compare("reset")) {
+
+              nm->rc_process(reset);
+              std::cout << INFOTAG << "Fazia DAQ reset" << std::endl;
+           }
+
+           if(!line.compare("stats")) {
 
               std::stringstream in_evbw, out_evbw, in_databw, out_databw;
 
-              if(!mon->has_data()) {
+              if(!nm->has_data()) {
 
                  std::cout << "FzNodeManager is collecting statistics... try later" << std::endl;
                  lastcmd = line;
                  continue;
               }
 
-              nodereport = mon->get_nodereport(); 
+              nodereport = nm->get_nodereport(); 
               std::cout << std::endl;
 
               if(iscompute) {
@@ -545,16 +565,24 @@ int main(int argc, char *argv[]) {
 
                  in_evbw << rd_report.in_events_bw() << " ev/s";
                  in_databw << human_byte(rd_report.in_bytes_bw()) << "/s"; // << " (" << human_bit(rd_report.in_bytes_bw() * 8) << "/s)";
+                 out_evbw << rd_report.out_events_bw() << " ev/s";
+                 out_databw << human_byte(rd_report.out_bytes_bw()) << "/s"; // << " (" << human_bit(rd_report.out_bytes_bw() * 8) << "/s)";
 
                  std::cout << std::left << std::setw(15) << "FzReader" <<
 			std::setw(15) << std::right << rd_report.in_events() <<
 			std::setw(15) << std::right << in_evbw.str() <<
 			std::setw(15) << std::right << human_byte(rd_report.in_bytes()) <<
 			std::setw(15) << std::right << in_databw.str() <<
+                        std::setw(15) << std::right << rd_report.out_events() <<
+                        std::setw(15) << std::right << out_evbw.str() <<
+                        std::setw(15) << std::right << human_byte(rd_report.out_bytes()) <<
+                        std::setw(15) << std::right << out_databw.str() <<
 		 std::endl;
 
                  in_evbw.str("");
                  in_databw.str("");
+                 out_evbw.str("");
+                 out_databw.str("");
  
 		 std::cout << "---" << std::endl;
 
@@ -664,7 +692,6 @@ int main(int argc, char *argv[]) {
            }
 
            if(!line.compare("quit")) {
-              DAQstatus = QUIT;
               break;
            }
 
@@ -673,20 +700,17 @@ int main(int argc, char *argv[]) {
     }
 
    std::cout << INFOTAG << "FzNodeManager: closing thread: \t";
-   mon->close();
+   nm->close();
+   nm->rc_process(stop);
    std::cout << " DONE" << std::endl;
 
    if(iscompute) {
    
       std::cout << INFOTAG << "FzReader: closing thread: \t";
-      rd->set_status(STOP);
       rd->close();
       std::cout << " DONE" << std::endl;
 
       std::cout << INFOTAG << "FzParser: closing threads: \t";
-      for(i=0; i < nthreads; i++) {		// STOP and CLOSE each FzParser to do a fast exit
-         psr_array[i]->set_status(STOP);
-      }
       for(i=0; i < nthreads; i++) {
          psr_array[i]->close();
       }
@@ -696,7 +720,6 @@ int main(int argc, char *argv[]) {
    if(isstorage) {
 
       std::cout << INFOTAG << "FzWriter: closing thread: \t";
-      wr->set_status(STOP);
       wr->close();
       std::cout << " DONE" << std::endl; 
    }

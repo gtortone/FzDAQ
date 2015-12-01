@@ -52,8 +52,8 @@ int FZHttpPost::fMaxPHP = 1000;
 // it is currently 2: corresponding to the 'user' and 'category' fields
 int FZHttpPost::fNHdrElements = 2;
 
-static size_t write_data(void *buffer, size_t size, size_t nmemb, void *userp) {
-   return size * nmemb;
+/* static */ size_t write_data(void *buffer, size_t size, size_t nmemb, void *userp) {
+   return size *nmemb;
 }
 
 void FZHttpPost::AddKeyValuePair(const std::string& key, const std::string& value)
@@ -80,6 +80,9 @@ FZHttpPost::FZHttpPost()
    curl_global_init(CURL_GLOBAL_ALL);
    fCURL = curl_easy_init();
    curl_easy_setopt(fCURL, CURLOPT_WRITEFUNCTION, write_data);
+
+   // disable console output
+   curl_easy_setopt(fCURL, CURLOPT_VERBOSE, 0L);
    formpost=lastptr=NULL;
 }
 
@@ -274,9 +277,11 @@ void FZHttpPost::SendPost()
    //std::cout << "Sending " << fLineNumber+1 << "lines (" << fPostPairs << " key-value pairs) to server" << std::endl;
 
    curl_easy_setopt(fCURL, CURLOPT_HTTPPOST, formpost);
-   CURLcode res = curl_easy_perform(fCURL);
+   /* CURLcode res = */ curl_easy_perform(fCURL);
+/*
    if (res != CURLE_OK)
       std::cout << "curl_easy_perform() failed: " << curl_easy_strerror(res);
+*/
    curl_formfree(formpost);
    formpost = lastptr = NULL;
 

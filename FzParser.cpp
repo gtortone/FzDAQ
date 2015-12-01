@@ -2,8 +2,20 @@
 #include "FzProtobuf.h"
 #include "FzLogger.h"
 
-FzParser::FzParser(unsigned int id, log4cpp::Priority::Value log_priority, std::string cfgfile, zmq::context_t &ctx) :
-   context(ctx), logparser(log4cpp::Category::getInstance("fzparser" + id)) {
+FzParser::FzParser(unsigned int id, std::string cfgfile, zmq::context_t &ctx, cms::Connection *JMSconn) :
+   context(ctx), AMQconn(JMSconn) {
+
+   std::stringstream filename, msg;
+   filename << "/var/log/fzdaq/fzparser.log." << id;
+
+   log.setFileConnection("fzparser", filename.str());
+
+   if(AMQconn.get()) {
+
+      msg << "FzParser." << id;
+      log.setJMSConnection(msg.str(), JMSconn);
+      msg.str("");
+   }
 
    if(!cfgfile.empty()) {
 
@@ -12,21 +24,11 @@ FzParser::FzParser(unsigned int id, log4cpp::Priority::Value log_priority, std::
 
    } else hascfg = false;
 
-   std::stringstream filename;
+   msg << "thread " << id << " allocated";
+   log.write(INFO, msg.str());
+   msg.str("");
 
-   filename << "logs/fzparser.log." << id;
-   appender = new log4cpp::FileAppender("fzparser" + id, filename.str());
-   layout = new log4cpp::PatternLayout();
-   layout->setConversionPattern("%d [%p] %m%n");
-   appender->setLayout(layout);
-   appender->setThreshold(log_priority);
-   logparser.addAppender(appender);
-
-   logparser.setAdditivity(false);
-
-   logparser << INFO << "FzParser::constructor - success";
-
-   sm.initlog(&logparser);
+   sm.initlog(&log);
    sm.init();
 
    std::string ep;
@@ -114,9 +116,9 @@ FzParser::FzParser(unsigned int id, log4cpp::Priority::Value log_priority, std::
    }
 
    thread_init = false;
-   status = STOP;
+   rcstate = IDLE;
 
-   logparser << INFO << "FzParser - state machine started";
+   log.write(INFO, "state machine started");
 
    psr_report.Clear();
 };
@@ -135,11 +137,6 @@ void FzParser::init(void) {
    }
 }
 
-void FzParser::set_status(enum DAQstatus_t val) {
-
-   status = val;
-}
-
 void FzParser::process(void) {
 
    bool rc = false;
@@ -148,7 +145,7 @@ void FzParser::process(void) {
 
       try {    
 
-         if(status == START) {
+         if(rcstate == RUNNING) {
 
             zmq::message_t message;
             std::string str;
@@ -158,8 +155,10 @@ void FzParser::process(void) {
                rc = parser->recv(&message);
 
             } catch (zmq::error_t &e) {
-
-                logparser << WARN << "FzParser: error receiving from FzReader: " << e.what ();
+                 
+                std::stringstream msg;
+                msg << "error receiving from FzReader: " << e.what ();
+                log.write(WARN, msg.str());
             }
 
             if(rc) {
@@ -182,27 +181,33 @@ void FzParser::process(void) {
 
                   retval = ev.SerializeToString(&str);
 
-                  if(retval == false)
-                     logparser << WARN << "FzParser: serialization error - EC: " << ev.ec();
+                  if(retval == false) {
+ 
+                     std::stringstream msg;
+                     msg << "serialization error - EC: " << std::hex << ev.ec();
+                     log.write(WARN, msg.str());
+                  }
 
                   writer->send(str.data(), str.size());
+
+                  psr_report.set_out_bytes( psr_report.out_bytes() + str.size() );
+                  psr_report.set_out_events( psr_report.out_events() + 1 );
 
                   str.clear();
 
                } else if (retval == PARSE_FAIL) {
 
-                  logparser << WARN << "FzParser: serialization error - EC: " << ev.ec();
+                  std::stringstream msg;
+                  msg << "serialization error - EC: " << std::hex << ev.ec();
+                  log.write(WARN, msg.str());
                }
-
-               psr_report.set_out_bytes( psr_report.out_bytes() + str.size() );
-               psr_report.set_out_events( psr_report.out_events() + 1 );
 
                ev.Clear();
             }
 
             boost::this_thread::interruption_point();
 
-         } else if (status == STOP) {
+         } else {
 
               boost::this_thread::sleep(boost::posix_time::seconds(1));
               boost::this_thread::interruption_point();
@@ -228,3 +233,14 @@ Report::FzParser FzParser::get_report(void) {
 Report::FzFSM FzParser::get_fsm_report(void) {
    return(sm.get_report());
 }
+
+void FzParser::rc_do(RCcommand cmd) {
+
+}
+
+void FzParser::set_rcstate(RCstate s) {
+
+   rcstate = s;
+
+}
+

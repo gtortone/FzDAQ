@@ -1,10 +1,6 @@
 #ifndef FZREADER_H_
 #define FZREADER_H_
 
-#include "log4cpp/Appender.hh"
-#include <log4cpp/PatternLayout.hh>
-#include "log4cpp/FileAppender.hh"
-#include <log4cpp/PropertyConfigurator.hh>
 #include "boost/thread.hpp"
 
 #include "FzConfig.h"
@@ -13,6 +9,9 @@
 #include "FzNodeReport.pb.h"
 #include "zmq.hpp"
 #include "fossa.h"
+#include "FzJMS.h"
+#include "FzLogger.h"
+#include "FzTypedef.h"
 
 #define CYPRESS_VID     0x04B4
 #define CYPRESS_PID     0x8613 
@@ -26,7 +25,7 @@
 
 struct _cb_data {
 
-   log4cpp::Category *logreader_ptr;
+   FzLogger *log_ptr;
    zmq::socket_t *reader_ptr;
    Report::FzReader *report_ptr;
    bool rec;
@@ -46,6 +45,8 @@ private:
    zmq::context_t &context;
    zmq::socket_t *reader;
 
+   RCstate rcstate;
+
    libusb_device_handle *usbh;
    libusb_context *ctx;
    libusb_transfer *xfr;
@@ -54,15 +55,12 @@ private:
 
    struct _cb_data cb_data;
 
-   log4cpp::Category &logreader;
-   log4cpp::Appender *appender;
-   log4cpp::PatternLayout *layout;
+   FzLogger log;
+   std::unique_ptr<cms::Connection> AMQconn;
 
    struct ns_mgr udpserver;
 
    Report::FzReader report;
-
-   DAQstatus_t status;
 
    int setupUsb(void);
    int setupNet(void);
@@ -77,14 +75,15 @@ private:
 
 public:
 
-   FzReader(std::string dname, std::string nurl, std::string cfgfile, zmq::context_t &ctx);
+   FzReader(std::string dname, std::string nurl, std::string cfgfile, zmq::context_t &ctx, cms::Connection *JMSconn);
 
    int setup(void);
    int init(void);
    void close(void);
    void record(bool val);
 
-   void set_status(enum DAQstatus_t val);
+   void rc_do(RCcommand cmd);
+   void set_rcstate(RCstate s);
 
    Report::FzReader get_report(void); 
 

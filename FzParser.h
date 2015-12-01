@@ -5,12 +5,6 @@
 
 #include <boost/thread.hpp>
 
-#include <log4cpp/Category.hh>
-#include "log4cpp/Appender.hh"
-#include <log4cpp/PatternLayout.hh>
-#include "log4cpp/FileAppender.hh"
-#include <log4cpp/PropertyConfigurator.hh>
-
 #include "FzConfig.h"
 #include "FzTypedef.h"
 #include "FzFSM.h"
@@ -18,6 +12,9 @@
 #include "FzLogger.h"
 #include "FzNodeReport.pb.h"
 #include "zmq.hpp"
+#include "FzJMS.h"
+#include "FzLogger.h"
+#include "FzTypedef.h" 
 
 class FzParser {
 
@@ -33,25 +30,27 @@ private:
    zmq::socket_t *parser;
    zmq::socket_t *writer;
 
+   RCstate rcstate;
+
    FzFSM sm;
    DAQ::FzEvent ev;
-   log4cpp::Appender *appender;
-   log4cpp::PatternLayout *layout;
  
-   Report::FzParser psr_report;
+   FzLogger log;
+   std::unique_ptr<cms::Connection> AMQconn;
 
-   DAQstatus_t status;
+   Report::FzParser psr_report;
 
    void process(void);
 
 public:
-   log4cpp::Category &logparser;
 
-   FzParser(unsigned int id, log4cpp::Priority::Value log_priority, std::string cfgfile, zmq::context_t &ctx);
+   FzParser(unsigned int id, std::string cfgfile, zmq::context_t &ctx, cms::Connection *JMSconn);
 
    void init(void);
    void close(void);
-   void set_status(enum DAQstatus_t val);
+
+   void rc_do(RCcommand cmd);
+   void set_rcstate(RCstate s);
 
    Report::FzParser get_report(void);
    Report::FzFSM get_fsm_report(void);

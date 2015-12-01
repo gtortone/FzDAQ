@@ -4,13 +4,33 @@
 #include <sys/stat.h>
 #include "boost/program_options.hpp"
 #include "boost/thread.hpp"
-#include "mongoose.h"
+
+#include "epicsThread.h"
+#include "epicsExit.h"
+#include "epicsStdio.h"
+#include "dbStaticLib.h"
+#include "subRecord.h"
+#include "dbAccess.h"
+#include "asDbLib.h"
+#include "iocInit.h"
+#include "iocsh.h"
+#include "cadef.h"
 
 #include "FzConfig.h"
 #include "FzTypedef.h"
 #include "FzNodeReport.pb.h"
 #include "FzHttpPost.h"
+#include "FzEpics.h"
 #include "zmq.hpp"
+#include "RCFSM.h"
+#include "FzJMS.h"
+#include "FzLogger.h"
+#include "FzUtils.h"
+
+#define DBD_FILE "/etc/default/fazia/softIoc.dbd"
+#define DB_FILE  "/etc/default/fazia/Fazia-C.db"
+
+extern "C" int softIoc_registerRecordDeviceDriver(struct dbBase *pdbbase);
 
 namespace po = boost::program_options;
 
@@ -19,10 +39,6 @@ zmq::context_t context(1);
 void process(std::string cfgfile);
 bool map_insert(std::string const &k, Report::Node const &v);
 void map_clean(void);
-
-void httpd(void);
-static int ev_handler(struct mg_connection *conn, enum mg_event ev);
-std::string JsonReport(void);
 
 void weblog(void);
 bool haswl;
@@ -36,17 +52,29 @@ static double const EXPIRY = 10; 	// seconds
 std::map<std::string, Report::Node> map;
 std::deque<std::pair<std::map<std::string, Report::Node>::iterator, time_t>> deque;
 
-static const char *s_no_cache_header =
-  "Cache-Control: max-age=0, post-check=0, "
-  "pre-check=0, no-store, no-cache, must-revalidate\r\n";
+RCFSM rc;
+void epics_ioc(void);
+static void rc_configure_cb(struct event_handler_args eha);
+static void rc_start_cb(struct event_handler_args eha);
+static void rc_stop_cb(struct event_handler_args eha);
+static void rc_reset_cb(struct event_handler_args eha);
+void rc_do(RCcommand cmd);
+void update_stats_ioc(void);
 
+FzLogger clog;
+boost::mutex logmtx;
 
 int main(int argc, char *argv[]) {
 
    libconfig::Config cfg;
    std::string cfgfile = "";
 
-   boost::thread *thrmon, *thrweb;
+   activemq::core::ActiveMQConnectionFactory JMSfactory;
+   std::shared_ptr<cms::Connection> JMSconn;
+   std::string brokerURI;
+
+   boost::thread *thrmon;
+   boost::thread *ioc;
 
    // handling of command line parameters
    po::options_description desc("\nFzController - allowed options", 100);
@@ -90,8 +118,35 @@ int main(int argc, char *argv[]) {
       }
    }
 
+   // configure ActiveMQ JMS log
+   if(cfg.lookupValue("fzdaq.global.log.url", brokerURI)) {
+
+      std::cout << INFOTAG << "FzDAQ global logging URI: " << brokerURI << "\t[cfg file]" << std::endl;
+
+      activemq::library::ActiveMQCPP::initializeLibrary();
+      JMSfactory.setBrokerURI(brokerURI);
+
+      try {
+
+        JMSconn.reset(JMSfactory.createConnection());
+
+      } catch (cms::CMSException e) {
+
+        std::cout << ERRTAG << "log server error: " << e.what() << std::endl;
+        JMSconn.reset();
+        //activemq::library::ActiveMQCPP::shutdownLibrary();
+      }
+   }
+
+   if(JMSconn.get()) {
+
+      JMSconn->start();
+      std::cout << INFOTAG << "log server connection successfully" << std::endl;
+      clog.setJMSConnection("FzController", JMSconn.get());
+   }
+
    thrmon = new boost::thread(process, cfgfile);
-   thrweb = new boost::thread(httpd); 
+   ioc = new boost::thread(epics_ioc);
 
    std::cout << INFOTAG << "FzController: service ready" << std::endl;
    sleep(1);
@@ -127,10 +182,10 @@ int main(int argc, char *argv[]) {
    }
 
    std::cout << INFOTAG << "FzController: closing threads: \t";
+   ioc->interrupt();
+   ioc->join();
    thrmon->interrupt();
    thrmon->join();  
-   thrweb->interrupt();
-   thrweb->join();
    thrwl->interrupt();
    thrwl->join();
    std::cout << " DONE" << std::endl;
@@ -142,12 +197,16 @@ int main(int argc, char *argv[]) {
    return(0);
 }
 
+//
+// Monitoring report thread
+//
+
 void process(std::string cfgfile) {
 
    libconfig::Config cfg;
    bool hascfg;
 
-   zmq::socket_t *pubrc;        // publish socket for run control messages
+
    zmq::socket_t *pullmon;      // pull socket for monitoring reports
    std::string ep;
 
@@ -158,45 +217,6 @@ void process(std::string cfgfile) {
 
    } else hascfg = false;
 
-   // run control socket
-   
-   try {
-
-      pubrc = new zmq::socket_t(context, ZMQ_PUB);
-
-   } catch (zmq::error_t &e) {
-
-        std::cout << ERRTAG << "FzController: failed to start ZeroMQ run control publisher: " << e.what () << std::endl;
-        exit(1);
-   }
-
-   if(hascfg) {
-
-      ep = getZMQEndpoint(cfg, "fzdaq.fzcontroller.runcontrol"); 
-
-      if(ep.empty()) {
-
-         std::cout << ERRTAG << "FzController: run control endpoint not present in config file" << std::endl;
-         exit(1);
-      }
-
-      std::cout << INFOTAG << "FzController: run control publisher endpoint: " << ep << " [cfg file]" << std::endl;
-
-   } else {
-
-      ep = "tcp://eth0:6000";
-      std::cout << INFOTAG << "FzController: run control publisher endpoint: " << ep << " [default]" << std::endl;
-   }
-
-   try {
-
-      pubrc->bind(ep.c_str());
-
-   } catch (zmq::error_t &e) {
-
-        std::cout << ERRTAG << "FzController: failed to bind ZeroMQ endpoint " << ep << ": " << e.what () << std::endl;
-        exit(1);
-   }
 
    // report monitoring socket
 
@@ -283,6 +303,10 @@ void process(std::string cfgfile) {
    if(haswl)
       thrwl = new boost::thread(weblog); 
 
+   logmtx.lock();
+      clog.write(INFO, "node report monitoring loop started");
+   logmtx.unlock();
+
    while(true) {	// thread loop
 
       try {
@@ -298,13 +322,12 @@ void process(std::string cfgfile) {
          if(rc) {
 
             if(nodereport.ParseFromArray(repmsg.data(), repmsg.size()) == true) {
-            
+
                map_insert(nodereport.hostname(), nodereport);
             } 
          }
       } catch(boost::thread_interrupted& interruption) {
 
-         pubrc->close();
          pullmon->close();
          break;
 
@@ -313,6 +336,9 @@ void process(std::string cfgfile) {
       }
 
       map_clean();	// remove expired reports
+
+      // update EPICS IOC 
+      update_stats_ioc();
 
    }	// end while
 }
@@ -349,201 +375,11 @@ void map_clean(void) {
          deque.erase(deque.begin() + i);
       }
    }
-
-   /*
-   while (!deque.empty() && difftime(time(NULL), deque.front().second) > EXPIRY) {
-    map.erase(deque.front().first);
-    deque.pop_front();
-  }
-  */
 }
 
-void httpd(void) {
-
-   struct mg_server *server;
-
-   // Create and configure HTTP server
-   server = mg_create_server(NULL, ev_handler);
-   mg_set_option(server, "listening_port", "8080");
-
-   while(1) {
-
-      try {
-         
-         boost::this_thread::interruption_point();
-                  
-         mg_poll_server(server, 1000);
-      
-      } catch(boost::thread_interrupted& interruption) {
-
-         mg_destroy_server(&server);
-         break;
-
-      } catch(std::exception& e) {
-
-      }
-   }    
-}
-
-static int ev_handler(struct mg_connection *conn, enum mg_event ev) {
-
-   std::string json_str, uri, filename;
-   struct stat buffer;
-
-   switch (ev) {
-
-      case MG_AUTH: 
-         return MG_TRUE;
-
-      case MG_REQUEST:
-
-         uri = conn->uri;
-         filename = uri;
-         filename.erase(0,1);
-
-         if(uri == "/") {
-
-            mg_send_file(conn, "web/html/index.html", s_no_cache_header);
-            return MG_MORE;
-
-         } else if(uri == "/report") {
-
-            mg_send_header(conn, s_no_cache_header, "");
-            mg_printf_data(conn, "%s", JsonReport().c_str());
-            return MG_TRUE;
-         
-         } else if(!stat(filename.c_str(), &buffer)) {
-
-            mg_send_file(conn, filename.c_str(), s_no_cache_header);
-            return MG_MORE;
-
-         } else return MG_FALSE;
-
-      default: 
-         return MG_FALSE;
-   }
-}
-
-std::string JsonReport(void) {
-
-   std::stringstream str;
-   std::map<std::string, Report::Node>::iterator it;
-   Report::Node rep;
-
-   str << "[ ";
-
-   int i = 0;
-   it = map.begin();
-   while(it != map.end()) {
-
-      i++;
-
-      // check if first entry
-      if(it != map.begin())
-         str << " , ";
- 
-      rep = it->second;
- 
-      str << " { ";
-
-      str << "\"hostname\": \"" << rep.hostname() << "\", ";
-      str << "\"profile\": \"" << rep.profile() << "\", ";
-
-      if(rep.has_reader()) {
-
-        str << " \"reader\": { ";
-        str << " \"in\": { ";
-        str << " \"data\": " << rep.reader().in_bytes() <<  ", ";
-        str << " \"databw\": " << rep.reader().in_bytes_bw() << ", ";
-        str << " \"ev\": " << rep.reader().in_events() << ", ";
-        str << " \"evbw\": " << rep.reader().in_events_bw();
-        str << " } , ";
-        str << " \"out\": { ";
-        str << " \"data\": " << rep.reader().out_bytes() <<  ", ";
-        str << " \"databw\": " << rep.reader().out_bytes_bw() << ", ";
-        str << " \"ev\": " << rep.reader().out_events() << ", ";
-        str << " \"evbw\": " << rep.reader().out_events_bw();
-        str << " } } , ";
-
-        str << " \"parser\": [ ";
-        for(unsigned int i=0; i<rep.parser_num();i++) {
-
-           str << " { ";
-           str << " \"in\": { ";
-           str << " \"data\": " << rep.parser(i).in_bytes() <<  ", ";
-           str << " \"databw\": " << rep.parser(i).in_bytes_bw() << ", ";
-           str << " \"ev\": " << rep.parser(i).in_events() << ", ";
-           str << " \"evbw\": " << rep.parser(i).in_events_bw();
-           str << " } , ";
-
-           str << " \"out\": { ";
-           str << " \"data\": " << rep.parser(i).out_bytes() <<  ", ";
-           str << " \"databw\": " << rep.parser(i).out_bytes_bw() << ", ";
-           str << " \"ev\": " << rep.parser(i).out_events() << ", ";
-           str << " \"evbw\": " << rep.parser(i).out_events_bw();
-           str << " } ";
-           str << " } ";
-
-           if(i != rep.parser_num() - 1)
-              str << " ,";
-        }
-        str << " ],";		// end of parsers list
-
-        str << " \"fsm\": [ ";
-        for(unsigned int i=0; i<rep.parser_num();i++) {
-
-           str << " { ";
-           str << " \"state_invalid\": " << rep.fsm(i).state_invalid() << ", ";
-           str << " \"events_empty\": " << rep.fsm(i).events_empty() << ", ";
-           str << " \"events_good\": " << rep.fsm(i).events_good() << ", ";
-           str << " \"events_bad\": " << rep.fsm(i).events_bad() << ", ";
-           str << " \"in\": { ";
-           str << " \"data\": " << rep.fsm(i).in_bytes() <<  ", ";
-           str << " \"databw\": " << rep.fsm(i).in_bytes_bw() << ", ";
-           str << " \"ev\": " << rep.fsm(i).in_events() << ", ";
-           str << " \"evbw\": " << rep.fsm(i).in_events_bw();
-           str << " } , ";
-
-           str << " \"out\": { ";
-           str << " \"data\": " << rep.fsm(i).out_bytes() <<  ", ";
-           str << " \"databw\": " << rep.fsm(i).out_bytes_bw() << ", ";
-           str << " \"ev\": " << rep.fsm(i).out_events() << ", ";
-           str << " \"evbw\": " << rep.fsm(i).out_events_bw();
-           str << " } ";
-           str << " } ";
-
-           if(i != rep.parser_num() - 1)
-              str << " ,";
-        }
-         str << " ]";           // end of fsm list
-      }
-
-      if(rep.has_writer()) {
-
-        str << " \"writer\": { ";
-        str << " \"in\": { ";
-        str << " \"data\": " << rep.writer().in_bytes() <<  ", ";
-        str << " \"databw\": " << rep.writer().in_bytes_bw() << ", ";
-        str << " \"ev\": " << rep.writer().in_events() << ", ";
-        str << " \"evbw\": " << rep.writer().in_events_bw();
-        str << " }, ";
-        str << " \"out\": { ";
-        str << " \"data\": " << rep.writer().out_bytes() <<  ", ";
-        str << " \"databw\": " << rep.writer().out_bytes_bw() << ", ";
-        str << " \"ev\": " << rep.writer().out_events() << ", ";
-        str << " \"evbw\": " << rep.writer().out_events_bw();
-        str << " } } ";
-      }
-
-      str << "}";
-
-      it++;    
-   }
-
-   str << " ]";   
-
-   return(str.str());
-}
+// 
+// WebLog thread
+//
 
 void weblog(void) {
 
@@ -645,4 +481,379 @@ void weblog(void) {
            break;
         }
    }	// end while
+}
+
+//
+// EPICS IOC thread
+//
+
+void epics_ioc(void) {
+
+   const char *base_dbd = DBD_FILE;
+   char *dbd_file = const_cast<char*>(base_dbd);
+
+   chid rc_configure_chid;	// channel id for global run control CONFIGURE signal
+   chid rc_start_chid;		// channel id for global run control START signal
+   chid rc_stop_chid;		// channel id for global run control STOP signal
+   chid rc_reset_chid;		// channel id for global run control RESET signal
+   std::string rc_configure_pv;
+   std::string rc_start_pv;
+   std::string rc_stop_pv;
+   std::string rc_reset_pv;
+
+   if (dbLoadDatabase(dbd_file, NULL, NULL)) {
+      std::cout << ERRTAG << "FzController: failed to load FAZIA dbd file" << std::endl;
+      exit(1);
+   }
+
+   softIoc_registerRecordDeviceDriver(pdbbase);
+
+   if (dbLoadRecords(DB_FILE, NULL)) {
+      std::cout << ERRTAG << "FzController: failed to load NodeManager db file" << std::endl;
+      exit(1);
+   }
+
+   iocInit();
+   epicsThreadSleep(0.2);
+
+   if(ca_context_create(ca_enable_preemptive_callback) != ECA_NORMAL) {
+
+      std::cout << ERRTAG << "FzController: failed to create EPICS CA context" << std::endl;
+      exit(1);
+   }
+
+   rc_configure_pv = "DAQ:RC:configure";
+   ca_create_channel(rc_configure_pv.c_str(), NULL, NULL, 20, &rc_configure_chid);
+   rc_start_pv= "DAQ:RC:start";
+   ca_create_channel(rc_start_pv.c_str(), NULL, NULL, 20, &rc_start_chid);
+   rc_stop_pv = "DAQ:RC:stop";
+   ca_create_channel(rc_stop_pv.c_str(), NULL, NULL, 20, &rc_stop_chid); 
+   rc_reset_pv = "DAQ:RC:reset";
+   ca_create_channel(rc_reset_pv.c_str(), NULL, NULL, 20, &rc_reset_chid);
+
+   // first param '1' is DBR_INT from db_access.h
+   ca_create_subscription(1, 1, rc_configure_chid, DBE_VALUE, rc_configure_cb, NULL, NULL);
+   ca_create_subscription(1, 1, rc_start_chid, DBE_VALUE, rc_start_cb, NULL, NULL);
+   ca_create_subscription(1, 1, rc_stop_chid, DBE_VALUE, rc_stop_cb, NULL, NULL);
+   ca_create_subscription(1, 1, rc_reset_chid, DBE_VALUE, rc_reset_cb, NULL, NULL);
+
+   while(true) {
+
+      try {
+
+         boost::this_thread::interruption_point();
+         epicsThreadSleep(0.5);
+
+      } catch (boost::thread_interrupted& interruption) {
+
+        break;
+      }
+   }	// end while
+}
+
+static void rc_configure_cb(struct event_handler_args eha) {
+
+   int *pdata = (int *) eha.dbr;
+   bool cfg = (bool) *pdata;
+   RCstate prev_state = rc.state();
+   RCstate cur_state;
+   std::stringstream msg;
+
+   if(cfg) {
+
+      RCcommand cmd = configure;
+      RCtransition trans_err = rc.process(cmd);
+      cur_state = rc.state();
+
+      logmtx.lock(); 
+         msg << "global RC state transition: " << state_labels_l[prev_state] << " -> " << state_labels_l[cur_state];
+         clog.write(INFO, msg.str()); 
+      logmtx.unlock(); 
+
+      PVwrite_db("DAQ:RC:transition.DISP", 0);
+      PVwrite_db("DAQ:RC:transition", trans_err);
+      PVwrite_db("DAQ:RC:transition.DISP", 1);
+
+      rc_do(cmd);
+
+      // update RC FSM state
+      PVwrite_db("DAQ:RC:state.DISP", 0);
+      PVwrite_db("DAQ:RC:state", rc.state());
+      PVwrite_db("DAQ:RC:state.DISP", 1);
+   }
+
+}
+
+static void rc_start_cb(struct event_handler_args eha) {
+
+   int *pdata = (int *) eha.dbr;
+   bool sta = (bool) *pdata;
+   RCstate prev_state = rc.state();
+   RCstate cur_state;
+   std::stringstream msg;
+
+   if(sta) {
+
+      RCcommand cmd = start;
+      RCtransition trans_err = rc.process(cmd);
+      cur_state = rc.state();
+
+      logmtx.lock();
+         msg << "global RC state transition: " << state_labels_l[prev_state] << " -> " << state_labels_l[cur_state];
+         clog.write(INFO, msg.str());
+      logmtx.unlock();
+ 
+      PVwrite_db("DAQ:RC:transition.DISP", 0);
+      PVwrite_db("DAQ:RC:transition", trans_err);
+      PVwrite_db("DAQ:RC:transition.DISP", 1);
+
+      rc_do(cmd);
+
+      // update RC FSM state
+      PVwrite_db("DAQ:RC:state.DISP", 0);
+      PVwrite_db("DAQ:RC:state", rc.state());
+      PVwrite_db("DAQ:RC:state.DISP", 1);
+   }
+}
+
+static void rc_stop_cb(struct event_handler_args eha) {
+
+   int *pdata = (int *) eha.dbr;
+   bool stp = (bool) *pdata;
+   RCstate prev_state = rc.state();
+   RCstate cur_state;
+   std::stringstream msg;
+
+   if(stp) {
+
+      RCcommand cmd = stop;
+      RCtransition trans_err = rc.process(cmd);
+      cur_state = rc.state();
+
+      logmtx.lock();
+         msg << "global RC state transition: " << state_labels_l[prev_state] << " -> " << state_labels_l[cur_state];
+         clog.write(INFO, msg.str());
+      logmtx.unlock();
+
+      PVwrite_db("DAQ:RC:transition.DISP", 0);
+      PVwrite_db("DAQ:RC:transition", trans_err);
+      PVwrite_db("DAQ:RC:transition.DISP", 1);
+
+      rc_do(cmd);
+
+      // update RC FSM state
+      PVwrite_db("DAQ:RC:state.DISP", 0);
+      PVwrite_db("DAQ:RC:state", rc.state());
+      PVwrite_db("DAQ:RC:state.DISP", 1);
+   }
+}
+
+static void rc_reset_cb(struct event_handler_args eha) {
+
+   int *pdata = (int *) eha.dbr;
+   bool rst = (bool) *pdata;
+   RCstate prev_state = rc.state();
+   RCstate cur_state;
+   std::stringstream msg; 
+
+   if(rst) {
+
+      RCcommand cmd = reset;
+      RCtransition trans_err = rc.process(cmd);
+      cur_state = rc.state();
+
+      logmtx.lock();
+         msg << "global RC state transition: " << state_labels_l[prev_state] << " -> " << state_labels_l[cur_state];
+         clog.write(INFO, msg.str());
+      logmtx.unlock();
+
+      PVwrite_db("DAQ:RC:transition.DISP", 0);
+      PVwrite_db("DAQ:RC:transition", trans_err);
+      PVwrite_db("DAQ:RC:transition.DISP", 1);
+
+      rc_do(cmd);
+
+      // update RC FSM state
+      PVwrite_db("DAQ:RC:state.DISP", 0);
+      PVwrite_db("DAQ:RC:state", rc.state());
+      PVwrite_db("DAQ:RC:state.DISP", 1);
+   }
+}
+
+void rc_do(RCcommand cmd) {
+
+   std::map<std::string, Report::Node>::iterator it;
+   Report::Node rep;
+   std::string cmd_str;
+   std::stringstream msg;
+
+   cmd_str = cmd_labels[cmd];
+
+   if(map.size() == 0) {
+  
+      logmtx.lock();
+         msg << "no DAQ node available - RC command not sent";
+         clog.write(WARN, msg.str());
+      logmtx.unlock();
+   }
+
+   it = map.begin();
+   while(it != map.end()) {
+
+      rep = it->second;
+      std::stringstream ep;
+
+      zmq::socket_t socket(context, ZMQ_REQ);
+      int tval = 1000;
+      socket.setsockopt(ZMQ_RCVTIMEO, &tval, sizeof(tval));            // 1 second timeout on recv
+
+      ep << "tcp://" << rep.hostname() << ":5550";
+      socket.connect (ep.str().c_str());
+ 
+      zmq::message_t message(cmd_str.size());      
+      memcpy(message.data(), cmd_str.data(), cmd_str.size());
+      
+      msg << "sending " << cmd_str << " RC command to " << rep.hostname();
+      logmtx.lock(); 
+         clog.write(INFO, msg.str());
+      logmtx.unlock(); 
+      msg.str("");
+
+      bool rc = socket.send(message);
+
+      if(rc) {
+
+         socket.recv(&message);
+
+      } else {
+
+         msg << "Problem connecting " << rep.hostname() << " RC command failed";
+         logmtx.lock();
+            clog.write(ERROR, msg.str());
+         logmtx.unlock();
+      }
+
+      it++;
+   } 
+}
+
+void update_stats_ioc(void) {
+
+   std::map<std::string, Report::Node>::iterator it;
+   Report::Node rep;
+   Report::Node DAQreport;
+   double ev_good, ev_bad, ev_empty, st_invalid;
+   std::stringstream nodelist;
+
+   if(map.empty()) {
+
+      PVwrite_db("DAQ:nodelist", "");
+      return;
+   }
+
+   it = map.begin();
+   ev_good = ev_bad = ev_empty = st_invalid = 0;
+
+   while(it != map.end()) {
+
+      rep = it->second;
+
+      nodelist << rep.hostname() << " [" << rep.profile() << "] ";
+
+      if(rep.has_reader()) {	// compute DAQ node
+
+         Report::FzReader rdrep = rep.reader();
+
+         DAQreport.mutable_reader()->set_in_bytes( DAQreport.mutable_reader()->in_bytes() + rdrep.in_bytes() );
+         DAQreport.mutable_reader()->set_in_bytes_bw( DAQreport.mutable_reader()->in_bytes_bw() + rdrep.in_bytes_bw() );
+         DAQreport.mutable_reader()->set_in_events( DAQreport.mutable_reader()->in_events() + rdrep.in_events() );
+         DAQreport.mutable_reader()->set_in_events_bw( DAQreport.mutable_reader()->in_events_bw() + rdrep.in_events_bw() );
+         DAQreport.mutable_reader()->set_out_bytes( DAQreport.mutable_reader()->out_bytes() + rdrep.out_bytes() );
+         DAQreport.mutable_reader()->set_out_bytes_bw( DAQreport.mutable_reader()->out_bytes_bw() + rdrep.out_bytes_bw() );
+         DAQreport.mutable_reader()->set_out_events( DAQreport.mutable_reader()->out_events() + rdrep.out_events() );
+         DAQreport.mutable_reader()->set_out_events_bw( DAQreport.mutable_reader()->out_events_bw() + rdrep.out_events_bw() );
+
+         for(int i=0; i<rep.parser_size(); i++) {
+
+            ev_good += rep.fsm(i).events_good();
+            ev_bad += rep.fsm(i).events_bad();
+            ev_empty += rep.fsm(i).events_empty();
+            st_invalid += rep.fsm(i).state_invalid();
+         }
+      }
+
+      if(rep.has_writer()) {	// storage DAQ node
+
+         Report::FzWriter wrrep = rep.writer();
+
+         DAQreport.mutable_writer()->set_in_bytes( DAQreport.mutable_writer()->in_bytes() + wrrep.in_bytes() );
+         DAQreport.mutable_writer()->set_in_bytes_bw( DAQreport.mutable_writer()->in_bytes_bw() + wrrep.in_bytes_bw() );
+         DAQreport.mutable_writer()->set_in_events( DAQreport.mutable_writer()->in_events() + wrrep.in_events() );
+         DAQreport.mutable_writer()->set_in_events_bw( DAQreport.mutable_writer()->in_events_bw() + wrrep.in_events_bw() );
+         DAQreport.mutable_writer()->set_out_bytes( DAQreport.mutable_writer()->out_bytes() + wrrep.out_bytes() );
+         DAQreport.mutable_writer()->set_out_bytes_bw( DAQreport.mutable_writer()->out_bytes_bw() + wrrep.out_bytes_bw() );
+         DAQreport.mutable_writer()->set_out_events( DAQreport.mutable_writer()->out_events() + wrrep.out_events() );
+         DAQreport.mutable_writer()->set_out_events_bw( DAQreport.mutable_writer()->out_events_bw() + wrrep.out_events_bw() );
+      }
+
+      it++;
+   }
+
+   double value;
+   std::string unit;
+ 
+   // FzReader data statistics
+
+   PVwrite_db("DAQ:nodelist", nodelist.str());
+
+   human_byte(DAQreport.reader().in_bytes(), &value, &unit);
+   PVwrite_db("DAQ:reader:in:data", value);
+   PVwrite_db("DAQ:reader:in:data.EGU", unit);
+
+   PVwrite_db("DAQ:reader:in:databw", DAQreport.reader().in_bytes_bw() * 8E-6);       // Mbit/s
+
+   PVwrite_db("DAQ:reader:in:ev", (double)DAQreport.reader().in_events());
+
+   human_byte(DAQreport.reader().in_events_bw(), &value);
+   PVwrite_db("DAQ:reader:in:evbw", value);
+
+   human_byte(DAQreport.reader().out_bytes(), &value, &unit);
+   PVwrite_db("DAQ:reader:out:data", value);
+   PVwrite_db("DAQ:reader:out:data.EGU", unit);
+
+   PVwrite_db("DAQ:reader:out:databw", DAQreport.reader().out_bytes_bw() * 8E-6);     // Mbit/s
+
+   PVwrite_db("DAQ:reader:out:ev", (double)DAQreport.reader().out_events());
+
+   human_byte(DAQreport.reader().out_events_bw(), &value);
+   PVwrite_db("DAQ:reader:out:evbw", value);
+
+   PVwrite_db("DAQ:fsm:events:good", ev_good);
+   PVwrite_db("DAQ:fsm:events:bad", ev_bad);
+   PVwrite_db("DAQ:fsm:events:empty", ev_empty);
+   PVwrite_db("DAQ:fsm:states:invalid", st_invalid);
+
+   // FzWriter data statistics
+
+   human_byte(DAQreport.writer().in_bytes(), &value, &unit);
+   PVwrite_db("DAQ:writer:in:data", value);
+   PVwrite_db("DAQ:writer:in:data.EGU", unit);
+
+   PVwrite_db("DAQ:writer:in:databw", DAQreport.writer().in_bytes_bw() * 8E-6);       // Mbit/s
+
+   PVwrite_db("DAQ:writer:in:ev", (double)DAQreport.writer().in_events());
+
+   human_byte(DAQreport.writer().in_events_bw(), &value);
+   PVwrite_db("DAQ:writer:in:evbw", value);
+
+   human_byte(DAQreport.writer().out_bytes(), &value, &unit);
+   PVwrite_db("DAQ:writer:out:data", value);
+   PVwrite_db("DAQ:writer:out:data.EGU", unit);
+
+   PVwrite_db("DAQ:writer:out:databw", DAQreport.writer().out_bytes_bw() * 1E-6);     // Mbyte/s;
+
+   PVwrite_db("DAQ:writer:out:ev", (double)DAQreport.writer().out_events());
+
+   human_byte(DAQreport.writer().out_events_bw(), &value);
+   PVwrite_db("DAQ:writer:out:evbw", value);
 }

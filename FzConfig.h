@@ -7,4 +7,3 @@
 std::string getZMQEndpoint(libconfig::Config &cfg, std::string path);
 
 #endif
-

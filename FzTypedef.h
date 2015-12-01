@@ -8,9 +8,16 @@
 // vector of raw data
 typedef std::vector<unsigned short int> FzRawData;
 
-// status of DAQ
-enum DAQstatus_t { STOP, START, QUIT };
-static char const* const state_labels[] = { "STOP", "START", "QUIT" };
+// DAQ Run Control
+enum RCcommand { configure = 0, start, stop, reset };
+static char const* const state_labels[] = { "IDLE", "READY", "RUNNING", "PAUSED" };
+
+enum RCstate { IDLE = 0,  READY, RUNNING, PAUSED };
+static char const* const cmd_labels[] = { "configure", "start", "stop", "reset" };
+// JMS2RDB plugins filters TEXT containing 'IDLE'
+static char const* const state_labels_l[] = { "idle", "ready", "running", "paused" };
+
+enum RCtransition { RCERROR, RCOK };
 
 // text colors
 #define RESET   "\033[0m"

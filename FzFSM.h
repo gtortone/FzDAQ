@@ -4,12 +4,7 @@
 #include <stdint.h>
 #include "FzEventSet.pb.h"
 #include "FzNodeReport.pb.h"
-
-#include <log4cpp/Category.hh>
-#include "log4cpp/Appender.hh"
-#include <log4cpp/PatternLayout.hh>
-#include "log4cpp/FileAppender.hh"
-#include <log4cpp/PropertyConfigurator.hh>
+#include "FzLogger.h"
 
 #define WORDTYPE_NUM	18
 #define TRANSITION_NUM	19
@@ -184,7 +179,8 @@ private:
 
    bool err_in_event;
 
-   log4cpp::Category *logfsm;
+   FzLogger *log;
+   char logbuf[256];
 
    Report::FzFSM fsm_report;
 
@@ -195,7 +191,7 @@ public:
    bool event_is_empty;
 
    void init(void);
-   void initlog(log4cpp::Category *lc);
+   void initlog(FzLogger *l);
 
    void import(unsigned short int *evraw, uint32_t size, DAQ::FzEvent *e);
 

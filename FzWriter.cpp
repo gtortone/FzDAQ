@@ -5,15 +5,20 @@
 #include <fstream>
 #include <sstream>
 
-FzWriter::FzWriter(std::string bdir, std::string run, long int id, bool subid, std::string cfgfile, zmq::context_t &ctx) :
-   context(ctx), logwriter(log4cpp::Category::getInstance("fzwriter")) {
+FzWriter::FzWriter(std::string bdir, std::string run, long int id, bool subid, std::string cfgfile, zmq::context_t &ctx, cms::Connection *JMSconn) :
+   context(ctx), AMQconn(JMSconn) {
 
    int status;
 
    basedir = bdir;
    runtag = run;
    dirid = id;
-   dirsubid = subid;
+   this->subid = subid;
+
+   log.setFileConnection("fzwriter", "/var/log/fzdaq/fzwriter.log");
+
+   if(AMQconn.get())
+      log.setJMSConnection("FzWriter", JMSconn);
 
    if(!cfgfile.empty()) {
 
@@ -25,25 +30,34 @@ FzWriter::FzWriter(std::string bdir, std::string run, long int id, bool subid, s
    pb = new FzProtobuf();
    
    // prevent init method run thread
-   status = STOP;
+   rcstate = IDLE;
    thread_init = false;
-
-   appender = new log4cpp::FileAppender("fzwriter", "logs/fzwriter.log");
-   layout = new log4cpp::PatternLayout();
-   layout->setConversionPattern("%d [%p] %m%n");
-   appender->setLayout(layout);
-   logwriter.addAppender(appender);
 
    status = setup_newdir();
 
-   if(status == DIR_EXISTS)
-      logwriter << INFO << "FzWriter: directory " << dirstr << " already exists";   
-   else if(status == DIR_FAIL)
-      logwriter << INFO << "FzWriter: directory " << dirstr << " filesystem  error";
+   if(status == DIR_EXISTS) {
+
+      std::stringstream msg;
+      msg << "directory " << dirstr << " already exists - searching for new directory name...";
+      log.write(WARN, msg.str());
+
+      while(setup_newdir() == DIR_EXISTS)
+         ;
+      
+      msg.str("");
+      msg << "directory " << dirstr << " successfully allocated for new event files";
+      log.write(INFO, msg.str());
+
+   } else if(status == DIR_FAIL) {
+
+      std::stringstream msg;
+      msg << "directory " << dirstr << " filesystem  error";
+      log.write(ERROR, msg.str());
+   }
 
    setup_newfile();
 
-   logwriter << INFO << "FzWriter::constructor - success";
+   log.write(INFO, "thread allocated");
 
    std::string ep;
 
@@ -150,11 +164,6 @@ void FzWriter::init(void) {
    }
 }
 
-void FzWriter::set_status(enum DAQstatus_t val) {
-
-   status = val;
-}
-
 void FzWriter::set_eventfilesize(unsigned long int size) {
    event_file_size = size;
 };
@@ -214,7 +223,7 @@ void FzWriter::process(void) {
 
          boost::this_thread::interruption_point();
 
-         if(status == START) {
+         if(rcstate == RUNNING) {
 
             bool rc;
             static unsigned long esize;	// current eventset file dize
@@ -239,7 +248,9 @@ void FzWriter::process(void) {
 
                if(retval == false) {
 
-                  logwriter.warn("FzWriter: parse error - EC: %X", event.ec());
+                  std::stringstream msg;
+                  msg << "parse error - EC: " << std::hex << event.ec();
+                  log.write(WARN, msg.str());
                   //dumpEventOnScreen(&event);
                }
 
@@ -274,7 +285,7 @@ void FzWriter::process(void) {
 
             boost::this_thread::interruption_point();
 
-         } else if(status == STOP) {
+         } else {
 
             boost::this_thread::sleep(boost::posix_time::seconds(1));
             boost::this_thread::interruption_point();
@@ -297,3 +308,12 @@ void FzWriter::process(void) {
 Report::FzWriter FzWriter::get_report(void) {
    return(report);
 };
+
+void FzWriter::rc_do(RCcommand cmd) {
+
+}
+
+void FzWriter::set_rcstate(RCstate s) {
+
+   rcstate = s;
+}

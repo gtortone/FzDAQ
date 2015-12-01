@@ -3,18 +3,14 @@
 
 #include <boost/thread.hpp>
 
-#include <log4cpp/Category.hh>
-#include <log4cpp/Appender.hh>
-#include <log4cpp/PatternLayout.hh>
-#include <log4cpp/FileAppender.hh>
-#include <log4cpp/PropertyConfigurator.hh>
-
 #include "FzConfig.h"
 #include "FzTypedef.h"
 #include "FzProtobuf.h"
 #include "FzNodeReport.pb.h"
-
+#include "FzJMS.h"
+#include "FzLogger.h"
 #include "zmq.hpp"
+#include "FzTypedef.h"
 
 class FzWriter {
 
@@ -31,10 +27,9 @@ private:
 
    FzProtobuf *pb;
 
-   log4cpp::Category &logwriter;
-   log4cpp::Appender *appender;
-   log4cpp::PatternLayout *layout;
- 
+   FzLogger log;
+   std::unique_ptr<cms::Connection> AMQconn;
+  
    unsigned long int event_file_size;
    unsigned long int event_dir_size;
 
@@ -52,16 +47,15 @@ private:
 
    Report::FzWriter report;
 
-   DAQstatus_t status;
+   RCstate rcstate;
 
    void process(void);
 
 public:
-   FzWriter(std::string bdir, std::string run, long int id, bool subid, std::string cfgfile, zmq::context_t &ctx);
+   FzWriter(std::string bdir, std::string run, long int id, bool subid, std::string cfgfile, zmq::context_t &ctx, cms::Connection *JMSconn);
 
    void init(void);
    void close(void);
-   void set_status(enum DAQstatus_t val);
 
    void set_eventfilesize(unsigned long int size);
    void set_eventdirsize(unsigned long int size);
@@ -70,6 +64,9 @@ public:
    int setup_newdir(void);
 
    Report::FzWriter get_report(void);
+
+   void rc_do(RCcommand cmd);
+   void set_rcstate(RCstate s);
 };
 
 #endif

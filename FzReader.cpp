@@ -7,11 +7,16 @@
 #define REGHDR_FMT              0xF800
 #define REGHDR_TAG              0xC800  
 
-FzReader::FzReader(std::string dname, std::string nurl, std::string cfgfile, zmq::context_t &ctx) :
-   context(ctx), logreader(log4cpp::Category::getInstance("fzreader")) {
+FzReader::FzReader(std::string dname, std::string nurl, std::string cfgfile, zmq::context_t &ctx, cms::Connection *JMSconn) :
+   context(ctx), AMQconn(JMSconn) {
   
    devname = dname;
    neturl = nurl;
+
+   log.setFileConnection("fzreader", "/var/log/fzdaq/fzreader.log");
+
+   if(AMQconn.get())
+      log.setJMSConnection("FzReader", JMSconn);
 
    if(!cfgfile.empty()) {
 
@@ -20,14 +25,8 @@ FzReader::FzReader(std::string dname, std::string nurl, std::string cfgfile, zmq
 
    } else hascfg = false;
 
-   appender = new log4cpp::FileAppender("fzreader", "logs/fzreader.log");
-   layout = new log4cpp::PatternLayout();
-   layout->setConversionPattern("%d [%p] %m%n");
-   appender->setLayout(layout);
-   logreader.addAppender(appender);
+   log.write(INFO, "thread allocated");
 
-   logreader << INFO << "FzReader::constructor - success";
-   
    usbstatus = -1;
 
    std::string ep;
@@ -73,7 +72,7 @@ FzReader::FzReader(std::string dname, std::string nurl, std::string cfgfile, zmq
    }
 
    // prevent init method run thread
-   status = STOP;
+   rcstate = IDLE;
    thread_init = false;
 
    // setup
@@ -123,6 +122,7 @@ int FzReader::setupUsb(void) {
 
    libusb_device **devs; // pointer to pointer of device, used to retrieve a list of devices
    libusb_device_descriptor desc;
+   std::stringstream msg;
 
    std::ostringstream oss; // string stream for logging
    ssize_t cnt, i; // holding number of devices in list
@@ -132,7 +132,7 @@ int FzReader::setupUsb(void) {
    retval = libusb_init(&ctx); // initialize a library session
 
    if (retval < 0) {
-      logreader << FATAL << "init error";
+      log.write(FATAL, "init error");
       return -1;
    }
 
@@ -141,19 +141,20 @@ int FzReader::setupUsb(void) {
    cnt = libusb_get_device_list(ctx, &devs); // get the list of devices
 
    if (cnt < 0) {
-      logreader << FATAL << "get device error";
+      log.write(FATAL, "get device error");
       std::cout << ERRTAG << "FzReader: USB get device error" << std::endl;
       exit(1);
    }
 
-   logreader << INFO << cnt << " devices in list";
+   msg << cnt << " devices in list";
+   log.write(INFO, msg.str());
 
    for (i = 0; i < cnt; i++) {
 
       retval = libusb_get_device_descriptor(devs[i], &desc);
 
       if (retval < 0) {
-         logreader << FATAL << "failed to get device descriptor";
+         log.write(FATAL, "failed to get device descriptor");
          std::cout << ERRTAG << "FzReader: USB failed to get device descriptor" << std::endl;
          exit(1);
       }
@@ -166,20 +167,20 @@ int FzReader::setupUsb(void) {
 
    if (!found) {
 
-      logreader << FATAL << "Cypress USB controller NOT found";
+      log.write(FATAL, "Cypress USB controller NOT found");
       std::cout << ERRTAG << "FzReader: Cypress USB controller NOT found" << std::endl;
       exit(1);
 
    } else {
 
-      logreader << INFO << "Cypress USB controller FOUND";
+      log.write(INFO, "Cypress USB controller FOUND");
       std::cout << INFOTAG << "FzReader: Cypress USB controller FOUND" << std::endl;
    }
 
    retval = libusb_open(devs[i], &usbh);
 
    if (retval != 0) {
-      logreader << FATAL << "error opening Cypress USB device";
+      log.write(FATAL, "error opening Cypress USB device");
       std::cout << ERRTAG << "FzReader: error opening Cypress USB device" << std::endl;
       exit(1);
    }
@@ -190,7 +191,7 @@ int FzReader::setupUsb(void) {
 
       retval = libusb_detach_kernel_driver(usbh, 0);
       if (retval != 0) {
-         logreader << FATAL << "error detaching Cypress USB device";
+         log.write(FATAL, "error detaching Cypress USB device");
          std::cout << ERRTAG << "FzReader: error detaching Cypress USB device" << std::endl;
          exit(1);
       }
@@ -199,39 +200,39 @@ int FzReader::setupUsb(void) {
    retval = libusb_set_configuration(usbh, 1);
    if (retval != 0) {
 
-      logreader << ERROR << "error configuring Cypress USB interface";
+      log.write(ERROR, "error configuring Cypress USB interface");
       std::cout << ERRTAG << "FzReader: error configuring Cypress USB interface" << std::endl;
       exit(1);
 
    } else {
  
-      logreader << INFO << "USB interface configured";
+      log.write(INFO, "USB interface configured");
       std::cout << INFOTAG << "FzReader: USB interface configured" << std::endl; 
    }
 
    retval = libusb_claim_interface(usbh, 0);
    if (retval != 0) {
 
-      logreader << ERROR << "error claiming Cypress USB interface";
+      log.write(ERROR, "error claiming Cypress USB interface");
       std::cout << ERRTAG << "FzReader: error claiming Cypress USB interface" << std::endl;
       exit(1);
 
    } else {
 
-      logreader << INFO << "USB interface claimed";
+      log.write(INFO, "USB interface claimed");
       std::cout << INFOTAG << "FzReader: USB interface claimed" << std::endl;
    }
 
    retval = libusb_set_interface_alt_setting(usbh, 0, 1);
    if (retval != 0) {
 
-      logreader << ERROR << "error setting interface alternate settings";
+      log.write(ERROR, "error setting interface alternate settings");
       std::cout << ERRTAG << "FzReader: error setting interface alternate settings" << std::endl;
       exit(1);
 
    } else {
 
-      logreader << INFO <<  "interface settings ok";
+      log.write(INFO, "interface settings ok");
       std::cout << INFOTAG << "FzReader: interface settings ok" << std::endl;
    }
 
@@ -251,7 +252,7 @@ int FzReader::setupUsb(void) {
 
    chunk.reserve(MAX_EVENT_SIZE);
 
-   log4cpp::Category *logreader = (log4cpp::Category *) pdata->logreader_ptr;
+   // FzLogger *log = (FzLogger *) pdata->log_ptr;
    zmq::socket_t *reader = (zmq::socket_t *) pdata->reader_ptr;
    Report::FzReader *report = (Report::FzReader *) pdata->report_ptr; 
    bool rec = (bool) pdata->rec;
@@ -313,7 +314,11 @@ int FzReader::setupUsb(void) {
       if(chunk.size() >= MAX_EVENT_SIZE) {
  
          chunk.clear();
-         logreader->error("data discarded due to overcoming maximum event size: %d bytes", MAX_EVENT_SIZE);
+/*
+         std::stringstream msg;
+         msg << "data discarded due to overcoming maximum event size: " << MAX_EVENT_SIZE << " bytes";
+         log->write(ERROR, msg.str());
+*/
       }
 
       report->set_in_bytes( report->in_bytes() + xfr->actual_length );
@@ -338,7 +343,7 @@ int FzReader::init(void) {
 
 int FzReader::initUsb(void) {
 
-   cb_data.logreader_ptr = &logreader;
+   cb_data.log_ptr = &log;
    cb_data.reader_ptr = reader;
    cb_data.report_ptr = &report;
 
@@ -359,7 +364,7 @@ int FzReader::initUsb(void) {
 
 int FzReader::initNet(void) {
 
-   cb_data.logreader_ptr = &logreader;
+   cb_data.log_ptr = &log;
    cb_data.reader_ptr = reader;
    cb_data.report_ptr = &report;
 
@@ -392,8 +397,10 @@ int FzReader::initNet(void) {
    unsigned short int *bufusint;
    unsigned short int value;
    long int evlen;
+/*
    uint32_t seqno;
-   static uint32_t old_seqno;
+   static uint32_t old_seqno = 0;
+*/
    int offset;
 
    struct iobuf *io = &nc->recv_iobuf;
@@ -401,7 +408,7 @@ int FzReader::initNet(void) {
    // retrieve callback data
    struct _cb_data *pdata = (struct _cb_data *) nc->mgr->user_data;
 
-   log4cpp::Category *logreader = (log4cpp::Category *) pdata->logreader_ptr;
+   // FzLogger *log = (FzLogger *) pdata->log_ptr;
    zmq::socket_t *reader= (zmq::socket_t *) pdata->reader_ptr;
    Report::FzReader *report = (Report::FzReader *) pdata->report_ptr; 
    bool rec = (bool) pdata->rec;
@@ -414,14 +421,18 @@ int FzReader::initNet(void) {
          
          evlen = ((io->len/2 * 2) == io->len)?io->len/2:io->len/2 + 1;
 
+/*
          seqno = bufusint[1] + (bufusint[0] << 16);
 
          if(seqno != old_seqno + 1) {
 
-            logreader->error("FzReader: UDP out of sequence prev: %u - curr: %u", old_seqno, seqno);
+            std::stringstream msg;
+            msg << "FzReader: UDP out of sequence prev:" << old_seqno << " - curr " << seqno;
+            log->write(ERROR, msg.str());
          }
 
          old_seqno = seqno;
+*/
 
          offset = 2;
          if( (bufusint[0] == 0x8080) || (bufusint[1] == 0x8080) || (bufusint[2] == 0x8080) )
@@ -457,11 +468,14 @@ int FzReader::initNet(void) {
                   myfile.close();
                }                   // end if rec 
 
+               report->set_in_events( report->in_events() + 1 );
+
                char *blob_data = reinterpret_cast<char *>(chunk.data());
                long int blob_size = chunk.size() * 2;
                reader->send(blob_data, blob_size);
 
-               report->set_in_events( report->in_events() + 1 );
+               report->set_out_events( report->out_events() + 1);
+               report->set_out_bytes( report->out_bytes() + blob_size );
 
                chunk.clear();
            }                       // end if eoe
@@ -477,7 +491,11 @@ int FzReader::initNet(void) {
         if(chunk.size() >= MAX_EVENT_SIZE) {
  
            chunk.clear();
-           logreader->error("data discarded due to overcoming maximum event size: %d bytes", MAX_EVENT_SIZE);
+/*
+           std::stringstream msg;
+           msg << "data discarded due to overcoming maximum event size: " << MAX_EVENT_SIZE << " bytes";
+           log->write(ERROR, msg.str());
+*/
         }
 
       break;
@@ -493,7 +511,7 @@ void FzReader::process(void) {
 
       try {
 
-         if(status == START) {
+         if(rcstate == RUNNING) {
  
             if(devname == "usb") {
 
@@ -507,7 +525,7 @@ void FzReader::process(void) {
  
             boost::this_thread::interruption_point();
 
-         } else if(status == STOP) {
+         } else {
 
               boost::this_thread::sleep(boost::posix_time::seconds(1));
               boost::this_thread::interruption_point();
@@ -539,14 +557,14 @@ Report::FzReader FzReader::get_report(void) {
 
 void FzReader::usb_close(void) {
 
-//   while(!libusb_cancel_transfer(xfr)) ;
    libusb_free_transfer(xfr); 
-/*   libusb_release_interface(usbh, 0);
-   libusb_close(usbh);
-   libusb_exit(ctx); */
 };
 
-void FzReader::set_status(enum DAQstatus_t val) {
+void FzReader::rc_do(RCcommand cmd) {
 
-   status = val;
+}
+
+void FzReader::set_rcstate(RCstate s) {
+
+   rcstate = s;
 }

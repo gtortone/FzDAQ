@@ -3,7 +3,7 @@
 #include<netdb.h>
 #include<ifaddrs.h>
 
-std::string human_byte(double size) {
+std::string human_byte(double size, double *value, std::string *unit) {
 
    const char* units[] = {"B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"};
    char buf[50];
@@ -13,6 +13,12 @@ std::string human_byte(double size) {
       size /= 1024;
       i++;
    }
+
+   if(value)
+      *value = size;
+
+   if(unit)
+      *unit = units[i]; 
 
    sprintf(buf, "%.*f %s", i, size, units[i]);
    return buf;
@@ -86,6 +92,8 @@ std::string devtoip(std::string netdev) {
 
     return(host);
 }
+
+/*
 
 void dumpEventOnScreen(DAQ::FzEvent *ev) {
 
@@ -183,4 +191,4 @@ void dumpEventOnScreen(DAQ::FzEvent *ev) {
 
    std::cout << "### END of event ###" << std::endl;
 }
-
+*/
