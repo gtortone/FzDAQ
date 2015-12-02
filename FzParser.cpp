@@ -177,9 +177,14 @@ void FzParser::process(void) {
                // check if process from FSM is ok...
                if( (retval == PARSE_OK) && (sm.event_is_empty == false) ) {
    
-                  bool retval;
+                  DAQ::FzEventSet eventset;
+                  DAQ::FzEvent *tmpev;
 
-                  retval = ev.SerializeToString(&str);
+                  tmpev = eventset.add_ev();
+                  tmpev->MergeFrom(ev);
+
+                  bool retval;
+                  retval = eventset.SerializeToString(&str);
 
                   if(retval == false) {
  
@@ -194,6 +199,7 @@ void FzParser::process(void) {
                   psr_report.set_out_events( psr_report.out_events() + 1 );
 
                   str.clear();
+                  eventset.Clear();
 
                } else if (retval == PARSE_FAIL) {
 
