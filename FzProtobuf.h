@@ -80,6 +80,15 @@ void WriteDataset(std::fstream &output, DAQ::FzEventSet &ev) {
    serialize_delimited(output, ev, ev.ByteSize());
 };
 
+void WriteDataset(std::fstream &output, std::string &message) {
+
+   google::protobuf::io::OstreamOutputStream ostreamWrapper(&output);
+   google::protobuf::io::CodedOutputStream codedOStream(&ostreamWrapper);
+
+   codedOStream.WriteLittleEndian32(message.length());
+   codedOStream.WriteRaw(message.c_str(), message.length());
+};
+
 };	//end of class
 
 #endif

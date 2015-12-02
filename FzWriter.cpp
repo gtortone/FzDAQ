@@ -229,10 +229,6 @@ void FzWriter::process(void) {
             static unsigned long esize;	// current eventset file dize
             static unsigned long dsize;	// current eventset directory size
 
-            DAQ::FzEventSet eventset;
-            DAQ::FzEvent *tmpev;
-            DAQ::FzEvent event;
-
             zmq::message_t message;
 
             rc = writer->recv(&message);
@@ -242,31 +238,18 @@ void FzWriter::process(void) {
                report.set_in_bytes( report.in_bytes() + message.size() );
                report.set_in_events( report.in_events() + 1 );
 
-               bool retval;
 
-               retval = event.ParseFromArray(message.data(), message.size()); 
-
-               if(retval == false) {
-
-                  std::stringstream msg;
-                  msg << "parse error - EC: " << std::hex << event.ec();
-                  log.write(WARN, msg.str());
-                  //dumpEventOnScreen(&event);
-               }
+               std::string msg_str(static_cast<char*>(message.data()), message.size());
+               pb->WriteDataset(output, msg_str);
 
                // to fazia-spy
                pub->send(message);
- 
-               tmpev = eventset.add_ev();
-               tmpev->MergeFrom(event);
 
-               pb->WriteDataset(output, eventset);
-
-               report.set_out_bytes( report.out_bytes() + eventset.ByteSize() );
+               report.set_out_bytes( report.out_bytes() + message.size() );
                report.set_out_events( report.out_events() + 1 );
 
-               esize += eventset.ByteSize();
-               dsize += eventset.ByteSize();
+               esize += message.size();
+               dsize += message.size();
          
                if(dsize > event_dir_size) {
 
@@ -279,8 +262,6 @@ void FzWriter::process(void) {
                   setup_newfile();
                   esize = 0;
                }
-
-               eventset.Clear(); 
             }
 
             boost::this_thread::interruption_point();
