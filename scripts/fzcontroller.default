@@ -1,0 +1,5 @@
+# Default settings for FzController. This file is sourced by /bin/sh from
+# /etc/init.d/fzcontroller
+
+# Options to pass to fzcontroller
+CFGFILE="/opt/FzDAQ/config/test-gennaro.cfg"

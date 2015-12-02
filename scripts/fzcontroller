@@ -1,0 +1,40 @@
+#!/bin/sh
+
+# FzDAQ start-stop-daemon 
+set -e
+
+export PATH="$PATH:/opt/FzDAQ:/usr/sbin:/sbin"
+
+if test -f /etc/default/fazia/fzcontroller; then
+    . /etc/default/fazia/fzcontroller
+fi
+
+SCREEN_OPTS=" -d -m -S fzcontroller FzController --cfg $CFGFILE"
+
+case "$1" in
+  start)
+        echo -n "Starting FzController: "
+        if pgrep FzController > /dev/null; then
+           echo -n "DAQ Controller instance already exists !"
+        else 
+           /usr/bin/screen $SCREEN_OPTS
+           echo -n "DAQ Controller instance created"
+        fi
+        echo "."
+	;;
+  stop)
+        echo -n "Stopping FzController: "
+        /usr/bin/screen -r fzcontroller -X quit
+        echo "."
+	;;
+  status)
+        echo -n "FzController instances: "
+        /usr/bin/screen -list
+        echo "."
+        ;;
+  *)
+	echo "Usage: "$1" {start|stop|status}"
+	exit 1
+esac
+
+exit 0
