@@ -29,7 +29,7 @@ case "$1" in
 	;;
   status)
         echo -n "FzDAQ instances: "
-        /usr/bin/screen -list
+        /usr/bin/screen -list | grep -i fzdaq
         echo "."
         ;;
   *)
