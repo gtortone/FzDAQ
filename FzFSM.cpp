@@ -1218,11 +1218,8 @@ void FzFSM::trans16(void) {	// S9      ->      (CRCBL)         -> S10
      // check if this block is a 'fake block' containing trigger info
      if(blk->blkid() == 0x7FF) {
 
-        if(blk->fee_size() > 0) {
-
-           std::cout << "Trigger info detected" << std::endl;
+        if(blk->fee_size() > 0)
            read_triggerinfo(blk, ev);
-        }
 
         ev->mutable_block()->RemoveLast(); 
      }
