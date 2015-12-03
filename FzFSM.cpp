@@ -94,8 +94,10 @@ int FzFSM::process(void) {
    fsm_report.set_in_events( fsm_report.in_events() + 1 );
    fsm_report.set_in_bytes( fsm_report.in_bytes() + (event_size*2) );	// event_size[i] contains 2 bytes
 
+#ifdef FSM_DEBUG
    sprintf(logbuf, "received event size: %d", event_size);
    log->write(DEBUG, logbuf);
+#endif
 
    for(event_index=0; event_index<event_size; event_index++) {
 
@@ -103,7 +105,9 @@ int FzFSM::process(void) {
 
       if(word_id == 8) {	// EMPTY word
 
+#ifdef FSM_DEBUG
          log->write(DEBUG, "empty word (0x8080) detected");
+#endif
          continue;	// no transition
       }
       
@@ -113,8 +117,10 @@ int FzFSM::process(void) {
 
          case 0: // transition not valid
 
+#ifdef FSM_DEBUG
             sprintf(logbuf, "transition not valid WORD = %4.4X - word_id = %d - curr_state = %d - trans_id = %d\n", event[event_index], int(word_id), int(state_id), int(trans_id));
             log->write(DEBUG, logbuf);
+#endif
 
             state_id = 0; 	// reset FSM	
 	    ev->Clear();	// clear incomplete event
