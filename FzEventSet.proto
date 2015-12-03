@@ -99,11 +99,19 @@ message FzBlock {
   required bool crc_error = 4;
 }
 
+message FzTrigInfo {
+
+  required uint32 id = 1;
+  required string attr = 2;
+  required uint64 value = 3;
+}
+
 message FzEvent {
 
   required uint32 ec = 1;
   repeated FzBlock block = 2;
   required uint32 regid = 3;
+  repeated FzTrigInfo trinfo = 4;
 }
 
 message FzEventSet {

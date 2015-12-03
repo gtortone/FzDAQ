@@ -40,6 +40,7 @@ class FzData;
 class FzHit;
 class FzFee;
 class FzBlock;
+class FzTrigInfo;
 class FzEvent;
 class FzEventSet;
 
@@ -974,6 +975,110 @@ class FzBlock : public ::google::protobuf::Message {
 };
 // -------------------------------------------------------------------
 
+class FzTrigInfo : public ::google::protobuf::Message {
+ public:
+  FzTrigInfo();
+  virtual ~FzTrigInfo();
+
+  FzTrigInfo(const FzTrigInfo& from);
+
+  inline FzTrigInfo& operator=(const FzTrigInfo& from) {
+    CopyFrom(from);
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _unknown_fields_;
+  }
+
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return &_unknown_fields_;
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const FzTrigInfo& default_instance();
+
+  void Swap(FzTrigInfo* other);
+
+  // implements Message ----------------------------------------------
+
+  FzTrigInfo* New() const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const FzTrigInfo& from);
+  void MergeFrom(const FzTrigInfo& from);
+  void Clear();
+  bool IsInitialized() const;
+
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  public:
+  ::google::protobuf::Metadata GetMetadata() const;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // required uint32 id = 1;
+  inline bool has_id() const;
+  inline void clear_id();
+  static const int kIdFieldNumber = 1;
+  inline ::google::protobuf::uint32 id() const;
+  inline void set_id(::google::protobuf::uint32 value);
+
+  // required string attr = 2;
+  inline bool has_attr() const;
+  inline void clear_attr();
+  static const int kAttrFieldNumber = 2;
+  inline const ::std::string& attr() const;
+  inline void set_attr(const ::std::string& value);
+  inline void set_attr(const char* value);
+  inline void set_attr(const char* value, size_t size);
+  inline ::std::string* mutable_attr();
+  inline ::std::string* release_attr();
+  inline void set_allocated_attr(::std::string* attr);
+
+  // required uint64 value = 3;
+  inline bool has_value() const;
+  inline void clear_value();
+  static const int kValueFieldNumber = 3;
+  inline ::google::protobuf::uint64 value() const;
+  inline void set_value(::google::protobuf::uint64 value);
+
+  // @@protoc_insertion_point(class_scope:DAQ.FzTrigInfo)
+ private:
+  inline void set_has_id();
+  inline void clear_has_id();
+  inline void set_has_attr();
+  inline void clear_has_attr();
+  inline void set_has_value();
+  inline void clear_has_value();
+
+  ::google::protobuf::UnknownFieldSet _unknown_fields_;
+
+  ::google::protobuf::uint32 _has_bits_[1];
+  mutable int _cached_size_;
+  ::std::string* attr_;
+  ::google::protobuf::uint64 value_;
+  ::google::protobuf::uint32 id_;
+  friend void  protobuf_AddDesc_FzEventSet_2eproto();
+  friend void protobuf_AssignDesc_FzEventSet_2eproto();
+  friend void protobuf_ShutdownFile_FzEventSet_2eproto();
+
+  void InitAsDefaultInstance();
+  static FzTrigInfo* default_instance_;
+};
+// -------------------------------------------------------------------
+
 class FzEvent : public ::google::protobuf::Message {
  public:
   FzEvent();
@@ -1053,6 +1158,18 @@ class FzEvent : public ::google::protobuf::Message {
   inline ::google::protobuf::uint32 regid() const;
   inline void set_regid(::google::protobuf::uint32 value);
 
+  // repeated .DAQ.FzTrigInfo trinfo = 4;
+  inline int trinfo_size() const;
+  inline void clear_trinfo();
+  static const int kTrinfoFieldNumber = 4;
+  inline const ::DAQ::FzTrigInfo& trinfo(int index) const;
+  inline ::DAQ::FzTrigInfo* mutable_trinfo(int index);
+  inline ::DAQ::FzTrigInfo* add_trinfo();
+  inline const ::google::protobuf::RepeatedPtrField< ::DAQ::FzTrigInfo >&
+      trinfo() const;
+  inline ::google::protobuf::RepeatedPtrField< ::DAQ::FzTrigInfo >*
+      mutable_trinfo();
+
   // @@protoc_insertion_point(class_scope:DAQ.FzEvent)
  private:
   inline void set_has_ec();
@@ -1067,6 +1184,7 @@ class FzEvent : public ::google::protobuf::Message {
   ::google::protobuf::RepeatedPtrField< ::DAQ::FzBlock > block_;
   ::google::protobuf::uint32 ec_;
   ::google::protobuf::uint32 regid_;
+  ::google::protobuf::RepeatedPtrField< ::DAQ::FzTrigInfo > trinfo_;
   friend void  protobuf_AddDesc_FzEventSet_2eproto();
   friend void protobuf_AssignDesc_FzEventSet_2eproto();
   friend void protobuf_ShutdownFile_FzEventSet_2eproto();
@@ -1806,6 +1924,134 @@ inline void FzBlock::set_crc_error(bool value) {
 
 // -------------------------------------------------------------------
 
+// FzTrigInfo
+
+// required uint32 id = 1;
+inline bool FzTrigInfo::has_id() const {
+  return (_has_bits_[0] & 0x00000001u) != 0;
+}
+inline void FzTrigInfo::set_has_id() {
+  _has_bits_[0] |= 0x00000001u;
+}
+inline void FzTrigInfo::clear_has_id() {
+  _has_bits_[0] &= ~0x00000001u;
+}
+inline void FzTrigInfo::clear_id() {
+  id_ = 0u;
+  clear_has_id();
+}
+inline ::google::protobuf::uint32 FzTrigInfo::id() const {
+  // @@protoc_insertion_point(field_get:DAQ.FzTrigInfo.id)
+  return id_;
+}
+inline void FzTrigInfo::set_id(::google::protobuf::uint32 value) {
+  set_has_id();
+  id_ = value;
+  // @@protoc_insertion_point(field_set:DAQ.FzTrigInfo.id)
+}
+
+// required string attr = 2;
+inline bool FzTrigInfo::has_attr() const {
+  return (_has_bits_[0] & 0x00000002u) != 0;
+}
+inline void FzTrigInfo::set_has_attr() {
+  _has_bits_[0] |= 0x00000002u;
+}
+inline void FzTrigInfo::clear_has_attr() {
+  _has_bits_[0] &= ~0x00000002u;
+}
+inline void FzTrigInfo::clear_attr() {
+  if (attr_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    attr_->clear();
+  }
+  clear_has_attr();
+}
+inline const ::std::string& FzTrigInfo::attr() const {
+  // @@protoc_insertion_point(field_get:DAQ.FzTrigInfo.attr)
+  return *attr_;
+}
+inline void FzTrigInfo::set_attr(const ::std::string& value) {
+  set_has_attr();
+  if (attr_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    attr_ = new ::std::string;
+  }
+  attr_->assign(value);
+  // @@protoc_insertion_point(field_set:DAQ.FzTrigInfo.attr)
+}
+inline void FzTrigInfo::set_attr(const char* value) {
+  set_has_attr();
+  if (attr_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    attr_ = new ::std::string;
+  }
+  attr_->assign(value);
+  // @@protoc_insertion_point(field_set_char:DAQ.FzTrigInfo.attr)
+}
+inline void FzTrigInfo::set_attr(const char* value, size_t size) {
+  set_has_attr();
+  if (attr_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    attr_ = new ::std::string;
+  }
+  attr_->assign(reinterpret_cast<const char*>(value), size);
+  // @@protoc_insertion_point(field_set_pointer:DAQ.FzTrigInfo.attr)
+}
+inline ::std::string* FzTrigInfo::mutable_attr() {
+  set_has_attr();
+  if (attr_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    attr_ = new ::std::string;
+  }
+  // @@protoc_insertion_point(field_mutable:DAQ.FzTrigInfo.attr)
+  return attr_;
+}
+inline ::std::string* FzTrigInfo::release_attr() {
+  clear_has_attr();
+  if (attr_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    return NULL;
+  } else {
+    ::std::string* temp = attr_;
+    attr_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+    return temp;
+  }
+}
+inline void FzTrigInfo::set_allocated_attr(::std::string* attr) {
+  if (attr_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    delete attr_;
+  }
+  if (attr) {
+    set_has_attr();
+    attr_ = attr;
+  } else {
+    clear_has_attr();
+    attr_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  }
+  // @@protoc_insertion_point(field_set_allocated:DAQ.FzTrigInfo.attr)
+}
+
+// required uint64 value = 3;
+inline bool FzTrigInfo::has_value() const {
+  return (_has_bits_[0] & 0x00000004u) != 0;
+}
+inline void FzTrigInfo::set_has_value() {
+  _has_bits_[0] |= 0x00000004u;
+}
+inline void FzTrigInfo::clear_has_value() {
+  _has_bits_[0] &= ~0x00000004u;
+}
+inline void FzTrigInfo::clear_value() {
+  value_ = GOOGLE_ULONGLONG(0);
+  clear_has_value();
+}
+inline ::google::protobuf::uint64 FzTrigInfo::value() const {
+  // @@protoc_insertion_point(field_get:DAQ.FzTrigInfo.value)
+  return value_;
+}
+inline void FzTrigInfo::set_value(::google::protobuf::uint64 value) {
+  set_has_value();
+  value_ = value;
+  // @@protoc_insertion_point(field_set:DAQ.FzTrigInfo.value)
+}
+
+// -------------------------------------------------------------------
+
 // FzEvent
 
 // required uint32 ec = 1;
@@ -1884,6 +2130,36 @@ inline void FzEvent::set_regid(::google::protobuf::uint32 value) {
   set_has_regid();
   regid_ = value;
   // @@protoc_insertion_point(field_set:DAQ.FzEvent.regid)
+}
+
+// repeated .DAQ.FzTrigInfo trinfo = 4;
+inline int FzEvent::trinfo_size() const {
+  return trinfo_.size();
+}
+inline void FzEvent::clear_trinfo() {
+  trinfo_.Clear();
+}
+inline const ::DAQ::FzTrigInfo& FzEvent::trinfo(int index) const {
+  // @@protoc_insertion_point(field_get:DAQ.FzEvent.trinfo)
+  return trinfo_.Get(index);
+}
+inline ::DAQ::FzTrigInfo* FzEvent::mutable_trinfo(int index) {
+  // @@protoc_insertion_point(field_mutable:DAQ.FzEvent.trinfo)
+  return trinfo_.Mutable(index);
+}
+inline ::DAQ::FzTrigInfo* FzEvent::add_trinfo() {
+  // @@protoc_insertion_point(field_add:DAQ.FzEvent.trinfo)
+  return trinfo_.Add();
+}
+inline const ::google::protobuf::RepeatedPtrField< ::DAQ::FzTrigInfo >&
+FzEvent::trinfo() const {
+  // @@protoc_insertion_point(field_list:DAQ.FzEvent.trinfo)
+  return trinfo_;
+}
+inline ::google::protobuf::RepeatedPtrField< ::DAQ::FzTrigInfo >*
+FzEvent::mutable_trinfo() {
+  // @@protoc_insertion_point(field_mutable_list:DAQ.FzEvent.trinfo)
+  return &trinfo_;
 }
 
 // -------------------------------------------------------------------

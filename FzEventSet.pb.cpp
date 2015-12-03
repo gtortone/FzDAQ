@@ -43,6 +43,9 @@ const ::google::protobuf::EnumDescriptor* FzFee_FzFec_descriptor_ = NULL;
 const ::google::protobuf::Descriptor* FzBlock_descriptor_ = NULL;
 const ::google::protobuf::internal::GeneratedMessageReflection*
   FzBlock_reflection_ = NULL;
+const ::google::protobuf::Descriptor* FzTrigInfo_descriptor_ = NULL;
+const ::google::protobuf::internal::GeneratedMessageReflection*
+  FzTrigInfo_reflection_ = NULL;
 const ::google::protobuf::Descriptor* FzEvent_descriptor_ = NULL;
 const ::google::protobuf::internal::GeneratedMessageReflection*
   FzEvent_reflection_ = NULL;
@@ -171,11 +174,29 @@ void protobuf_AssignDesc_FzEventSet_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(FzBlock));
-  FzEvent_descriptor_ = file->message_type(6);
-  static const int FzEvent_offsets_[3] = {
+  FzTrigInfo_descriptor_ = file->message_type(6);
+  static const int FzTrigInfo_offsets_[3] = {
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(FzTrigInfo, id_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(FzTrigInfo, attr_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(FzTrigInfo, value_),
+  };
+  FzTrigInfo_reflection_ =
+    new ::google::protobuf::internal::GeneratedMessageReflection(
+      FzTrigInfo_descriptor_,
+      FzTrigInfo::default_instance_,
+      FzTrigInfo_offsets_,
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(FzTrigInfo, _has_bits_[0]),
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(FzTrigInfo, _unknown_fields_),
+      -1,
+      ::google::protobuf::DescriptorPool::generated_pool(),
+      ::google::protobuf::MessageFactory::generated_factory(),
+      sizeof(FzTrigInfo));
+  FzEvent_descriptor_ = file->message_type(7);
+  static const int FzEvent_offsets_[4] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(FzEvent, ec_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(FzEvent, block_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(FzEvent, regid_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(FzEvent, trinfo_),
   };
   FzEvent_reflection_ =
     new ::google::protobuf::internal::GeneratedMessageReflection(
@@ -188,7 +209,7 @@ void protobuf_AssignDesc_FzEventSet_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(FzEvent));
-  FzEventSet_descriptor_ = file->message_type(7);
+  FzEventSet_descriptor_ = file->message_type(8);
   static const int FzEventSet_offsets_[1] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(FzEventSet, ev_),
   };
@@ -228,6 +249,8 @@ void protobuf_RegisterTypes(const ::std::string&) {
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
     FzBlock_descriptor_, &FzBlock::default_instance());
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
+    FzTrigInfo_descriptor_, &FzTrigInfo::default_instance());
+  ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
     FzEvent_descriptor_, &FzEvent::default_instance());
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
     FzEventSet_descriptor_, &FzEventSet::default_instance());
@@ -248,6 +271,8 @@ void protobuf_ShutdownFile_FzEventSet_2eproto() {
   delete FzFee_reflection_;
   delete FzBlock::default_instance_;
   delete FzBlock_reflection_;
+  delete FzTrigInfo::default_instance_;
+  delete FzTrigInfo_reflection_;
   delete FzEvent::default_instance_;
   delete FzEvent_reflection_;
   delete FzEventSet::default_instance_;
@@ -286,10 +311,12 @@ void protobuf_AddDesc_FzEventSet_2eproto() {
     "FEC4\020\004\022\010\n\004FEC5\020\005\022\010\n\004FEC6\020\006\022\010\n\004FEC7\020\007\022\010\n\004"
     "ADCF\020\017\022\n\n\006UNKFEC\020\020\"W\n\007FzBlock\022\r\n\005blkid\030\001"
     " \002(\r\022\027\n\003fee\030\002 \003(\0132\n.DAQ.FzFee\022\021\n\tlen_err"
-    "or\030\003 \002(\010\022\021\n\tcrc_error\030\004 \002(\010\"A\n\007FzEvent\022\n"
-    "\n\002ec\030\001 \002(\r\022\033\n\005block\030\002 \003(\0132\014.DAQ.FzBlock\022"
-    "\r\n\005regid\030\003 \002(\r\"&\n\nFzEventSet\022\030\n\002ev\030\001 \003(\013"
-    "2\014.DAQ.FzEventB\005H\001\200\001\000", 1141);
+    "or\030\003 \002(\010\022\021\n\tcrc_error\030\004 \002(\010\"5\n\nFzTrigInf"
+    "o\022\n\n\002id\030\001 \002(\r\022\014\n\004attr\030\002 \002(\t\022\r\n\005value\030\003 \002"
+    "(\004\"b\n\007FzEvent\022\n\n\002ec\030\001 \002(\r\022\033\n\005block\030\002 \003(\013"
+    "2\014.DAQ.FzBlock\022\r\n\005regid\030\003 \002(\r\022\037\n\006trinfo\030"
+    "\004 \003(\0132\017.DAQ.FzTrigInfo\"&\n\nFzEventSet\022\030\n\002"
+    "ev\030\001 \003(\0132\014.DAQ.FzEventB\005H\001\200\001\000", 1229);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "FzEventSet.proto", &protobuf_RegisterTypes);
   Energy::default_instance_ = new Energy();
@@ -298,6 +325,7 @@ void protobuf_AddDesc_FzEventSet_2eproto() {
   FzHit::default_instance_ = new FzHit();
   FzFee::default_instance_ = new FzFee();
   FzBlock::default_instance_ = new FzBlock();
+  FzTrigInfo::default_instance_ = new FzTrigInfo();
   FzEvent::default_instance_ = new FzEvent();
   FzEventSet::default_instance_ = new FzEventSet();
   Energy::default_instance_->InitAsDefaultInstance();
@@ -306,6 +334,7 @@ void protobuf_AddDesc_FzEventSet_2eproto() {
   FzHit::default_instance_->InitAsDefaultInstance();
   FzFee::default_instance_->InitAsDefaultInstance();
   FzBlock::default_instance_->InitAsDefaultInstance();
+  FzTrigInfo::default_instance_->InitAsDefaultInstance();
   FzEvent::default_instance_->InitAsDefaultInstance();
   FzEventSet::default_instance_->InitAsDefaultInstance();
   ::google::protobuf::internal::OnShutdown(&protobuf_ShutdownFile_FzEventSet_2eproto);
@@ -2595,9 +2624,347 @@ void FzBlock::Swap(FzBlock* other) {
 // ===================================================================
 
 #ifndef _MSC_VER
+const int FzTrigInfo::kIdFieldNumber;
+const int FzTrigInfo::kAttrFieldNumber;
+const int FzTrigInfo::kValueFieldNumber;
+#endif  // !_MSC_VER
+
+FzTrigInfo::FzTrigInfo()
+  : ::google::protobuf::Message() {
+  SharedCtor();
+  // @@protoc_insertion_point(constructor:DAQ.FzTrigInfo)
+}
+
+void FzTrigInfo::InitAsDefaultInstance() {
+}
+
+FzTrigInfo::FzTrigInfo(const FzTrigInfo& from)
+  : ::google::protobuf::Message() {
+  SharedCtor();
+  MergeFrom(from);
+  // @@protoc_insertion_point(copy_constructor:DAQ.FzTrigInfo)
+}
+
+void FzTrigInfo::SharedCtor() {
+  ::google::protobuf::internal::GetEmptyString();
+  _cached_size_ = 0;
+  id_ = 0u;
+  attr_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  value_ = GOOGLE_ULONGLONG(0);
+  ::memset(_has_bits_, 0, sizeof(_has_bits_));
+}
+
+FzTrigInfo::~FzTrigInfo() {
+  // @@protoc_insertion_point(destructor:DAQ.FzTrigInfo)
+  SharedDtor();
+}
+
+void FzTrigInfo::SharedDtor() {
+  if (attr_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    delete attr_;
+  }
+  if (this != default_instance_) {
+  }
+}
+
+void FzTrigInfo::SetCachedSize(int size) const {
+  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
+  _cached_size_ = size;
+  GOOGLE_SAFE_CONCURRENT_WRITES_END();
+}
+const ::google::protobuf::Descriptor* FzTrigInfo::descriptor() {
+  protobuf_AssignDescriptorsOnce();
+  return FzTrigInfo_descriptor_;
+}
+
+const FzTrigInfo& FzTrigInfo::default_instance() {
+  if (default_instance_ == NULL) protobuf_AddDesc_FzEventSet_2eproto();
+  return *default_instance_;
+}
+
+FzTrigInfo* FzTrigInfo::default_instance_ = NULL;
+
+FzTrigInfo* FzTrigInfo::New() const {
+  return new FzTrigInfo;
+}
+
+void FzTrigInfo::Clear() {
+#define OFFSET_OF_FIELD_(f) (reinterpret_cast<char*>(      \
+  &reinterpret_cast<FzTrigInfo*>(16)->f) - \
+   reinterpret_cast<char*>(16))
+
+#define ZR_(first, last) do {                              \
+    size_t f = OFFSET_OF_FIELD_(first);                    \
+    size_t n = OFFSET_OF_FIELD_(last) - f + sizeof(last);  \
+    ::memset(&first, 0, n);                                \
+  } while (0)
+
+  if (_has_bits_[0 / 32] & 7) {
+    ZR_(value_, id_);
+    if (has_attr()) {
+      if (attr_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+        attr_->clear();
+      }
+    }
+  }
+
+#undef OFFSET_OF_FIELD_
+#undef ZR_
+
+  ::memset(_has_bits_, 0, sizeof(_has_bits_));
+  mutable_unknown_fields()->Clear();
+}
+
+bool FzTrigInfo::MergePartialFromCodedStream(
+    ::google::protobuf::io::CodedInputStream* input) {
+#define DO_(EXPRESSION) if (!(EXPRESSION)) goto failure
+  ::google::protobuf::uint32 tag;
+  // @@protoc_insertion_point(parse_start:DAQ.FzTrigInfo)
+  for (;;) {
+    ::std::pair< ::google::protobuf::uint32, bool> p = input->ReadTagWithCutoff(127);
+    tag = p.first;
+    if (!p.second) goto handle_unusual;
+    switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
+      // required uint32 id = 1;
+      case 1: {
+        if (tag == 8) {
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   ::google::protobuf::uint32, ::google::protobuf::internal::WireFormatLite::TYPE_UINT32>(
+                 input, &id_)));
+          set_has_id();
+        } else {
+          goto handle_unusual;
+        }
+        if (input->ExpectTag(18)) goto parse_attr;
+        break;
+      }
+
+      // required string attr = 2;
+      case 2: {
+        if (tag == 18) {
+         parse_attr:
+          DO_(::google::protobuf::internal::WireFormatLite::ReadString(
+                input, this->mutable_attr()));
+          ::google::protobuf::internal::WireFormat::VerifyUTF8StringNamedField(
+            this->attr().data(), this->attr().length(),
+            ::google::protobuf::internal::WireFormat::PARSE,
+            "attr");
+        } else {
+          goto handle_unusual;
+        }
+        if (input->ExpectTag(24)) goto parse_value;
+        break;
+      }
+
+      // required uint64 value = 3;
+      case 3: {
+        if (tag == 24) {
+         parse_value:
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   ::google::protobuf::uint64, ::google::protobuf::internal::WireFormatLite::TYPE_UINT64>(
+                 input, &value_)));
+          set_has_value();
+        } else {
+          goto handle_unusual;
+        }
+        if (input->ExpectAtEnd()) goto success;
+        break;
+      }
+
+      default: {
+      handle_unusual:
+        if (tag == 0 ||
+            ::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_END_GROUP) {
+          goto success;
+        }
+        DO_(::google::protobuf::internal::WireFormat::SkipField(
+              input, tag, mutable_unknown_fields()));
+        break;
+      }
+    }
+  }
+success:
+  // @@protoc_insertion_point(parse_success:DAQ.FzTrigInfo)
+  return true;
+failure:
+  // @@protoc_insertion_point(parse_failure:DAQ.FzTrigInfo)
+  return false;
+#undef DO_
+}
+
+void FzTrigInfo::SerializeWithCachedSizes(
+    ::google::protobuf::io::CodedOutputStream* output) const {
+  // @@protoc_insertion_point(serialize_start:DAQ.FzTrigInfo)
+  // required uint32 id = 1;
+  if (has_id()) {
+    ::google::protobuf::internal::WireFormatLite::WriteUInt32(1, this->id(), output);
+  }
+
+  // required string attr = 2;
+  if (has_attr()) {
+    ::google::protobuf::internal::WireFormat::VerifyUTF8StringNamedField(
+      this->attr().data(), this->attr().length(),
+      ::google::protobuf::internal::WireFormat::SERIALIZE,
+      "attr");
+    ::google::protobuf::internal::WireFormatLite::WriteStringMaybeAliased(
+      2, this->attr(), output);
+  }
+
+  // required uint64 value = 3;
+  if (has_value()) {
+    ::google::protobuf::internal::WireFormatLite::WriteUInt64(3, this->value(), output);
+  }
+
+  if (!unknown_fields().empty()) {
+    ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
+        unknown_fields(), output);
+  }
+  // @@protoc_insertion_point(serialize_end:DAQ.FzTrigInfo)
+}
+
+::google::protobuf::uint8* FzTrigInfo::SerializeWithCachedSizesToArray(
+    ::google::protobuf::uint8* target) const {
+  // @@protoc_insertion_point(serialize_to_array_start:DAQ.FzTrigInfo)
+  // required uint32 id = 1;
+  if (has_id()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(1, this->id(), target);
+  }
+
+  // required string attr = 2;
+  if (has_attr()) {
+    ::google::protobuf::internal::WireFormat::VerifyUTF8StringNamedField(
+      this->attr().data(), this->attr().length(),
+      ::google::protobuf::internal::WireFormat::SERIALIZE,
+      "attr");
+    target =
+      ::google::protobuf::internal::WireFormatLite::WriteStringToArray(
+        2, this->attr(), target);
+  }
+
+  // required uint64 value = 3;
+  if (has_value()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteUInt64ToArray(3, this->value(), target);
+  }
+
+  if (!unknown_fields().empty()) {
+    target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
+        unknown_fields(), target);
+  }
+  // @@protoc_insertion_point(serialize_to_array_end:DAQ.FzTrigInfo)
+  return target;
+}
+
+int FzTrigInfo::ByteSize() const {
+  int total_size = 0;
+
+  if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    // required uint32 id = 1;
+    if (has_id()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::UInt32Size(
+          this->id());
+    }
+
+    // required string attr = 2;
+    if (has_attr()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::StringSize(
+          this->attr());
+    }
+
+    // required uint64 value = 3;
+    if (has_value()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::UInt64Size(
+          this->value());
+    }
+
+  }
+  if (!unknown_fields().empty()) {
+    total_size +=
+      ::google::protobuf::internal::WireFormat::ComputeUnknownFieldsSize(
+        unknown_fields());
+  }
+  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
+  _cached_size_ = total_size;
+  GOOGLE_SAFE_CONCURRENT_WRITES_END();
+  return total_size;
+}
+
+void FzTrigInfo::MergeFrom(const ::google::protobuf::Message& from) {
+  GOOGLE_CHECK_NE(&from, this);
+  const FzTrigInfo* source =
+    ::google::protobuf::internal::dynamic_cast_if_available<const FzTrigInfo*>(
+      &from);
+  if (source == NULL) {
+    ::google::protobuf::internal::ReflectionOps::Merge(from, this);
+  } else {
+    MergeFrom(*source);
+  }
+}
+
+void FzTrigInfo::MergeFrom(const FzTrigInfo& from) {
+  GOOGLE_CHECK_NE(&from, this);
+  if (from._has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    if (from.has_id()) {
+      set_id(from.id());
+    }
+    if (from.has_attr()) {
+      set_attr(from.attr());
+    }
+    if (from.has_value()) {
+      set_value(from.value());
+    }
+  }
+  mutable_unknown_fields()->MergeFrom(from.unknown_fields());
+}
+
+void FzTrigInfo::CopyFrom(const ::google::protobuf::Message& from) {
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+void FzTrigInfo::CopyFrom(const FzTrigInfo& from) {
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool FzTrigInfo::IsInitialized() const {
+  if ((_has_bits_[0] & 0x00000007) != 0x00000007) return false;
+
+  return true;
+}
+
+void FzTrigInfo::Swap(FzTrigInfo* other) {
+  if (other != this) {
+    std::swap(id_, other->id_);
+    std::swap(attr_, other->attr_);
+    std::swap(value_, other->value_);
+    std::swap(_has_bits_[0], other->_has_bits_[0]);
+    _unknown_fields_.Swap(&other->_unknown_fields_);
+    std::swap(_cached_size_, other->_cached_size_);
+  }
+}
+
+::google::protobuf::Metadata FzTrigInfo::GetMetadata() const {
+  protobuf_AssignDescriptorsOnce();
+  ::google::protobuf::Metadata metadata;
+  metadata.descriptor = FzTrigInfo_descriptor_;
+  metadata.reflection = FzTrigInfo_reflection_;
+  return metadata;
+}
+
+
+// ===================================================================
+
+#ifndef _MSC_VER
 const int FzEvent::kEcFieldNumber;
 const int FzEvent::kBlockFieldNumber;
 const int FzEvent::kRegidFieldNumber;
+const int FzEvent::kTrinfoFieldNumber;
 #endif  // !_MSC_VER
 
 FzEvent::FzEvent()
@@ -2671,6 +3038,7 @@ void FzEvent::Clear() {
 #undef ZR_
 
   block_.Clear();
+  trinfo_.Clear();
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
   mutable_unknown_fields()->Clear();
 }
@@ -2724,6 +3092,20 @@ bool FzEvent::MergePartialFromCodedStream(
         } else {
           goto handle_unusual;
         }
+        if (input->ExpectTag(34)) goto parse_trinfo;
+        break;
+      }
+
+      // repeated .DAQ.FzTrigInfo trinfo = 4;
+      case 4: {
+        if (tag == 34) {
+         parse_trinfo:
+          DO_(::google::protobuf::internal::WireFormatLite::ReadMessageNoVirtual(
+                input, add_trinfo()));
+        } else {
+          goto handle_unusual;
+        }
+        if (input->ExpectTag(34)) goto parse_trinfo;
         if (input->ExpectAtEnd()) goto success;
         break;
       }
@@ -2769,6 +3151,12 @@ void FzEvent::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormatLite::WriteUInt32(3, this->regid(), output);
   }
 
+  // repeated .DAQ.FzTrigInfo trinfo = 4;
+  for (int i = 0; i < this->trinfo_size(); i++) {
+    ::google::protobuf::internal::WireFormatLite::WriteMessageMaybeToArray(
+      4, this->trinfo(i), output);
+  }
+
   if (!unknown_fields().empty()) {
     ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
         unknown_fields(), output);
@@ -2794,6 +3182,13 @@ void FzEvent::SerializeWithCachedSizes(
   // required uint32 regid = 3;
   if (has_regid()) {
     target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(3, this->regid(), target);
+  }
+
+  // repeated .DAQ.FzTrigInfo trinfo = 4;
+  for (int i = 0; i < this->trinfo_size(); i++) {
+    target = ::google::protobuf::internal::WireFormatLite::
+      WriteMessageNoVirtualToArray(
+        4, this->trinfo(i), target);
   }
 
   if (!unknown_fields().empty()) {
@@ -2831,6 +3226,14 @@ int FzEvent::ByteSize() const {
         this->block(i));
   }
 
+  // repeated .DAQ.FzTrigInfo trinfo = 4;
+  total_size += 1 * this->trinfo_size();
+  for (int i = 0; i < this->trinfo_size(); i++) {
+    total_size +=
+      ::google::protobuf::internal::WireFormatLite::MessageSizeNoVirtual(
+        this->trinfo(i));
+  }
+
   if (!unknown_fields().empty()) {
     total_size +=
       ::google::protobuf::internal::WireFormat::ComputeUnknownFieldsSize(
@@ -2857,6 +3260,7 @@ void FzEvent::MergeFrom(const ::google::protobuf::Message& from) {
 void FzEvent::MergeFrom(const FzEvent& from) {
   GOOGLE_CHECK_NE(&from, this);
   block_.MergeFrom(from.block_);
+  trinfo_.MergeFrom(from.trinfo_);
   if (from._has_bits_[0 / 32] & (0xffu << (0 % 32))) {
     if (from.has_ec()) {
       set_ec(from.ec());
@@ -2884,6 +3288,7 @@ bool FzEvent::IsInitialized() const {
   if ((_has_bits_[0] & 0x00000005) != 0x00000005) return false;
 
   if (!::google::protobuf::internal::AllAreInitialized(this->block())) return false;
+  if (!::google::protobuf::internal::AllAreInitialized(this->trinfo())) return false;
   return true;
 }
 
@@ -2892,6 +3297,7 @@ void FzEvent::Swap(FzEvent* other) {
     std::swap(ec_, other->ec_);
     block_.Swap(&other->block_);
     std::swap(regid_, other->regid_);
+    trinfo_.Swap(&other->trinfo_);
     std::swap(_has_bits_[0], other->_has_bits_[0]);
     _unknown_fields_.Swap(&other->_unknown_fields_);
     std::swap(_cached_size_, other->_cached_size_);

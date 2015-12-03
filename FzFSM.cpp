@@ -4,6 +4,7 @@
 #include "FzFSM.h"
 
 //#define FSM_DEBUG
+#include <google/protobuf/text_format.h>  // for debug
 
 FzFSM::FzFSM(void) {
 
@@ -1214,6 +1215,18 @@ void FzFSM::trans16(void) {	// S9      ->      (CRCBL)         -> S10
  
      blk->set_crc_error(false);
     
+     // check if this block is a 'fake block' containing trigger info
+     if(blk->blkid() == 0x7FF) {
+
+        if(blk->fee_size() > 0) {
+
+           std::cout << "Trigger info detected" << std::endl;
+           read_triggerinfo(blk, ev);
+        }
+
+        ev->mutable_block()->RemoveLast(); 
+     }
+
    } else {
 
       sprintf(logbuf, "B%d - EC: %d BLOCK crc error (value read: %X - value calc: %X)", blk->blkid(), ev->ec(), rd_blkcrc, crc_calc);
@@ -1293,4 +1306,54 @@ void FzFSM::trans18(void) {	// S10     ->      (REGID)         -> idle
 
 Report::FzFSM FzFSM::get_report(void) {
    return(fsm_report);
+}
+
+void FzFSM::read_triggerinfo(DAQ::FzBlock *blk, DAQ::FzEvent *ev) {
+
+   std::cout << "number of FEE: " << blk->fee_size() << std::endl;
+
+   const DAQ::FzFee& fee = blk->fee(0); 
+   const DAQ::FzHit& hit = fee.hit(0);
+   const DAQ::FzData& data = hit.data(0);
+   const DAQ::Waveform wf = data.waveform();
+   DAQ::FzTrigInfo *tri = NULL;
+
+   std::cout << "wf.sample_size() = " << wf.sample_size() << std::endl;
+ 
+   uint32_t supp;
+   uint8_t idx;
+
+   for(int i=0; i<wf.sample_size(); i=i+3) {	
+
+      supp = 0;
+ 
+      tri = ev->add_trinfo();
+      tri->set_id(wf.sample(i));
+      idx = wf.sample(i) - 0x100;
+
+      if( (idx >= 0) && (idx <= 12) )
+         tri->set_attr(FzTriggerInfo_str[idx]);
+      else
+         tri->set_attr("unknown");
+      
+      supp = wf.sample(i+1) << 15;
+      supp += wf.sample(i+2);
+
+      if(wf.sample(i) == 0x10A) {
+
+         supp = (supp << 15) + hit.gttag();
+ 
+      } else if(wf.sample(i) == 0x10B) {
+
+         supp = (supp << 12) + hit.ec();
+      } 
+
+      tri->set_value(supp);
+   }     
+
+   std::string text_str;
+   for(int i=0; i<ev->trinfo_size(); i++) {
+      google::protobuf::TextFormat::PrintToString(ev->trinfo(i), &text_str);
+      std::cout << text_str << std::endl;
+   }
 }

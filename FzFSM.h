@@ -110,6 +110,8 @@ static char const* const FzFec_str[] = { "FEC#0", "FEC#1", "FEC#2", "FEC#3", "FE
 static char const* const FzDataType_str[] = { "QH1", "I1", "QL1", "Q2", "I2", "Q3", "ADC", "UNK" };
 static char const* const FzTelescope_str[] = { "A", "B", "UNK" };
 static char const* const FzDetector_str[] = { "Si1", "Si2", "CsI", "UNK" };
+static char const* const FzTriggerInfo_str[] = { "global trigger", "global trigger no-veto", "majority", "or downscaled", "<empty>", "<empty>", "<empty>", "trigger from RC", \
+							"external trigger", "deltaT", "GTTAG overflow", "EC overflow" };
 
 class FzFSM {
 
@@ -144,6 +146,8 @@ private:
    void trans16(void);
    void trans17(void);
    void trans18(void);
+
+   void read_triggerinfo(DAQ::FzBlock *blk, DAQ::FzEvent *ev);
 
    // support variables
 
