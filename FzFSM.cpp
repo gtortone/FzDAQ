@@ -1351,9 +1351,11 @@ void FzFSM::read_triggerinfo(DAQ::FzBlock *blk, DAQ::FzEvent *ev) {
       tri->set_value(supp);
    }     
 
+/*
    std::string text_str;
    for(int i=0; i<ev->trinfo_size(); i++) {
       google::protobuf::TextFormat::PrintToString(ev->trinfo(i), &text_str);
       std::cout << text_str << std::endl;
    }
+*/
 }
