@@ -4,6 +4,9 @@
 - copy fzcontroller.default in /etc/default/fazia/fzcontroller
 - copy fzcontroller to /etc/init.d/fzcontroller
 
+- copy jms2rdb in /etc/init.d/jms2rdb
+- ln -s /opt/activemq/bin/activemq /etc/init.d/activemq
+
 - copy screenrc in /etc
 
 content of /etc/default/fazia:
