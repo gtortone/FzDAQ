@@ -1310,16 +1310,12 @@ Report::FzFSM FzFSM::get_report(void) {
 
 void FzFSM::read_triggerinfo(DAQ::FzBlock *blk, DAQ::FzEvent *ev) {
 
-   std::cout << "number of FEE: " << blk->fee_size() << std::endl;
-
    const DAQ::FzFee& fee = blk->fee(0); 
    const DAQ::FzHit& hit = fee.hit(0);
    const DAQ::FzData& data = hit.data(0);
    const DAQ::Waveform wf = data.waveform();
    DAQ::FzTrigInfo *tri = NULL;
 
-   std::cout << "wf.sample_size() = " << wf.sample_size() << std::endl;
- 
    uint32_t supp;
    uint8_t idx;
 
