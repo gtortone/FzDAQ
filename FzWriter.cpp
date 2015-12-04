@@ -242,9 +242,6 @@ void FzWriter::process(void) {
                std::string msg_str(static_cast<char*>(message.data()), message.size());
                pb->WriteDataset(output, msg_str);
 
-               // to fazia-spy
-               pub->send(message);
-
                report.set_out_bytes( report.out_bytes() + message.size() );
                report.set_out_events( report.out_events() + 1 );
 
@@ -262,6 +259,9 @@ void FzWriter::process(void) {
                   setup_newfile();
                   esize = 0;
                }
+
+               // to fazia-spy	-- at this point due to 'move' semantic on message
+               pub->send(message);
             }
 
             boost::this_thread::interruption_point();
