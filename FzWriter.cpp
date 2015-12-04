@@ -238,7 +238,6 @@ void FzWriter::process(void) {
                report.set_in_bytes( report.in_bytes() + message.size() );
                report.set_in_events( report.in_events() + 1 );
 
-
                std::string msg_str(static_cast<char*>(message.data()), message.size());
                pb->WriteDataset(output, msg_str);
 
