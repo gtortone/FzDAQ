@@ -340,7 +340,8 @@ void process(std::string cfgfile) {
       map_clean();	// remove expired reports
 
       // update EPICS IOC 
-      update_stats_ioc();
+      if(ioc_is_ready)		// synchronize with IOC initialization
+         update_stats_ioc();
 
    }	// end while
 }
