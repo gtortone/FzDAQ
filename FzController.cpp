@@ -13,6 +13,7 @@
 #include "dbAccess.h"
 #include "asDbLib.h"
 #include "iocInit.h"
+#include "initHooks.h"
 #include "iocsh.h"
 #include "cadef.h"
 
@@ -53,6 +54,7 @@ std::map<std::string, Report::Node> map;
 std::deque<std::pair<std::map<std::string, Report::Node>::iterator, time_t>> deque;
 
 RCFSM rc;
+bool ioc_is_ready = false;
 void epics_ioc(void);
 static void rc_configure_cb(struct event_handler_args eha);
 static void rc_start_cb(struct event_handler_args eha);
@@ -62,7 +64,7 @@ void rc_do(RCcommand cmd);
 void update_stats_ioc(void);
 
 FzLogger clog;
-boost::mutex logmtx;
+boost::shared_mutex mutex;
 
 int main(int argc, char *argv[]) {
 
@@ -303,9 +305,9 @@ void process(std::string cfgfile) {
    if(haswl)
       thrwl = new boost::thread(weblog); 
 
-   logmtx.lock();
+   boost::shared_lock<boost::shared_mutex> lock{mutex};
       clog.write(INFO, "node report monitoring loop started");
-   logmtx.unlock();
+   lock.unlock();
 
    while(true) {	// thread loop
 
@@ -487,6 +489,20 @@ void weblog(void) {
 // EPICS IOC thread
 //
 
+static void myHookFunction(initHookState state) {
+  switch(state) {
+    case initHookAfterIocRunning:
+      ioc_is_ready = true;
+      break;
+    default:
+      break;
+  }
+}
+
+int myHookInit(void) {
+  return(initHookRegister(myHookFunction));
+}
+
 void epics_ioc(void) {
 
    const char *base_dbd = DBD_FILE;
@@ -513,8 +529,13 @@ void epics_ioc(void) {
       exit(1);
    }
 
+   myHookInit();
    iocInit();
-   epicsThreadSleep(0.2);
+
+   while(!ioc_is_ready) 
+      ;			// loop until IOC hook
+
+   std::cout << "FzController: IOC initialized and started" << std::endl;
 
    if(ca_context_create(ca_enable_preemptive_callback) != ECA_NORMAL) {
 
@@ -532,10 +553,30 @@ void epics_ioc(void) {
    ca_create_channel(rc_reset_pv.c_str(), NULL, NULL, 20, &rc_reset_chid);
 
    // first param '1' is DBR_INT from db_access.h
-   ca_create_subscription(1, 1, rc_configure_chid, DBE_VALUE, rc_configure_cb, NULL, NULL);
-   ca_create_subscription(1, 1, rc_start_chid, DBE_VALUE, rc_start_cb, NULL, NULL);
-   ca_create_subscription(1, 1, rc_stop_chid, DBE_VALUE, rc_stop_cb, NULL, NULL);
-   ca_create_subscription(1, 1, rc_reset_chid, DBE_VALUE, rc_reset_cb, NULL, NULL);
+ 
+   if( ca_create_subscription(1, 1, rc_configure_chid, DBE_VALUE, rc_configure_cb, NULL, NULL) != ECA_NORMAL ) {
+
+      std::cout << "FATAL: EPICS CA callback not available" << std::endl;
+      exit(1);
+   }
+
+   if( ca_create_subscription(1, 1, rc_start_chid, DBE_VALUE, rc_start_cb, NULL, NULL) != ECA_NORMAL ) {
+
+      std::cout << "FATAL: EPICS CA callback not available" << std::endl;
+      exit(1);
+   }
+
+   if( ca_create_subscription(1, 1, rc_stop_chid, DBE_VALUE, rc_stop_cb, NULL, NULL) != ECA_NORMAL ) {
+
+      std::cout << "FATAL: EPICS CA callback not available" << std::endl;
+      exit(1);
+   }
+
+   if( ca_create_subscription(1, 1, rc_reset_chid, DBE_VALUE, rc_reset_cb, NULL, NULL) != ECA_NORMAL ) {
+
+      std::cout << "FATAL: EPICS CA callback not available" << std::endl;
+      exit(1);
+   }
 
    while(true) {
 
@@ -565,10 +606,10 @@ static void rc_configure_cb(struct event_handler_args eha) {
       RCtransition trans_err = rc.process(cmd);
       cur_state = rc.state();
 
-      logmtx.lock(); 
+      boost::shared_lock<boost::shared_mutex> lock(mutex);
          msg << "global RC state transition: " << state_labels_l[prev_state] << " -> " << state_labels_l[cur_state];
          clog.write(INFO, msg.str()); 
-      logmtx.unlock(); 
+      lock.unlock();
 
       PVwrite_db("DAQ:RC:transition.DISP", 0);
       PVwrite_db("DAQ:RC:transition", trans_err);
@@ -598,10 +639,10 @@ static void rc_start_cb(struct event_handler_args eha) {
       RCtransition trans_err = rc.process(cmd);
       cur_state = rc.state();
 
-      logmtx.lock();
+      boost::shared_lock<boost::shared_mutex> lock{mutex};
          msg << "global RC state transition: " << state_labels_l[prev_state] << " -> " << state_labels_l[cur_state];
          clog.write(INFO, msg.str());
-      logmtx.unlock();
+      lock.unlock();
  
       PVwrite_db("DAQ:RC:transition.DISP", 0);
       PVwrite_db("DAQ:RC:transition", trans_err);
@@ -630,10 +671,10 @@ static void rc_stop_cb(struct event_handler_args eha) {
       RCtransition trans_err = rc.process(cmd);
       cur_state = rc.state();
 
-      logmtx.lock();
+      boost::shared_lock<boost::shared_mutex> lock{mutex};
          msg << "global RC state transition: " << state_labels_l[prev_state] << " -> " << state_labels_l[cur_state];
          clog.write(INFO, msg.str());
-      logmtx.unlock();
+      lock.unlock();
 
       PVwrite_db("DAQ:RC:transition.DISP", 0);
       PVwrite_db("DAQ:RC:transition", trans_err);
@@ -662,10 +703,10 @@ static void rc_reset_cb(struct event_handler_args eha) {
       RCtransition trans_err = rc.process(cmd);
       cur_state = rc.state();
 
-      logmtx.lock();
+      boost::shared_lock<boost::shared_mutex> lock{mutex};
          msg << "global RC state transition: " << state_labels_l[prev_state] << " -> " << state_labels_l[cur_state];
          clog.write(INFO, msg.str());
-      logmtx.unlock();
+      lock.unlock();
 
       PVwrite_db("DAQ:RC:transition.DISP", 0);
       PVwrite_db("DAQ:RC:transition", trans_err);
@@ -691,10 +732,10 @@ void rc_do(RCcommand cmd) {
 
    if(map.size() == 0) {
   
-      logmtx.lock();
+      boost::shared_lock<boost::shared_mutex> lock{mutex};
          msg << "no DAQ node available - RC command not sent";
          clog.write(WARN, msg.str());
-      logmtx.unlock();
+      lock.unlock();
    }
 
    it = map.begin();
@@ -714,9 +755,9 @@ void rc_do(RCcommand cmd) {
       memcpy(message.data(), cmd_str.data(), cmd_str.size());
       
       msg << "sending " << cmd_str << " RC command to " << rep.hostname();
-      logmtx.lock(); 
+      boost::shared_lock<boost::shared_mutex> lock{mutex};
          clog.write(INFO, msg.str());
-      logmtx.unlock(); 
+      lock.unlock(); 
       msg.str("");
 
       bool rc = socket.send(message);
@@ -728,9 +769,9 @@ void rc_do(RCcommand cmd) {
       } else {
 
          msg << "Problem connecting " << rep.hostname() << " RC command failed";
-         logmtx.lock();
+         boost::shared_lock<boost::shared_mutex> lock{mutex};
             clog.write(ERROR, msg.str());
-         logmtx.unlock();
+         lock.unlock();
       }
 
       it++;
