@@ -1330,7 +1330,7 @@ void FzFSM::read_triggerinfo(DAQ::FzBlock *blk, DAQ::FzEvent *ev) {
       tri->set_id(wf.sample(i));
       idx = wf.sample(i) - 0x100;
 
-      if( (idx >= 0) && (idx <= 12) )
+      if( (idx >= 0) && (idx <= 15) )
          tri->set_attr(FzTriggerInfo_str[idx]);
       else
          tri->set_attr("unknown");
@@ -1338,14 +1338,22 @@ void FzFSM::read_triggerinfo(DAQ::FzBlock *blk, DAQ::FzEvent *ev) {
       supp = wf.sample(i+1) << 15;
       supp += wf.sample(i+2);
 
-      if(wf.sample(i) == 0x10A) {
+      if(wf.sample(i) == 0x10C) {
+
+         supp = (supp * 4) / 150E6;
+
+      } else if(wf.sample(i) == 0x10D) {
 
          supp = (supp << 15) + hit.gttag();
  
-      } else if(wf.sample(i) == 0x10B) {
+      } else if(wf.sample(i) == 0x10E) {
 
          supp = (supp << 12) + hit.ec();
-      } 
+
+      } else if(wf.sample(i) == 0x10F) {
+
+         supp = supp & 0x00FF;
+      }
 
       tri->set_value(supp);
    }     
