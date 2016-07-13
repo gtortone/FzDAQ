@@ -21,6 +21,7 @@ private:
 
    boost::thread *thr;
    bool thread_init;
+   bool start_newdir;
    zmq::context_t &context;
    zmq::socket_t *writer;
    zmq::socket_t *pub;
@@ -32,6 +33,7 @@ private:
   
    unsigned long int event_file_size;
    unsigned long int event_dir_size;
+   unsigned long int esize, dsize;
 
    std::string basedir;
    std::string runtag;

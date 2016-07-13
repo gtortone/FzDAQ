@@ -33,6 +33,7 @@ FzWriter::FzWriter(std::string bdir, std::string run, long int id, bool subid, s
    rcstate = IDLE;
    thread_init = false;
 
+   start_newdir = true;
    status = setup_newdir();
 
    if(status == DIR_EXISTS) {
@@ -226,9 +227,6 @@ void FzWriter::process(void) {
          if(rcstate == RUNNING) {
 
             bool rc;
-            static unsigned long esize;	// current eventset file dize
-            static unsigned long dsize;	// current eventset directory size
-
             zmq::message_t message;
 
             rc = writer->recv(&message);
@@ -291,6 +289,20 @@ Report::FzWriter FzWriter::get_report(void) {
 
 void FzWriter::rc_do(RCcommand cmd) {
 
+   if(cmd == start) {
+
+      if(!start_newdir) {
+
+         // at every start a new run must be allocated
+         // PAUSED -> start -> RUNNING
+         // READY  -> start -> RUNNING
+         setup_newdir();
+         setup_newfile();
+         esize = dsize = 0; 
+      }
+
+      start_newdir = false;	// prevent first 'start' create a new run directory
+   }
 }
 
 void FzWriter::set_rcstate(RCstate s) {
