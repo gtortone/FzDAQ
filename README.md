@@ -34,7 +34,7 @@ Installation instructions
 
   ```
   # EPICS environment
-  export EPICS_BASE="${HOME}/devel/Belle2/EPICS"
+  export EPICS_BASE="/opt/epics/base"
   export EPICS_HOST_ARCH="linux-x86_64"
   export PATH="${PATH}:${EPICS_BASE}/bin/${EPICS_HOST_ARCH}":/usr/local/root/bin
   export LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:${EPICS_BASE}/lib/${EPICS_HOST_ARCH}"
