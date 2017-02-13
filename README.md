@@ -54,6 +54,6 @@ Installation instructions
   
 - start compilation
 
-  ```make```
+  ``` make ```
   
 
