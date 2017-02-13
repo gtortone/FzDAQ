@@ -1282,14 +1282,22 @@ void FzFSM::trans18(void) {	// S10     ->      (REGID)         -> idle
 
    ev->set_regid(regid);
 
-   for(int i=0; i<ev->block_size(); i++) {		// for each block
+   if(ev->trinfo_size() > 0) {		// an event that includes only trigger info is not empty...
 
-      if(ev->block(i).fee_size() > 0) {
+      event_is_empty = false;
 
-         event_is_empty = false;
-         break; 
-      }
-   }	// end for
+   } else {
+
+      for(int i=0; i<ev->block_size(); i++) {		// for each block
+
+         if(ev->block(i).fee_size() > 0) {
+
+            event_is_empty = false;
+            break; 
+         }
+      }	// end for
+
+   }
 
    if(event_is_empty) {
 
