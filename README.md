@@ -1,8 +1,8 @@
 FzDAQ
 =====
 
-Installation instructions
--------------------------
+Compilation instructions
+------------------------
 
 - distribution: Debian 8.x
 
@@ -56,4 +56,8 @@ Installation instructions
 
   ``` make ```
   
+Installation instructions
+-------------------------
+
+
 
