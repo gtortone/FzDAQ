@@ -1,17 +1,17 @@
 FzDAQ
 =====
 
-FAZIA DAQ
+Installation instructions
+-------------------------
 
-master branch
+- distribution: Debian 8.x
 
-updated libraries:
+- install dependencies
 
-libusb-1.0.9
-protobuf-2.6.1
-zeromq-4.0.5
-libconfig++-1.3.2
+  ```apt-get update```
+  
+  ```apt-get install git libusb-1.0-0 libusb-1.0-0-dev libprotobuf9 libprotobuf-dev protobuf-compiler libboost-thread1.55.0 libboost-thread1.55-dev liblog4cpp5 liblog4cpp5-dev libboost-system1.55.0 libboost-system1.55-dev libboost-program-options1.55.0 libboost-program-options1.55-dev libzmq3 libzmq3-dev ```
 
-new libraries
+- clone FzDAQ GIT master branch
 
-libcurl4-nss-dev-7.35.0
+  ```git clone https://github.com/gtortone/FzDAQ.git```
