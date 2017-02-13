@@ -20,7 +20,7 @@ Installation instructions
 
   ```tar xzf activemq-cpp-library-3.9.3-src.tar.gz ; cd activemq-cpp-library-3.9.3```
   
-  ```./configure ; make ; make install```
+  ```./configure ; make ; make install ; ldconfig```
   
 - install EPICS library and command line
 
