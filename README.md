@@ -18,9 +18,7 @@ Installation instructions
   
   ```wget https://www.aps.anl.gov/epics/download/base/base-3.15.5.tar.gz```
   
-  ```tar xzf base-3.15.5.tar.gz ; mv base-3.15.5 base ; cd base```
-  
-  ```make```
+  ```tar xzf base-3.15.5.tar.gz ; mv base-3.15.5 base ; cd base ; make```
   
 - setup EPICS environment in .bashrc
 
