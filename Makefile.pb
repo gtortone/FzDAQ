@@ -8,11 +8,11 @@ space:
 	@echo -e "OK"
 
 proto: 
-	protoc FzEventSet.proto --cpp_out=.
-	mv FzEventSet.pb.cc FzEventSet.pb.cpp
-	sed -i 's/assert/\/\/assert/' FzEventSet.pb.h
-	protoc FzNodeReport.proto --cpp_out=.
-	mv FzNodeReport.pb.cc FzNodeReport.pb.cpp
+	protoc src/proto/FzEventSet.proto --cpp_out=.
+	mv src/proto/FzEventSet.pb.cc src/proto/FzEventSet.pb.cpp
+	sed -i 's/assert/\/\/assert/' src/proto/FzEventSet.pb.h
+	protoc src/proto/FzNodeReport.proto --cpp_out=.
+	mv src/proto/FzNodeReport.pb.cc src/proto/FzNodeReport.pb.cpp
 
 deploy:
 	ssh daq@fzdaq01 "rm -rf devel/Fazia/miniDAQ-mt/*"

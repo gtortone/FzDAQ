@@ -3,7 +3,7 @@ FzDAQ
 
 FAZIA DAQ
 
-development branch
+master branch
 
 updated libraries:
 
