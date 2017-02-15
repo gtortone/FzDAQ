@@ -165,10 +165,14 @@ int main(int argc, char* argv[]) {
                        if(n%16 == 0 && n) 
                           cout << endl << "\t\t\t\t              ";
 
-                       if(rwf.sample(n) > 8191)
-                          supp = rwf.sample(n) | 0xFFFFC000;
-                       else
-                          supp = rwf.sample(n);
+                       if(rdata.type() != DAQ::FzData::ADC) {
+
+                          if(rwf.sample(n) > 8191)
+                             supp = rwf.sample(n) | 0xFFFFC000;
+                          else
+                             supp = rwf.sample(n);
+
+                       } else supp = rwf.sample(n);
                        
                        cout << supp << ", ";
                        //cout << hex << "(0x" << rwf.sample(n) << ")";

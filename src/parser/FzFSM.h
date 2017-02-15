@@ -14,7 +14,7 @@
 #define BLKID_MASK      0x07FF
 #define EC_MASK         0x0FFF
 #define TELID_MASK      0x0001
-#define FEEID_MASK      0x000E
+#define FEEID_MASK      0x001E
 #define ADC_MASK        0x001F
 #define DTYPE_MASK      0x0700  
 #define DETID_MASK      0x00E0  

@@ -671,9 +671,46 @@ void FzFSM::trans08(void) {	// S5      ->      (DATA)          -> S5
 
      } else {
 
-         blkcrc = save_blkcrc;
-         feecrc = save_feecrc;
+        blkcrc = save_blkcrc;
+        feecrc = save_feecrc;
 
+        if(d->type() == DAQ::FzData::ADC) {
+
+           // fetch sine and cosine from waveform (first six samples)
+
+           int64_t sine = 0; 
+           int64_t cosine = 0;
+
+           // sine (3 words)
+           sine = (event[event_index] << 22) + (event[event_index+1] << 7) + (event[event_index+2] >> 8);
+
+           // cosine (3 words)
+           cosine = (event[event_index+3] << 22) + (event[event_index+4] << 7) + (event[event_index+5] >> 8);
+           
+           if(sine & 0x1000000000)
+              sine = 0xFFFFFFE000000000 + sine;
+
+           if(cosine & 0x1000000000)
+              cosine = 0xFFFFFFE000000000 + cosine;
+
+           d->set_sine(sine);
+           d->set_cosine(cosine);
+
+           for(int ix=0; ix<6; ix++) {
+
+              blklen++; 
+              feelen++;
+           
+              blkcrc ^= event[event_index];
+              feecrc ^= event[event_index];
+
+              event_index++;
+           }
+
+           save_blkcrc = blkcrc;
+           save_feecrc = feecrc;
+        } 
+ 
         // boost patch 
         while(event[event_index] <= 0x7FFF) {
 

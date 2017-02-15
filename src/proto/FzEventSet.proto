@@ -31,6 +31,9 @@ message FzData {
   required FzDataType type = 1;
   optional Energy energy = 2;
   optional Waveform waveform = 3;
+  // attributes related to ADC datatype
+  optional int64 sine = 4;
+  optional int64 cosine = 5;
 }
 
 message FzHit {
