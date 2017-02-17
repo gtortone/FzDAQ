@@ -46,7 +46,9 @@ Compilation instructions
   
 - generate Makefile
 
-  ```autoreconf -ivf ; ./configure```
+  ```autoreconf -ivf```
+  
+  ```./configure --with-boost-libdir=/usr/lib/x86_64-linux-gnu```
   
 - generate Protobuf classes
 
