@@ -1,3 +1,5 @@
+#ifdef EPICS_ENABLED
+
 #ifndef _FZEPICS_H
 #define _FZEPICS_H
 
@@ -8,5 +10,7 @@ void PVwrite_db(const std::string pvname, long value);
 /*
 int PVread_db(const std::string pvname);
 */
+
+#endif
 
 #endif

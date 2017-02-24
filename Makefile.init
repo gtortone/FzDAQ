@@ -1,0 +1,11 @@
+install-scripts$(EXEEXT):
+	mkdir -p /etc/default/fazia
+	cp scripts/fzdaq.default /etc/default/fazia/fzdaq
+	cp scripts/fzdaq /etc/init.d
+	cp scripts/fzcontroller.default /etc/default/fazia/fzcontroller
+	cp scripts/fzcontroller /etc/init.d
+	cp src/rc/Fazia-C.db /etc/default/fazia
+	cp src/rc/Fazia-NM.db /etc/default/fazia
+	cp src/main/log4cpp.properties /etc/default/fazia
+	cp src/rc/softIoc.dbd /etc/default/fazia
+	

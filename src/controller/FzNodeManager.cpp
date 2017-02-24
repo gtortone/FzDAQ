@@ -1,8 +1,13 @@
 #include "FzNodeManager.h"
 #include "utils/FzUtils.h"
 
+#ifdef AMQLOG_ENABLED
 FzNodeManager::FzNodeManager(FzReader *rd, std::vector<FzParser *> psr_array, FzWriter *wr, std::string cfgfile, std::string prof, zmq::context_t &ctx, cms::Connection *JMSconn) :
    context(ctx), rd(rd), psr_array(psr_array), wr(wr), AMQconn(JMSconn) {
+#else
+FzNodeManager::FzNodeManager(FzReader *rd, std::vector<FzParser *> psr_array, FzWriter *wr, std::string cfgfile, std::string prof, zmq::context_t &ctx) :
+   context(ctx), rd(rd), psr_array(psr_array), wr(wr) {
+#endif
 
    if(!cfgfile.empty()) {
 
@@ -11,8 +16,10 @@ FzNodeManager::FzNodeManager(FzReader *rd, std::vector<FzParser *> psr_array, Fz
 
    } else hascfg = false;
    
+#ifdef AMQLOG_ENABLED
    if(AMQconn.get())
       log.setJMSConnection("FzNodeManager", JMSconn);
+#endif
 
    profile = prof;
    thread_init = false;
@@ -137,7 +144,9 @@ void FzNodeManager::init(void) {
 
       thread_init = true;
       thr = new boost::thread(boost::bind(&FzNodeManager::process, this));
+#ifdef EPICS_ENABLED
       ioc = new boost::thread(boost::bind(&FzNodeManager::epics_ioc, this)); 
+#endif
    }
 };
 
@@ -242,8 +251,10 @@ void FzNodeManager::process(void) {
             nodereport.mutable_writer()->set_out_events_bw( wr_report_t1.out_events() - wr_report_t0.out_events() );
          }
 
+#ifdef EPICS_ENABLED
          // update EPICS IOC
          update_stats_ioc();
+#endif
 
          // send report to FzController
          std::string str;
@@ -307,6 +318,8 @@ void FzNodeManager::process(void) {
    }	// end while
 };
 
+#ifdef EPICS_ENABLED
+
 void FzNodeManager::epics_ioc(void) {
 
    const char *base_dbd = DBD_FILE;
@@ -346,6 +359,8 @@ void FzNodeManager::epics_ioc(void) {
    }
 }
 
+#endif
+
 Report::Node FzNodeManager::get_nodereport(void) {
    return(nodereport);
 }
@@ -373,6 +388,8 @@ void FzNodeManager::rc_do(RCcommand cmd) {
       wr->set_rcstate(rc.state());
    }
 }
+
+#ifdef EPICS_ENABLED
 
 void FzNodeManager::update_rc_ioc(void) {
 
@@ -553,6 +570,8 @@ void FzNodeManager::update_stats_ioc(void) {
    }
 }
 
+#endif	// EPICS_ENABLED
+
 //
 // wrapper methods for RC FSM
 //
@@ -573,7 +592,9 @@ RCtransition FzNodeManager::rc_process(RCcommand cmd) {
       rc_do(cmd);
    }
 
+#ifdef EPICS_ENABLED
    update_rc_ioc();
+#endif
 
    return(rc.error());
 }

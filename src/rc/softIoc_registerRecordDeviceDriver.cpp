@@ -1,5 +1,4 @@
-/* THIS IS A GENERATED FILE. DO NOT EDIT! */
-/* Generated from ../O.Common/softIoc.dbd */
+#ifdef EPICS_ENABLED
 
 #include <string.h>
 
@@ -260,3 +259,5 @@ static int Registration() {
 }
 
 static int done = Registration();
+
+#endif

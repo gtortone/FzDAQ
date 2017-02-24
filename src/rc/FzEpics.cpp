@@ -1,3 +1,5 @@
+#ifdef EPICS_ENABLED
+
 #include <string>
 
 #include "epicsThread.h"
@@ -53,3 +55,5 @@ int PVread_db(const std::string pvname) {
 
 }
 */
+
+#endif

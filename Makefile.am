@@ -1,4 +1,5 @@
-AUTOMAKE_OPTIONS=subdir-objects
+AUTOMAKE_OPTIONS = subdir-objects
+DEFAULT_INCLUDES = -I. -Isrc
 
 bin_PROGRAMS = FzDAQ-mt FzController
 
@@ -19,9 +20,6 @@ src/logger/FzLogger.cpp \
 src/utils/FzUtils.cpp \
 src/main/FzDAQ-mt.cpp  
 
-FzDAQ_mt_CXXFLAGS = -std=c++0x -Wall -Isrc -I$(EPICS_BASE)/include -I$(EPICS_BASE)/include/os/Linux -I$(EPICS_BASE)/include/compiler/gcc -I/usr/local/include/activemq-cpp-3.9.0 -I/usr/local/apr/include/apr-1
-FzDAQ_mt_LDADD = -L/usr/local/lib -lusb-1.0 -lprotobuf -lpthread -lz -lboost_thread -llog4cpp -lboost_system -lboost_program_options -lzmq -lconfig++ -L $(EPICS_BASE)/lib/linux-x86_64 -ldbRecStd -ldbCore -lCom -lca -lactivemq-cpp -lssl
-
 FzController_SOURCES = \
 src/controller/FzController.cpp \
 src/main/FzConfig.cpp \
@@ -33,7 +31,5 @@ src/logger/FzLogger.cpp \
 src/utils/FzUtils.cpp \
 src/rc/softIoc_registerRecordDeviceDriver.cpp
 
-FzController_CXXFLAGS = -std=c++0x -Wall -Isrc -I$(EPICS_BASE)/include -I$(EPICS_BASE)/include/os/Linux -I$(EPICS_BASE)/include/compiler/gcc -I/usr/local/include/activemq-cpp-3.9.0 -I/usr/local/apr/include/apr-1
-FzController_LDADD = -L/usr/local/lib -lboost_thread -lboost_system -lboost_program_options -lprotobuf -lzmq -lconfig++ -lpthread -lcurl -L $(EPICS_BASE)/lib/linux-x86_64 -ldbRecStd -ldbCore -lCom -lca -lactivemq-cpp -llog4cpp
-
 include Makefile.pb
+include Makefile.init

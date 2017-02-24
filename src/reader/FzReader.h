@@ -21,7 +21,9 @@
 #define BUFFER_SIZE     16384
 
 #include <vector>
-#include <libusb-1.0/libusb.h>
+#ifdef USB_ENABLED
+   #include <libusb-1.0/libusb.h>
+#endif
 
 struct _cb_data {
 
@@ -47,16 +49,21 @@ private:
 
    RCstate rcstate;
 
+#ifdef USB_ENABLED
    libusb_device_handle *usbh;
    libusb_context *ctx;
    libusb_transfer *xfr;
    unsigned char ubuf[BUFFER_SIZE];
    int usbstatus;
+   static void cb_usbin(struct libusb_transfer *xfr);
+#endif
 
    struct _cb_data cb_data;
 
    FzLogger log;
+#ifdef AMQLOG_ENABLED
    std::unique_ptr<cms::Connection> AMQconn;
+#endif
 
    struct ns_mgr udpserver;
 
@@ -68,14 +75,17 @@ private:
    int initUsb(void);
    int initNet(void);
 
-   static void cb_usbin(struct libusb_transfer *xfr);
    static void udp_handler(struct ns_connection *nc, int ev, void *ev_data);
 
    void process(void);
 
 public:
 
+#ifdef USB_ENABLED
    FzReader(std::string dname, std::string nurl, std::string cfgfile, zmq::context_t &ctx, cms::Connection *JMSconn);
+#else
+   FzReader(std::string dname, std::string nurl, std::string cfgfile, zmq::context_t &ctx);
+#endif
 
    int setup(void);
    int init(void);
@@ -87,7 +97,9 @@ public:
 
    Report::FzReader get_report(void); 
 
+#ifdef USB_ENABLED
    void usb_close(void);
+#endif
 };
 
 #endif

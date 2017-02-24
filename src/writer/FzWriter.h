@@ -29,7 +29,9 @@ private:
    FzProtobuf *pb;
 
    FzLogger log;
+#ifdef AMQLOG_ENABLED
    std::unique_ptr<cms::Connection> AMQconn;
+#endif
   
    unsigned long int event_file_size;
    unsigned long int event_dir_size;
@@ -54,7 +56,12 @@ private:
    void process(void);
 
 public:
+
+#ifdef AMQLOG_ENABLED
    FzWriter(std::string bdir, std::string run, long int id, bool subid, std::string cfgfile, zmq::context_t &ctx, cms::Connection *JMSconn);
+#else
+   FzWriter(std::string bdir, std::string run, long int id, bool subid, std::string cfgfile, zmq::context_t &ctx);
+#endif
 
    void init(void);
    void close(void);

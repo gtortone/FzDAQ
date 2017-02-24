@@ -3,7 +3,7 @@
 # JMS2RDB start-stop-daemon 
 set -e
 
-export PATH="$PATH:/opt/FzDAQ:/usr/sbin:/sbin"
+export PATH="$PATH:/opt/FzDAQ/bin:/usr/sbin:/sbin"
 
 SCREEN_OPTS=" -d -m -S jms2rdb /opt/JMS2RDB/JMS2RDB -pluginCustomization /opt/JMS2RDB/plugin_customization.ini"
 

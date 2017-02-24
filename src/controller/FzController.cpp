@@ -5,6 +5,8 @@
 #include "boost/program_options.hpp"
 #include "boost/thread.hpp"
 
+#ifdef EPICS_ENABLED
+
 #include "epicsThread.h"
 #include "epicsExit.h"
 #include "epicsStdio.h"
@@ -16,22 +18,27 @@
 #include "initHooks.h"
 #include "iocsh.h"
 #include "cadef.h"
-
-#include "main/FzConfig.h"
-#include "utils/FzTypedef.h"
-#include "proto/FzNodeReport.pb.h"
-#include "logger/FzHttpPost.h"
 #include "rc/FzEpics.h"
-#include "utils/zmq.hpp"
-#include "rc/RCFSM.h"
-#include "logger/FzJMS.h"
-#include "logger/FzLogger.h"
-#include "utils/FzUtils.h"
 
 #define DBD_FILE "/etc/default/fazia/softIoc.dbd"
 #define DB_FILE  "/etc/default/fazia/Fazia-C.db"
 
 extern "C" int softIoc_registerRecordDeviceDriver(struct dbBase *pdbbase);
+
+#endif
+
+#ifdef WEBLOG_ENABLED
+#include "logger/FzHttpPost.h"
+#endif
+
+#include "main/FzConfig.h"
+#include "utils/FzTypedef.h"
+#include "proto/FzNodeReport.pb.h"
+#include "utils/zmq.hpp"
+#include "rc/RCFSM.h"
+#include "logger/FzJMS.h"
+#include "logger/FzLogger.h"
+#include "utils/FzUtils.h"
 
 namespace po = boost::program_options;
 
@@ -41,11 +48,13 @@ void process(std::string cfgfile);
 bool map_insert(std::string const &k, Report::Node const &v);
 void map_clean(void);
 
+#ifdef WEBLOG_ENABLED
 void weblog(void);
 bool haswl;
 std::string wl_url, wl_user;
 int wl_interval;
 boost::thread *thrwl;
+#endif
 
 // global vars 
 Report::Node nodereport;
@@ -54,14 +63,18 @@ std::map<std::string, Report::Node> map;
 std::deque<std::pair<std::map<std::string, Report::Node>::iterator, time_t>> deque;
 
 RCFSM rc;
-bool ioc_is_ready = false;
-void epics_ioc(void);
+void rc_do(RCcommand cmd);
+
+#ifdef EPICS_ENABLED
 static void rc_configure_cb(struct event_handler_args eha);
 static void rc_start_cb(struct event_handler_args eha);
 static void rc_stop_cb(struct event_handler_args eha);
 static void rc_reset_cb(struct event_handler_args eha);
-void rc_do(RCcommand cmd);
+
+bool ioc_is_ready = false;
+void epics_ioc(void);
 void update_stats_ioc(void);
+#endif
 
 FzLogger clog;
 boost::shared_mutex mutex;
@@ -71,12 +84,16 @@ int main(int argc, char *argv[]) {
    libconfig::Config cfg;
    std::string cfgfile = "";
 
+#ifdef AMQLOG_ENABLED
    activemq::core::ActiveMQConnectionFactory JMSfactory;
    std::shared_ptr<cms::Connection> JMSconn;
    std::string brokerURI;
+#endif
 
    boost::thread *thrmon;
+#ifdef EPICS_ENABLED
    boost::thread *ioc;
+#endif
 
    // handling of command line parameters
    po::options_description desc("\nFzController - allowed options", 100);
@@ -120,6 +137,7 @@ int main(int argc, char *argv[]) {
       }
    }
 
+#ifdef AMQLOG_ENABLED
    // configure ActiveMQ JMS log
    if(cfg.lookupValue("fzdaq.global.log.url", brokerURI)) {
 
@@ -146,9 +164,12 @@ int main(int argc, char *argv[]) {
       std::cout << INFOTAG << "log server connection successfully" << std::endl;
       clog.setJMSConnection("FzController", JMSconn.get());
    }
+#endif
 
    thrmon = new boost::thread(process, cfgfile);
+#ifdef EPICS_ENABLED
    ioc = new boost::thread(epics_ioc);
+#endif
 
    std::cout << INFOTAG << "FzController: service ready" << std::endl;
    sleep(1);
@@ -175,6 +196,8 @@ int main(int argc, char *argv[]) {
             std::cout << std::endl;
            }
 
+         // ADD run control commands
+
          if(!line.compare("quit")) {
             break;
          }
@@ -184,12 +207,16 @@ int main(int argc, char *argv[]) {
    }
 
    std::cout << INFOTAG << "FzController: closing threads: \t";
+#ifdef EPICS_ENABLED
    ioc->interrupt();
    ioc->join();
+#endif
    thrmon->interrupt();
    thrmon->join();  
+#ifdef WEBLOG_ENABLED
    thrwl->interrupt();
    thrwl->join();
+#endif
    std::cout << " DONE" << std::endl;
    
    context.close();
@@ -262,6 +289,7 @@ void process(std::string cfgfile) {
         exit(1);
    }
 
+#ifdef WEBLOG_ENABLED
    // parse weblog parameters
      
    haswl = false;
@@ -304,6 +332,7 @@ void process(std::string cfgfile) {
 
    if(haswl)
       thrwl = new boost::thread(weblog); 
+#endif
 
    boost::shared_lock<boost::shared_mutex> lock{mutex};
       clog.write(INFO, "node report monitoring loop started");
@@ -339,9 +368,11 @@ void process(std::string cfgfile) {
 
       map_clean();	// remove expired reports
 
+#ifdef EPICS_ENABLED
       // update EPICS IOC 
       if(ioc_is_ready)		// synchronize with IOC initialization
          update_stats_ioc();
+#endif
 
    }	// end while
 }
@@ -379,6 +410,8 @@ void map_clean(void) {
       }
    }
 }
+
+#ifdef WEBLOG_ENABLED
 
 // 
 // WebLog thread
@@ -485,6 +518,10 @@ void weblog(void) {
         }
    }	// end while
 }
+
+#endif	// WEBLOG_ENABLED
+
+#ifdef EPICS_ENABLED
 
 //
 // EPICS IOC thread
@@ -644,7 +681,7 @@ static void rc_start_cb(struct event_handler_args eha) {
          msg << "global RC state transition: " << state_labels_l[prev_state] << " -> " << state_labels_l[cur_state];
          clog.write(INFO, msg.str());
       lock.unlock();
- 
+
       PVwrite_db("DAQ:RC:transition.DISP", 0);
       PVwrite_db("DAQ:RC:transition", trans_err);
       PVwrite_db("DAQ:RC:transition.DISP", 1);
@@ -722,6 +759,8 @@ static void rc_reset_cb(struct event_handler_args eha) {
    }
 }
 
+#endif 	// EPICS_ENABLED
+
 void rc_do(RCcommand cmd) {
 
    std::map<std::string, Report::Node>::iterator it;
@@ -778,6 +817,8 @@ void rc_do(RCcommand cmd) {
       it++;
    } 
 }
+
+#ifdef EPICS_ENABLE
 
 void update_stats_ioc(void) {
 
@@ -899,3 +940,5 @@ void update_stats_ioc(void) {
    human_byte(DAQreport.writer().out_events_bw(), &value);
    PVwrite_db("DAQ:writer:out:evbw", value);
 }
+
+#endif	// EPICS_ENABLED

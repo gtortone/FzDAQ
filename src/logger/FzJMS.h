@@ -1,3 +1,5 @@
+#ifdef AMQLOG_ENABLED
+
 #ifndef _FZJMS_H_
 #define _FZJMS_H_
 
@@ -10,5 +12,7 @@
 #include <cms/MapMessage.h>
 
 #define DEST_LOG	"LOG"
+
+#endif
 
 #endif

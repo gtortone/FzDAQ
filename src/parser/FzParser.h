@@ -36,7 +36,9 @@ private:
    DAQ::FzEvent ev;
  
    FzLogger log;
+#ifdef AMQLOG_ENABLED
    std::unique_ptr<cms::Connection> AMQconn;
+#endif
 
    Report::FzParser psr_report;
 
@@ -44,7 +46,11 @@ private:
 
 public:
 
+#ifdef AMQLOG_ENABLED
    FzParser(unsigned int id, std::string cfgfile, zmq::context_t &ctx, cms::Connection *JMSconn);
+#else
+   FzParser(unsigned int id, std::string cfgfile, zmq::context_t &ctx);
+#endif
 
    void init(void);
    void close(void);

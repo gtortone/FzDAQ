@@ -5,8 +5,13 @@
 #include <fstream>
 #include <sstream>
 
+#ifdef AMQLOG_ENABLED
 FzWriter::FzWriter(std::string bdir, std::string run, long int id, bool subid, std::string cfgfile, zmq::context_t &ctx, cms::Connection *JMSconn) :
    context(ctx), AMQconn(JMSconn) {
+#else
+FzWriter::FzWriter(std::string bdir, std::string run, long int id, bool subid, std::string cfgfile, zmq::context_t &ctx) :
+   context(ctx) {
+#endif
 
    int status;
 
@@ -17,8 +22,10 @@ FzWriter::FzWriter(std::string bdir, std::string run, long int id, bool subid, s
 
    log.setFileConnection("fzwriter", "/var/log/fzdaq/fzwriter.log");
 
+#ifdef AMQLOG_ENABLED
    if(AMQconn.get())
       log.setJMSConnection("FzWriter", JMSconn);
+#endif
 
    if(!cfgfile.empty()) {
 

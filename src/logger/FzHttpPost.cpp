@@ -1,3 +1,5 @@
+#ifdef WEBLOG_ENABLED
+
 //Created by KVClassFactory on Wed May 20 11:31:27 2015
 //Author: John Frankland,,,
 
@@ -291,3 +293,4 @@ void FZHttpPost::SendPost()
    fPostPairs=0;
 }
 
+#endif

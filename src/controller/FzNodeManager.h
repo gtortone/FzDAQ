@@ -4,6 +4,8 @@
 #include <unistd.h>
 #include "boost/thread.hpp"
 
+#ifdef EPICS_ENABLED
+
 #include "epicsThread.h"
 #include "epicsExit.h"
 #include "epicsStdio.h"
@@ -14,20 +16,22 @@
 #include "iocInit.h"
 #include "iocsh.h"
 #include "cadef.h"
-
-#include "main/FzConfig.h"
-#include "reader/FzReader.h"
-#include "parser/FzParser.h"
-#include "writer/FzWriter.h"
 #include "rc/FzEpics.h"
-#include "rc/RCFSM.h"
-#include "utils/FzTypedef.h"
-#include "logger/FzLogger.h"
 
 #define DBD_FILE "/etc/default/fazia/softIoc.dbd"
 #define DB_FILE	 "/etc/default/fazia/Fazia-NM.db"
 
 extern "C" int softIoc_registerRecordDeviceDriver(struct dbBase *pdbbase);
+
+#endif	// EPICS_ENABLED
+
+#include "main/FzConfig.h"
+#include "reader/FzReader.h"
+#include "parser/FzParser.h"
+#include "writer/FzWriter.h"
+#include "rc/RCFSM.h"
+#include "utils/FzTypedef.h"
+#include "logger/FzLogger.h"
 
 class FzNodeManager {
 
@@ -51,7 +55,9 @@ private:
    FzWriter *wr;
 
    FzLogger log;
+#ifdef AMQLOG_ENABLED
    std::unique_ptr<cms::Connection> AMQconn;
+#endif
    boost::mutex logmtx;
 
    std::string hostname;
@@ -61,19 +67,26 @@ private:
    RCFSM rc;
 
    void process(void);   
+
+#ifdef EPICS_ENABLED
    void epics_ioc(void);   
 
    static void ca_connection_cb(struct connection_handler_args args);
    static void rc_event_cb(struct event_handler_args eha);
 
-   void rc_do(RCcommand cmd);
    void update_rc_ioc(void);
    void update_stats_ioc(void);
+#endif
+
+   void rc_do(RCcommand cmd);
 
 public:
 
+#ifdef AMQLOG_ENABLED
    FzNodeManager(FzReader *rd, std::vector<FzParser *> psr_array, FzWriter *wr, std::string cfgfile, std::string prof, zmq::context_t &ctx, cms::Connection *JMSconn);
-
+#else
+   FzNodeManager(FzReader *rd, std::vector<FzParser *> psr_array, FzWriter *wr, std::string cfgfile, std::string prof, zmq::context_t &ctx);
+#endif
    void init(void);
    void close(void);
 

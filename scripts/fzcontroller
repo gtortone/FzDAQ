@@ -3,7 +3,7 @@
 # FzDAQ start-stop-daemon 
 set -e
 
-export PATH="$PATH:/opt/FzDAQ:/usr/sbin:/sbin"
+export PATH="$PATH:/opt/FzDAQ/bin:/usr/sbin:/sbin"
 
 if test -f /etc/default/fazia/fzcontroller; then
     . /etc/default/fazia/fzcontroller

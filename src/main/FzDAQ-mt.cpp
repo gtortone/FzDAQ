@@ -52,16 +52,20 @@ int main(int argc, char *argv[]) {
 
    bool rec = false;
 
+#ifdef AMQLOG_ENABLED
    activemq::core::ActiveMQConnectionFactory JMSfactory;
    //std::shared_ptr<cms::Connection> JMSconn;
    cms::Connection *JMSconn = NULL;
+#endif
 
    // handling of command line parameters
    po::options_description desc("\nFzDAQ - allowed options", 100);
    
    desc.add_options()
     ("help", "produce help message")
+#ifdef USB_ENABLED
     ("dev", po::value<std::string>(), "acquisition device {usb, net} (default: usb)")
+#endif
     ("neturl", po::value<std::string>(), "network UDP consumer url (default: udp://eth0:50000)")
     ("nt", po::value<unsigned int>(), "number of parser threads\ndefault: 1")
     ("subdir", po::value<std::string>(), "base output directory")
@@ -150,6 +154,7 @@ int main(int argc, char *argv[]) {
         - default value
    */
 
+#ifdef AMQLOG_ENABLED
    // configure ActiveMQ JMS log
    if(cfg.lookupValue("fzdaq.global.log.url", brokerURI)) {
 
@@ -175,6 +180,7 @@ int main(int argc, char *argv[]) {
       JMSconn->start();
       std::cout << INFOTAG << "log server connection successfully" << std::endl;
    }
+#endif
 
    std::cout << INFOTAG << "FzDAQ profile selected: " << profile << std::endl;
 
@@ -187,8 +193,12 @@ int main(int argc, char *argv[]) {
       if(vm.count("dev")) {
 
         devname = vm["dev"].as<std::string>();
-        if( (devname == "usb") || (devname == "net") ) {
 
+#ifdef USB_ENABLED
+        if( (devname == "usb") || (devname == "net") ) {
+#else
+	if (devname == "net") {
+#endif
            std::cout << INFOTAG << "FzReader device: " << devname << "\t[cmd param]" << std::endl;
 
         } else {
@@ -200,12 +210,14 @@ int main(int argc, char *argv[]) {
       } else if(cfg.lookupValue("fzdaq.fzreader.consumer.device", devname)) {
 
          std::cout << INFOTAG << "FzReader device: " << devname << "\t[cfg file]" << std::endl;
-
-      } else {
+      }
+#ifdef USB_ENABLED
+      else {
 
          devname = "usb";
          std::cout << INFOTAG << "FzReader device: usb\t[default]" << std::endl;
       }
+#endif
 
       if(devname == "net") {  	// fetch neturl parameter
 
@@ -377,8 +389,12 @@ int main(int argc, char *argv[]) {
 
    if(iscompute) {
 
+#ifdef AMQLOG_ENABLED
       // create FzReader thread
       rd = new FzReader(devname, neturl, cfgfile, context, JMSconn);
+#else
+      rd = new FzReader(devname, neturl, cfgfile, context);
+#endif
 
       if(!rd) {
          std::cout << ERRTAG << "FzReader: thread allocation failed" << std::endl;
@@ -390,7 +406,11 @@ int main(int argc, char *argv[]) {
       // create FzParser threads pool
       for(i=0; i < nthreads; i++) {
 
+#ifdef AMQLOG_ENABLED
          psr_array.push_back(new FzParser(i, cfgfile, context, JMSconn));
+#else
+         psr_array.push_back(new FzParser(i, cfgfile, context));       
+#endif
 
          if(!psr_array[i]) {
 
@@ -406,8 +426,12 @@ int main(int argc, char *argv[]) {
 
    if(isstorage) {
 
+#ifdef AMQLOG_ENABLED
       // create FzWriter thread 
       wr = new FzWriter(subdir, runtag, runid, subid, cfgfile, context, JMSconn);
+#else
+      wr = new FzWriter(subdir, runtag, runid, subid, cfgfile, context);
+#endif
 
       if(!wr) {
          std::cout << ERRTAG << "FzWriter: thread allocation failed" << std::endl;
@@ -432,7 +456,11 @@ int main(int argc, char *argv[]) {
 
    // create FzNodeManager thread
 
+#ifdef AMQLOG_ENABLED
    nm = new FzNodeManager(rd, psr_array, wr, cfgfile, profile, context, JMSconn);
+#else
+   nm = new FzNodeManager(rd, psr_array, wr, cfgfile, profile, context);
+#endif
 
    if(!nm) {
       std::cout << ERRTAG << "FzNodeManager: thread allocation failed" << std::endl;

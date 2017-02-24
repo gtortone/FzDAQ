@@ -7,16 +7,23 @@
 #define REGHDR_FMT              0xF800
 #define REGHDR_TAG              0xC800  
 
+#ifdef AMQLOG_ENABLED
 FzReader::FzReader(std::string dname, std::string nurl, std::string cfgfile, zmq::context_t &ctx, cms::Connection *JMSconn) :
    context(ctx), AMQconn(JMSconn) {
+#else
+FzReader::FzReader(std::string dname, std::string nurl, std::string cfgfile, zmq::context_t &ctx) :
+   context(ctx) {
+#endif
   
    devname = dname;
    neturl = nurl;
 
    log.setFileConnection("fzreader", "/var/log/fzdaq/fzreader.log");
 
+#ifdef AMQLOG_ENABLED
    if(AMQconn.get())
       log.setJMSConnection("FzReader", JMSconn);
+#endif
 
    if(!cfgfile.empty()) {
 
@@ -27,7 +34,9 @@ FzReader::FzReader(std::string dname, std::string nurl, std::string cfgfile, zmq
 
    log.write(INFO, "thread allocated");
 
+#ifdef USB_ENABLED
    usbstatus = -1;
+#endif
 
    std::string ep;
 
@@ -105,8 +114,10 @@ void FzReader::record(bool val) {
 
 int FzReader::setup(void) {
 
+#ifdef USB_ENABLED
    if(devname == "usb")
       return(setupUsb());
+#endif
    if(devname == "net")
       return(setupNet());
 
@@ -118,6 +129,7 @@ int FzReader::setupNet(void) {
    return(0);
 };
 
+#ifdef USB_ENABLED
 int FzReader::setupUsb(void) {
 
    libusb_device **devs; // pointer to pointer of device, used to retrieve a list of devices
@@ -328,19 +340,22 @@ int FzReader::setupUsb(void) {
       std::cout << ERRTAG << "FzReading: re-submitting URB" << std::endl;
       libusb_free_transfer(xfr);
    }
-} 
+}
+#endif	// USB_ENABLED 
 
 int FzReader::init(void) {
 
+#ifdef USB_ENABLED
    if(devname == "usb")
       return(initUsb());
+#endif
    if(devname == "net")
       return(initNet());
 
    return(0);
 };
 
-
+#ifdef USB_ENABLED
 int FzReader::initUsb(void) {
 
    cb_data.log_ptr = &log;
@@ -361,6 +376,7 @@ int FzReader::initUsb(void) {
 
    return(usbstatus);
 };
+#endif
 
 int FzReader::initNet(void) {
 
@@ -512,14 +528,17 @@ void FzReader::process(void) {
       try {
 
          if(rcstate == RUNNING) {
- 
+
+#ifdef USB_ENABLED
             if(devname == "usb") {
 
                if( usbstatus || (libusb_handle_events(ctx) != 0) )
                   std::cout << ERRTAG << "FzReader: USB fatal error !" << std::endl;
 
             } else if(devname == "net") {
-
+#else
+	    if(devname == "net") {
+#endif
                ns_mgr_poll(&udpserver, 5);
             }
  
@@ -534,12 +553,15 @@ void FzReader::process(void) {
 
       } catch(boost::thread_interrupted& interruption) {
 
+#ifdef USB_ENABLED
          if(devname == "usb") {
 
             usb_close();
 
          } else if(devname == "net") {
-
+#else
+         if(devname == "net") {
+#endif
             reader->close();
          }
 
@@ -555,10 +577,12 @@ Report::FzReader FzReader::get_report(void) {
    return(report);
 };
 
+#ifdef USB_ENABLED
 void FzReader::usb_close(void) {
 
    libusb_free_transfer(xfr); 
 };
+#endif
 
 void FzReader::rc_do(RCcommand cmd) {
 
