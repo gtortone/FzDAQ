@@ -53,12 +53,7 @@ Build instructions
   installation in default path is recommended with:
 
     ```make install```
-
-  copy pkg-config file in /usr/lib/pkgconfig to allow configure script
-  to detect EPICS libraries
-
-    ```cp $EPICS_BASE/src/tools/O.$EPICS_HOST_ARCH/epics-base*.pc /usr/lib/pkgconfig```
-  
+    
   setup EPICS environment in .bashrc
 
     ```
@@ -68,6 +63,11 @@ Build instructions
     export PATH="${PATH}:${EPICS_BASE}/bin/${EPICS_HOST_ARCH}"
     export LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:${EPICS_BASE}/lib/${EPICS_HOST_ARCH}"
     ```
+    
+  copy pkg-config file in /usr/lib/pkgconfig to allow configure script
+  to detect EPICS libraries
+
+    ```cp $EPICS_BASE/src/tools/O.$EPICS_HOST_ARCH/epics-base*.pc /usr/lib/pkgconfig```
 
 - clone FzDAQ GIT master branch
 
