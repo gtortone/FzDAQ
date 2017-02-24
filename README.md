@@ -54,7 +54,7 @@ Build instructions
 
     ```make install```
 
-  in alternative copy pkg-config file in /usr/lib/pkgconfig to allow configure script
+  copy pkg-config file in /usr/lib/pkgconfig to allow configure script
   to detect EPICS libraries
 
     ```cp $EPICS_BASE/src/tools/O.$EPICS_HOST_ARCH/epics-base*.pc /usr/lib/pkgconfig```
