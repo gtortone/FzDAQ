@@ -1,6 +1,10 @@
 FzDAQ
 =====
 
+- Table of contents
+  * [Build instructions](#build-instructions)
+  * [Installation instructions](#installation-instructions)
+
 Build instructions
 ------------------
 
