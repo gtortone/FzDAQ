@@ -10,7 +10,7 @@
 #include "utils/FzTypedef.h"
 #include "utils/FzUtils.h"
 #include "logger/FzLogger.h"
-#include "controller/FzNodeManager.h"
+#include "rc/FzNodeManager.h"
 #include "reader/FzReader.h"
 #include "parser/FzParser.h"
 #include "writer/FzWriter.h"

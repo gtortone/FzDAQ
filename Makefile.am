@@ -12,7 +12,7 @@ src/parser/FzFSM.cpp \
 src/parser/FzParser.cpp \
 src/writer/FzWriter.cpp \
 src/rc/RCFSM.cpp \
-src/controller/FzNodeManager.cpp \
+src/rc/FzNodeManager.cpp \
 src/rc/FzEpics.cpp \
 src/rc/softIoc_registerRecordDeviceDriver.cpp \
 src/main/FzConfig.cpp \
