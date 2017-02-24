@@ -8,4 +8,5 @@ install-scripts$(EXEEXT):
 	cp src/rc/Fazia-NM.db /etc/default/fazia
 	cp src/main/log4cpp.properties /etc/default/fazia
 	cp src/rc/softIoc.dbd /etc/default/fazia
-	
+	mkdir -p /opt/FzDAQ/config
+	cp config/* /opt/FzDAQ/config

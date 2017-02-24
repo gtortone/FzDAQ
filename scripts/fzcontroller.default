@@ -2,4 +2,4 @@
 # /etc/init.d/fzcontroller
 
 # Options to pass to fzcontroller
-CFGFILE="/opt/FzDAQ/config/test-gennaro.cfg"
+CFGFILE="/opt/FzDAQ/config/local-daq-topology.cfg"

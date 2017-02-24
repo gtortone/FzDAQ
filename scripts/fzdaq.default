@@ -2,5 +2,5 @@
 # /etc/init.d/fzdaq
 
 # Options to pass to fzdaq
-CFGFILE="/opt/FzDAQ/config/test-gennaro.cfg"
+CFGFILE="/opt/FzDAQ/config/local-daq-topology.cfg"
 PROFILE="all"
