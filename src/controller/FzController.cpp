@@ -818,7 +818,7 @@ void rc_do(RCcommand cmd) {
    } 
 }
 
-#ifdef EPICS_ENABLE
+#ifdef EPICS_ENABLED
 
 void update_stats_ioc(void) {
 

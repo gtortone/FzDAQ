@@ -81,7 +81,7 @@ private:
 
 public:
 
-#ifdef USB_ENABLED
+#ifdef AMQLOG_ENABLED
    FzReader(std::string dname, std::string nurl, std::string cfgfile, zmq::context_t &ctx, cms::Connection *JMSconn);
 #else
    FzReader(std::string dname, std::string nurl, std::string cfgfile, zmq::context_t &ctx);

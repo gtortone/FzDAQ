@@ -53,7 +53,7 @@ Build instructions
   in alternative copy pkg-config file in /usr/lib/pkgconfig to allow configure script
   to detect EPICS libraries
 
-    ```cp $EPICS_BASE/src/tools/$EPICS_HOSTARCH/epics-base.pc /usr/lib/pkgconfig```
+    ```cp $EPICS_BASE/src/tools/O.$EPICS_HOST_ARCH/epics-base*.pc /usr/lib/pkgconfig```
   
   setup EPICS environment in .bashrc
 
