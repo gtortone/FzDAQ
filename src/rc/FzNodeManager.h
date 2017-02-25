@@ -15,8 +15,19 @@
 #include "asDbLib.h"
 #include "iocInit.h"
 #include "iocsh.h"
-#include "cadef.h"
 #include "rc/FzEpics.h"
+
+#undef DBR_CTRL_DOUBLE
+#undef DBR_CTRL_LONG
+#undef DBR_GR_DOUBLE
+#undef DBR_GR_LONG
+#undef DBR_PUT_ACKS
+#undef DBR_PUT_ACKT
+#undef DBR_SHORT
+#undef INVALID_DB_REQ
+#undef VALID_DB_REQ
+
+#include "cadef.h"
 
 #define DBD_FILE "/etc/default/fazia/softIoc.dbd"
 #define DB_FILE	 "/etc/default/fazia/Fazia-NM.db"
