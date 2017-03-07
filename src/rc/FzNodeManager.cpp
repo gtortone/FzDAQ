@@ -427,7 +427,7 @@ void FzNodeManager::update_stats_ioc(void) {
  
       PVwrite_db(hostname + ":reader:in:ev", (double)rd_report.in_events());
 
-      PVwrite_db(hostname + ":reader:in:evbw", rd_report.in_events_bw());
+      PVwrite_db(hostname + ":reader:in:evbw", (long)rd_report.in_events_bw());
 
       human_byte(rd_report.out_bytes(), &value, &unit);
       PVwrite_db(hostname + ":reader:out:data", value);
@@ -437,7 +437,7 @@ void FzNodeManager::update_stats_ioc(void) {
 
       PVwrite_db(hostname + ":reader:out:ev", (double)rd_report.out_events());
 
-      PVwrite_db(hostname + ":reader:out:evbw", rd_report.out_events_bw());
+      PVwrite_db(hostname + ":reader:out:evbw", (long)rd_report.out_events_bw());
 
       // FzParser pool data statistics
 
@@ -467,7 +467,7 @@ void FzNodeManager::update_stats_ioc(void) {
 
       PVwrite_db(hostname + ":parser:in:ev", (double)in_ev);
 
-      PVwrite_db(hostname + ":parser:in:evbw", in_ev_bw);
+      PVwrite_db(hostname + ":parser:in:evbw", (long)in_ev_bw);
 
       human_byte(out_data, &value, &unit);
       PVwrite_db(hostname + ":parser:out:data", value);
@@ -477,7 +477,7 @@ void FzNodeManager::update_stats_ioc(void) {
 
       PVwrite_db(hostname + ":parser:out:ev", (double)out_ev);
 
-      PVwrite_db(hostname + ":parser:out:evbw", out_ev_bw);
+      PVwrite_db(hostname + ":parser:out:evbw", (long)out_ev_bw);
 
       // FzFSM pool data statistics
       
@@ -513,7 +513,7 @@ void FzNodeManager::update_stats_ioc(void) {
 
       PVwrite_db(hostname + ":fsm:in:ev", (double)in_ev);
 
-      PVwrite_db(hostname + ":fsm:in:evbw", in_ev_bw);
+      PVwrite_db(hostname + ":fsm:in:evbw", (long)in_ev_bw);
 
       human_byte(out_data, &value, &unit);
       PVwrite_db(hostname + ":fsm:out:data", value);
@@ -523,7 +523,7 @@ void FzNodeManager::update_stats_ioc(void) {
 
       PVwrite_db(hostname + ":fsm:out:ev", (double)out_ev);
 
-      PVwrite_db(hostname + ":fsm:out:evbw", out_ev_bw);
+      PVwrite_db(hostname + ":fsm:out:evbw", (long)out_ev_bw);
  
       PVwrite_db(hostname + ":fsm:events:good", ev_good); 
       PVwrite_db(hostname + ":fsm:events:bad", ev_bad); 
@@ -548,7 +548,7 @@ void FzNodeManager::update_stats_ioc(void) {
 
       PVwrite_db(hostname + ":writer:in:ev", (double)wr_report.in_events());
 
-      PVwrite_db(hostname + ":writer:in:evbw", wr_report.in_events_bw());
+      PVwrite_db(hostname + ":writer:in:evbw", (long)wr_report.in_events_bw());
 
       human_byte(wr_report.out_bytes(), &value, &unit);
       PVwrite_db(hostname + ":writer:out:data", value);
@@ -558,7 +558,7 @@ void FzNodeManager::update_stats_ioc(void) {
 
       PVwrite_db(hostname + ":writer:out:ev", (double)wr_report.out_events());
 
-      PVwrite_db(hostname + ":writer:out:evbw", wr_report.out_events_bw());      
+      PVwrite_db(hostname + ":writer:out:evbw", (long)wr_report.out_events_bw());      
    }
 }
 
