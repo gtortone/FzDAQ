@@ -908,8 +908,7 @@ void update_stats_ioc(void) {
 
    PVwrite_db("DAQ:reader:in:ev", (double)DAQreport.reader().in_events());
 
-   human_byte(DAQreport.reader().in_events_bw(), &value);
-   PVwrite_db("DAQ:reader:in:evbw", value);
+   PVwrite_db("DAQ:reader:in:evbw", (long)DAQreport.reader().in_events_bw());
 
    human_byte(DAQreport.reader().out_bytes(), &value, &unit);
    PVwrite_db("DAQ:reader:out:data", value);
@@ -919,8 +918,7 @@ void update_stats_ioc(void) {
 
    PVwrite_db("DAQ:reader:out:ev", (double)DAQreport.reader().out_events());
 
-   human_byte(DAQreport.reader().out_events_bw(), &value);
-   PVwrite_db("DAQ:reader:out:evbw", value);
+   PVwrite_db("DAQ:reader:out:evbw", (long)DAQreport.reader().out_events_bw());
 
    PVwrite_db("DAQ:fsm:events:good", ev_good);
    PVwrite_db("DAQ:fsm:events:bad", ev_bad);
@@ -937,8 +935,7 @@ void update_stats_ioc(void) {
 
    PVwrite_db("DAQ:writer:in:ev", (double)DAQreport.writer().in_events());
 
-   human_byte(DAQreport.writer().in_events_bw(), &value);
-   PVwrite_db("DAQ:writer:in:evbw", value);
+   PVwrite_db("DAQ:writer:in:evbw", (long)DAQreport.writer().in_events_bw());
 
    human_byte(DAQreport.writer().out_bytes(), &value, &unit);
    PVwrite_db("DAQ:writer:out:data", value);
@@ -948,8 +945,7 @@ void update_stats_ioc(void) {
 
    PVwrite_db("DAQ:writer:out:ev", (double)DAQreport.writer().out_events());
 
-   human_byte(DAQreport.writer().out_events_bw(), &value);
-   PVwrite_db("DAQ:writer:out:evbw", value);
+   PVwrite_db("DAQ:writer:out:evbw", (long)DAQreport.writer().out_events_bw());
 }
 
 #endif	// EPICS_ENABLED
