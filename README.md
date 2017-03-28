@@ -18,7 +18,7 @@ FzDAQ is an acquisition software for FAZIA experiment. FAZIA stands for the Four
 
 FzDAQ is composed by different modules that exchange messages and events through [ZeroMQ sockets](http://zeromq.org):
 
-- **FzReader**: it acquires by UDP socket (or USB port) FAZIA raw data from Regional Board that aggregates multiple detector blocks. It forwards data to FzParser thread pool.
+- **FzReader**: it acquires by UDP socket FAZIA raw data from Regional Board that aggregates multiple detector blocks. It forwards data to FzParser thread pool.
 
 - **FzParser**: each FzParser includes a FzFSM (Finite State Machine) able to analyze and validate each acquired event. Multiple FzParser threads can be running on multi-core machine in order to benefit from tasks parallel execution. They forward data to FzWriter module.
 
@@ -132,11 +132,37 @@ fzreader: {
       };
  };
  ```
-
+ 
 Some config file examples are available in GIT repository [config directory](config/). To explain various configuration attributes we will use the following convention: the attribute 'device' in the sample section above will be defined as
 
 ```fzreader.consumer.device```
 
+It is also possible to specify some configuration parameters with command line arguments. This option will be listed in related module table.
+ 
+- Global configuration attributes
+ 
+- FzReader configuration attributes
+
+|cfgfile section|mandatory|cmdline param|default|description|
+|---|---|---|---|---|
+|fzreader.consumer.device|no|--dev|net|acquire events from network|
+|fzreader.consumer.url|no|--neturl|udp://eth0:50000|UDP socket to bind for event acquisition|
+|fzreader.producer|url|yes|-|-|set to inproc://fzreader|
+
+
+- FzParser configuration attributes
+
+|cfgfile section|mandatory|cmdline param|default|description|
+|---|---|---|---|---|
+|fzparser.nthreads|no|--nt|1|number of FzParser threads to allocate|
+|fzparser.consumer.url|yes|-|-|set to $fzdaq.fzreader.producer.url (referral)|
+|fzparser.producer.url|yes|-|-|set to $fzdaq.fzwriter.consumer.url (referral)|
+
+- FzWriter configuration attributes
+
+- FzNodeManager configuration attributes
+
+- FzController configuration attributes
 
 
 EPICS plugin
