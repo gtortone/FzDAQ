@@ -149,7 +149,6 @@ It is also possible to specify some configuration parameters with command line a
 |fzreader.consumer.url|no|--neturl|udp://eth0:50000|UDP socket to bind for event acquisition|
 |fzreader.producer|url|yes|-|-|set to inproc://fzreader|
 
-
 - FzParser configuration attributes
 
 |cfgfile section|mandatory|cmdline param|default|description|
@@ -160,10 +159,32 @@ It is also possible to specify some configuration parameters with command line a
 
 - FzWriter configuration attributes
 
+|cfgfile section|mandatory|cmdline param|default|description|
+|---|---|---|---|---|
+|fzwriter.subdir|yes|--subdir|-|base output directory|
+|fzwriter.runtag|no|--runtag|run|label for run directory identification (e.g. LNS, GANIL)|
+|fzwriter.runid|yes|--runid|-|id for run identification (e.g. 100, 205)|
+|fzwriter.esize|no|--esize|10|max size of event file in Mbytes|
+|fzwriter.dsize|no|--dsize|100|max size of event directory in Mbytes|
+|fzwriter.consumer|no|-|inproc://fzwriter|consumer interface|
+|fzwriter.spy|no|-|tcp://*:5563|events spy interface|
+
 - FzNodeManager configuration attributes
+
+|cfgfile section|mandatory|cmdline param|default|description|
+|---|---|---|---|---|
+|fznodemanager.runcontrol_mode|yes|-|-|local or remote run control mode|
+|fznodemanager.interface|no|-|eth0|network interface for run control|
+|fznodemanager.stats.url|no|-|tcp://eth0:7000|endpoint of FzController report collector|
 
 - FzController configuration attributes
 
+|cfgfile section|mandatory|cmdline param|default|description|
+|---|---|---|---|---|
+|fzcontroller.interface|no|-|eth0|report collector network interface|
+|fzcontroller.weblog.url|no|-|-|-|Weblog url|
+|fzcontroller.weblog.username|-|-|-|Weblog username|
+|fzcontroller.weblog.interval|-|-|-|Weblog time interval report in seconds|
 
 EPICS plugin
 ------------
