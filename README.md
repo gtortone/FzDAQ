@@ -23,12 +23,26 @@ FzDAQ is composed by different modules:
 
 - **FzWriter**: this module store data in files and directories with Google Protobuf data format. It also runs a data spy in order to allow online data processing and analysis from external data visualization tools. 
 
-- **FzNodeManager**: 
+- **FzNodeManager**: _local_ supervisor for FzReader/FzParser or FzWriter that run on each FzDAQ deployed machine. It sends a report on modules status to FzController and it receives run control and setup commands for modules management.
 
-- **FzController**:
+- **FzController**: _global_ supervisor for all FzNodeManager modules. It offers a global view on whole FzDAQ cluster status and accept commands for FzDAQ setup and run control.
 
 Deployment
 ----------
+
+A single FzDAQ node (=server) can run one of these combination of modules (profile):
+
+- **compute** profile
+  - 1 FzReader thread
+  - _n_ FzParser threads
+  - 1 FzNodeManager thread
+
+- **storage** profile
+  - 1 FzWriter thread
+  - 1 FzNodeManager thread
+
+- FzDAQ controller
+  - 1 FzController thread
 
 Build
 -----
