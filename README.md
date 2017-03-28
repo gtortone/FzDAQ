@@ -2,12 +2,36 @@ FzDAQ
 =====
 
 - Table of contents
-  * [Build instructions](#build-instructions)
-  * [Installation instructions](#installation-instructions)
+  * [Introduction](#introduction)
+  * [Deployment](#deployment)
+  * [Build](#build)
+  * [Installation](#installation)
+  * [Configuration](#configuration)
   * [ZeroMQ sockets](#zeromq-sockets)
+  * [EPICS plugin](#epics-plugin)
+  
+Introduction
+------------
 
-Build instructions
-------------------
+FzDAQ is an acquisition software for FAZIA experiment. FAZIA stands for the Four Pi A and Z Identification Array. This is a project which aims at building a new 4pi particle detector for charged particles. It operates in the domain of heavy-ion induced reactions around the Fermi energy and it groups together more than 10 institutions worldwide in Nuclear Physics. A large effort on research and development is currently made, especially on digital electronics and pulse shape analysis, in order to improve the detection capabilities of such particle detectors in different domains, such as charge and mass identification, lower energy thresholds, as well as improved energetic and angular resolutions.
+
+FzDAQ is composed by different modules:
+
+- **FzReader**: it acquires by UDP socket (or USB port) FAZIA raw data from Regional Board that aggregates multiple detector blocks. It forwards data to FzParser thread pool.
+
+- **FzParser**: each FzParser includes a FzFSM (Finite State Machine) able to analyze and validate each acquired event. Multiple FzParser threads can be running on multi-core machine in order to benefit from tasks parallel execution. They forward data to FzWriter module.
+
+- **FzWriter**: this module store data in files and directories with Google Protobuf data format. It also runs a data spy in order to allow online data processing and analysis from external data visualization tools. 
+
+- **FzNodeManager**: 
+
+- **FzController**:
+
+Deployment
+----------
+
+Build
+-----
 
 - distribution: Debian 8.x
 
@@ -64,12 +88,15 @@ Build instructions
 
   ``` make ```
   
-Installation instructions
--------------------------
+Installation 
+------------
 
 - To install FzDAQ binaries in default directory (/opt/FzDAQ/bin) run:
 
   ``` make install ```
+  
+Configuration
+-------------
 
 ZeroMQ sockets
 --------------
@@ -90,3 +117,8 @@ ZeroMQ sockets
 ||||||
 |FzController|ZMQ_PULL|:7000|consumer|from FzNodeManager - collector report|
 |FzController|ZMQ_REP|:5555|reply|from outside - run control & setup commands|
+
+EPICS plugin
+------------
+
+
