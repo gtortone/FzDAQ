@@ -84,22 +84,6 @@ AS_IF([test "x$enable_usb" = "xyes"], [
   LIBS="$usb_LIBS $LIBS"
 ])
 
-AC_ARG_ENABLE([epics],
-    AS_HELP_STRING([--enable-epics], [enable EPICS run control interface]))
-AS_IF([test "x$enable_epics" = "xyes"], [
-  PKG_CHECK_MODULES([epics], [epics-base] ,[], [
-    AC_MSG_ERROR([unable to find EPICS library])
-  ])
-  AC_DEFINE([EPICS_ENABLED])
-  LIBS="$epics_LIBS $LIBS"
-  CXXFLAGS="$CXXFLAGS $epics_CFLAGS"
-
-  AC_SEARCH_LIBS([dbNameToAddr], [dbCore])
-  AC_SEARCH_LIBS([ca_context_create], [ca])
-  AC_SEARCH_LIBS([epicsThreadSleep], [Com])
-  AC_SEARCH_LIBS([pvar_func_arrInitialize], [dbRecStd])
-])
-
 AC_ARG_ENABLE([weblog],
     AS_HELP_STRING([--enable-weblog], [enable WebLog message interface]))
 AS_IF([test "x$enable_weblog" = "xyes"], [

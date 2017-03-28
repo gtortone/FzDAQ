@@ -38,41 +38,6 @@ Build instructions
   
     ```./configure ; make ; make install ; ldconfig```
   
-- EPICS dependencies and build
-
-  ```apt-get install libreadline6 libreadline6-dev```
-
-  install EPICS library and command line
-
-    ```mkdir /opt/epics ; cd /opt/epics```
-  
-    ```wget https://www.aps.anl.gov/epics/download/base/base-3.15.5.tar.gz```
-  
-    ```tar xzf base-3.15.5.tar.gz ; mv base-3.15.5 base ; cd base ; make```
-
-  installation in default path is recommended with:
-
-    ```make install```
-    
-  setup EPICS environment in .bashrc
-
-    ```
-    # EPICS environment
-    export EPICS_BASE="/opt/epics/base"
-    export EPICS_HOST_ARCH=`$EPICS_BASE/startup/EpicsHostArch.pl`
-    export PATH="${PATH}:${EPICS_BASE}/bin/${EPICS_HOST_ARCH}"
-    export LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:${EPICS_BASE}/lib/${EPICS_HOST_ARCH}"
-    ```
-    
-  copy pkg-config file in /usr/lib/pkgconfig to allow configure script
-  to detect EPICS libraries
-
-    ```cp $EPICS_BASE/src/tools/O.$EPICS_HOST_ARCH/epics-base*.pc /usr/lib/pkgconfig```
-
-  set EPICS library for system wide usage:
-
-    ```echo ${EPICS_BASE}/lib/${EPICS_HOST_ARCH} > /etc/ld.so.conf.d/epics.conf; ldconfig```
-
 - clone FzDAQ GIT master branch
 
   ```git clone https://github.com/gtortone/FzDAQ.git```
@@ -86,14 +51,13 @@ Build instructions
   ```
   --with-boost-libdir	  directory for Boost libraries
   --enable-usb            enable USB acquisition channel
-  --enable-epics          enable EPICS run control interface
   --enable-weblog         enable WebLog message interface
   --enable-amqlog         enable ActiveMQ log message interface
   ```
 
 - run configure
   
-  ```./configure --prefix=/opt/FzDAQ --with-boost-libdir=/usr/lib/x86_64-linux-gnu --enable-epics --enable-weblog --enable-amqlog```
+  ```./configure --prefix=/opt/FzDAQ --with-boost-libdir=/usr/lib/x86_64-linux-gnu --enable-weblog --enable-amqlog```
   
 - start build
 

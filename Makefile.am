@@ -14,8 +14,6 @@ src/parser/FzParser.cpp \
 src/writer/FzWriter.cpp \
 src/rc/RCFSM.cpp \
 src/nodemanager/FzNodeManager.cpp \
-src/rc/FzEpics.cpp \
-src/rc/softIoc_registerRecordDeviceDriver.cpp \
 src/main/FzConfig.cpp \
 src/logger/FzLogger.cpp \
 src/utils/FzUtils.cpp \
@@ -35,7 +33,6 @@ src/controller/map.cpp \
 src/controller/main.cpp \
 src/main/FzConfig.cpp \
 src/rc/RCFSM.cpp \
-src/rc/FzEpics.cpp \
 src/logger/FzLogger.cpp \
 src/utils/FzUtils.cpp
 
