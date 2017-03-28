@@ -32,12 +32,18 @@ Deployment
 
 A single FzDAQ node (=server) can run one of these combination of modules (profile):
 
-- **compute** profile
+- profile **compute** 
   - 1 FzReader thread
   - _n_ FzParser threads
   - 1 FzNodeManager thread
 
-- **storage** profile
+- profile **storage** 
+  - 1 FzWriter thread
+  - 1 FzNodeManager thread
+  
+- profile **all** 
+  - 1 FzReader thread
+  - _n_ FzParser threads
   - 1 FzWriter thread
   - 1 FzNodeManager thread
 
