@@ -4,7 +4,7 @@ FzDAQ
 - Table of contents
   * [Build instructions](#build-instructions)
   * [Installation instructions](#installation-instructions)
-  * ZeroMQ sockets(#zeromq-sockets)
+  * [ZeroMQ sockets](#zeromq-sockets)
 
 Build instructions
 ------------------
