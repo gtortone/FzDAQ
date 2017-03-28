@@ -16,6 +16,13 @@ src/proto/FzNodeReport.pb.cpp$(EXEEXT) src/proto/FzNodeReport.pb.h$(EXEEXT):
 	protoc src/proto/FzNodeReport.proto --cpp_out=.
 	mv src/proto/FzNodeReport.pb.cc src/proto/FzNodeReport.pb.cpp
 
+src/proto/FzRCS.pb.cpp$(EXEEXT) src/proto/FzRCS.pb.h$(EXEEXT):
+	protoc src/proto/FzRCS.proto --cpp_out=.
+	mv src/proto/FzRCS.pb.cc src/proto/FzRCS.pb.cpp
+
+clean-local:
+	-rm -f src/proto/*.cpp src/proto/*.h
+
 deploy$(EXEEXT):
 	ssh daq@fzdaq01 "rm -rf devel/Fazia/miniDAQ-mt/*"
 	scp README ChangeLog NEWS AUTHORS COPYING configure.in Makefile.am Makefile.pb *.cpp *.h *.hpp daq@fzdaq01:/home/daq/devel/Fazia/miniDAQ-mt
