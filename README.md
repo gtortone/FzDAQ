@@ -16,13 +16,13 @@ Introduction
 
 FzDAQ is an acquisition software for FAZIA experiment. FAZIA stands for the Four Pi A and Z Identification Array. This is a project which aims at building a new 4pi particle detector for charged particles. It operates in the domain of heavy-ion induced reactions around the Fermi energy and it groups together more than 10 institutions worldwide in Nuclear Physics. A large effort on research and development is currently made, especially on digital electronics and pulse shape analysis, in order to improve the detection capabilities of such particle detectors in different domains, such as charge and mass identification, lower energy thresholds, as well as improved energetic and angular resolutions.
 
-FzDAQ is composed by different modules:
+FzDAQ is composed by different modules that exchange messages and events through [ZeroMQ sockets](http://zeromq.org):
 
 - **FzReader**: it acquires by UDP socket (or USB port) FAZIA raw data from Regional Board that aggregates multiple detector blocks. It forwards data to FzParser thread pool.
 
 - **FzParser**: each FzParser includes a FzFSM (Finite State Machine) able to analyze and validate each acquired event. Multiple FzParser threads can be running on multi-core machine in order to benefit from tasks parallel execution. They forward data to FzWriter module.
 
-- **FzWriter**: this module store data in files and directories with Google Protobuf data format. It also runs a data spy in order to allow online data processing and analysis from external data visualization tools. 
+- **FzWriter**: this module store data in files and directories with [Google Protobuf](https://developers.google.com/protocol-buffers/) data format. It also runs a data spy in order to allow online data processing and analysis from external data visualization tools. 
 
 - **FzNodeManager**: _local_ supervisor for FzReader/FzParser or FzWriter that run on each FzDAQ deployed machine. It sends a report on modules status to FzController and it receives run control and setup commands for modules management.
 
@@ -118,6 +118,7 @@ Installation
   
 Configuration
 -------------
+
 
 
 EPICS plugin
