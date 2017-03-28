@@ -182,9 +182,9 @@ It is also possible to specify some configuration parameters with command line a
 |cfgfile section|mandatory|cmdline param|default|description|
 |---|---|---|---|---|
 |fzcontroller.interface|no|-|eth0|report collector network interface|
-|fzcontroller.weblog.url|no|-|-|-|Weblog url|
-|fzcontroller.weblog.username|-|-|-|Weblog username|
-|fzcontroller.weblog.interval|-|-|-|Weblog time interval report in seconds|
+|fzcontroller.weblog.url|no|-|-|Weblog url|
+|fzcontroller.weblog.username|no|-|-|Weblog username|
+|fzcontroller.weblog.interval|no|-|-|Weblog time interval report in seconds|
 
 EPICS plugin
 ------------
