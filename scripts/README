@@ -11,10 +11,6 @@
 
 content of /etc/default/fazia:
 
-Fazia-C.db
-Fazia-NM.db
 fzdaq
 fzcontroller
 log4cpp.properties
-softIoc.dbd
-
