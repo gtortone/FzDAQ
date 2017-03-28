@@ -4,6 +4,7 @@ FzDAQ
 - Table of contents
   * [Build instructions](#build-instructions)
   * [Installation instructions](#installation-instructions)
+  * [ZeroMQ sockets](#zeromq-sockets)
 
 Build instructions
 ------------------
@@ -73,24 +74,19 @@ Installation instructions
 ZeroMQ sockets
 --------------
 
-FzReader
-	ZMQ_PUSH	(cfgfile)	producer	(to FzParser)
-	
-FzParser
-	ZMQ_PULL	(cfgfile)	consumer	(from FzReader)
-	ZMQ_PUSH	(cfgfile)	producer	(to FzWriter)
-
-FzWriter
-	ZMQ_PULL	(cfgfile)	consumer	(from FzParser)
-	ZMQ_PUB		(cfgfile)	publisher	(spy)
-
-FzNodeManager
-	ZMQ_PUSH	producer			(to FzController - node report)
-	ZMQ_REP		:5550		reply		(from FzController - run control & setup commands - with reply)
-	ZMQ_PULL	:6660		consumer	(from FzController - run control & setup commands - without reply)
-
-FzController
-	ZMQ_PULL	:7000		consumer	(from FzNodeManager - collector report)
-	ZMQ_REP		:5555		reply		(from outside - run control & setup commands)
-
-
+|module|type|port|description|destination|
+|---|---|---|---|---|
+|FzReader|ZMQ_PUSH|(cfgfile)|producer|to FzParser|
+||||||
+|FzParser|ZMQ_PULL|(cfgfile)|consumer|from FzReader|
+|FzParser|ZMQ_PUSH|(cfgfile)|producer|to FzWriter|
+||||||
+|FzWriter|ZMQ_PULL|(cfgfile)|consumer|from FzParser|
+|FzWriter|ZMQ_PUB|(cfgfile)|publisher|spy|
+||||||
+|FzNodeManager|ZMQ_PUSH|-|producer|to FzController - node report|
+|FzNodeManager|ZMQ_REP|:5550|reply|from FzController - run control & setup commands - with reply|
+|FzNodeManager|ZMQ_PULL|:6660|consumer|from FzController - run control & setup commands - without reply|
+||||||
+|FzController|ZMQ_PULL|:7000|consumer|from FzNodeManager - collector report|
+|FzController|ZMQ_REP|:5555|reply|from outside - run control & setup commands|
