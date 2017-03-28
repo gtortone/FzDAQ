@@ -7,8 +7,9 @@ FzDAQ
   * [Build](#build)
   * [Installation](#installation)
   * [Configuration](#configuration)
-  * [ZeroMQ sockets](#zeromq-sockets)
   * [EPICS plugin](#epics-plugin)
+  * [Implementation details](#implementation-details)
+    * [ZeroMQ sockets](#zeromq-sockets)
   
 Introduction
 ------------
@@ -118,6 +119,15 @@ Installation
 Configuration
 -------------
 
+
+EPICS plugin
+------------
+
+Implementation details
+----------------------
+
+This section provides information about FzDAQ internal implementations.
+
 ZeroMQ sockets
 --------------
 
@@ -137,8 +147,5 @@ ZeroMQ sockets
 ||||||
 |FzController|ZMQ_PULL|:7000|consumer|from FzNodeManager - collector report|
 |FzController|ZMQ_REP|:5555|reply|from outside - run control & setup commands|
-
-EPICS plugin
-------------
 
 
