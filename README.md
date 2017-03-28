@@ -147,7 +147,7 @@ It is also possible to specify some configuration parameters with command line a
 |---|---|---|---|---|
 |fzreader.consumer.device|no|--dev|net|acquire events from network|
 |fzreader.consumer.url|no|--neturl|udp://eth0:50000|UDP socket to bind for event acquisition|
-|fzreader.producer|url|yes|-|-|set to inproc://fzreader|
+|fzreader.producer.url|yes|-|-|set to inproc://fzreader|
 
 - FzParser configuration attributes
 
