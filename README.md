@@ -119,6 +119,24 @@ Installation
 Configuration
 -------------
 
+FzDAQ configuration file format is based on [libconfig](http://www.hyperrealm.com/libconfig) and each module properties are defined in a separate config section. This is a sample of config section:
+
+```
+fzreader: {
+      consumer: {
+         device = "net";
+         url = "udp://eth0:50000";
+      }; 
+      producer: {
+         url = "inproc://fzreader";     # push - bind
+      };
+ };
+ ```
+
+Some config file examples are available in GIT repository [config directory](config/). To explain various configuration attributes we will use the following convention: the attribute 'device' in the sample section above will be defined as
+
+```fzreader.consumer.device```
+
 
 
 EPICS plugin
