@@ -10,7 +10,7 @@
 #include "utils/FzTypedef.h"
 #include "utils/FzUtils.h"
 #include "logger/FzLogger.h"
-#include "rc/FzNodeManager.h"
+#include "nodemanager/FzNodeManager.h"
 #include "reader/FzReader.h"
 #include "parser/FzParser.h"
 #include "writer/FzWriter.h"
@@ -85,9 +85,6 @@ int main(int argc, char *argv[]) {
 
    if (vm.count("help")) {
       std::cout << desc << std::endl << std::endl;
-      //std::cout << "example: ./FzDAQ-mt --subdir pbout --runid 150" << std::endl;
-      //std::cout << " 'pbout' directory will contain event subdirectories starting from 'run000150'" << std::endl;
-      //std::cout << " each eventset file has a max size of 10 MB (default) and each event subdirectory has a max size of 100 MB (default)" << std::endl << std::endl;
       exit(0);
    }
  
@@ -171,7 +168,6 @@ int main(int argc, char *argv[]) {
 
         std::cout << ERRTAG << "log server error" << std::endl; 
         JMSconn = NULL;
-        //activemq::library::ActiveMQCPP::shutdownLibrary();
       } 
    } 
 
@@ -480,23 +476,33 @@ int main(int argc, char *argv[]) {
    std::cout << std::endl;  
 
    std::string line, lastcmd;
+   bool cmderr;
    RCtransition rcerr;
 
    for ( ; std::cout << "FzDAQ > " && std::getline(std::cin, line); ) {
         if (!line.empty()) { 
 
-           if(!line.compare("r")) 
+           cmderr = true;
+
+           if(!line.compare("r")) {
+              cmderr = false;
               line = lastcmd;
+           }
 
            if(!line.compare("help")) {
 
+              cmderr = false;
               std::cout << std::endl;
               std::cout << "help:   \tprint usage" << std::endl;
               std::cout << "status: \tprint acquisition status" << std::endl;
-              std::cout << "configure:  \tconfigure acquisition" << std::endl;
-              std::cout << "start:  \tconfigure and start acquisition" << std::endl;
-              std::cout << "stop:   \tstop acquisition" << std::endl;
-              std::cout << "reset:   \treset acquisition" << std::endl;
+
+              if(nm->rc_mode() == std::string(RC_MODE_LOCAL)) {
+                 std::cout << "configure:  \tconfigure acquisition" << std::endl;
+                 std::cout << "start:  \tconfigure and start acquisition" << std::endl;
+                 std::cout << "stop:   \tstop acquisition" << std::endl;
+                 std::cout << "reset:   \treset acquisition" << std::endl;
+              }
+
               std::cout << "stats:  \tprint event data acquisition statistics" << std::endl;
               std::cout << "r:      \trepeat last command" << std::endl;
               std::cout << "rec:    \trecord raw data to files" << std::endl;
@@ -505,51 +511,60 @@ int main(int argc, char *argv[]) {
            }
 
            if(!line.compare("status")) {
+              cmderr = false;
               std::cout << "current DAQ status: " << state_labels[nm->rc_state()] << std::endl;
-              //std::cout << "file eventset max size: " << esize/1000000 << " MB" << std::endl;
-              //std::cout << "directory eventset max size: " << dsize/1000000 << " MB" << std::endl;
+              std::cout << "Run Control mode = " << nm->rc_mode() << std::endl;
            }
 
-           if(!line.compare("configure")) {
+           if(nm->rc_mode() == std::string(RC_MODE_LOCAL)) {
 
-              rcerr = nm->rc_process(configure);
+              if(!line.compare("configure")) {
+
+                 cmderr = false;
+                 rcerr = nm->rc_process(RCcommand::configure);
  
-              if(rcerr == RCOK)
-                 std::cout << INFOTAG << "Fazia DAQ configured" << std::endl;
-              else
-                 std::cout << ERRTAG << "configure RC command failed" << std::endl;
-           }
+                 if(rcerr == RCOK)
+                    std::cout << INFOTAG << "Fazia DAQ configured" << std::endl;
+                 else
+                    std::cout << ERRTAG << "configure RC command failed" << std::endl;
+              }
 
-           if(!line.compare("start")) {
+              if(!line.compare("start")) {
 
-              // to simplify start
-              rcerr = nm->rc_process(configure);
-              rcerr = nm->rc_process(start);
+                 cmderr = false;
+                 // to simplify start
+                 rcerr = nm->rc_process(RCcommand::configure);
+                 rcerr = nm->rc_process(RCcommand::start);
 
-              if(rcerr == RCOK)
-                 std::cout << INFOTAG << "Fazia DAQ configured and started" << std::endl;
-              else
-                 std::cout << ERRTAG << "configure/start RC command failed" << std::endl;
-           }
+                 if(rcerr == RCOK)
+                    std::cout << INFOTAG << "Fazia DAQ configured and started" << std::endl;
+                 else
+                    std::cout << ERRTAG << "configure/start RC command failed" << std::endl;
+              }
 
-           if(!line.compare("stop")) {
+              if(!line.compare("stop")) {
 
-              rcerr = nm->rc_process(stop);
+                 cmderr = false;
+                 rcerr = nm->rc_process(RCcommand::stop);
         
-              if(rcerr == RCOK)
-                 std::cout << INFOTAG << "Fazia DAQ stopped" << std::endl;
-              else
-                 std::cout << ERRTAG << "stop RC command failed" << std::endl;
-           }
+                 if(rcerr == RCOK)
+                    std::cout << INFOTAG << "Fazia DAQ stopped" << std::endl;
+                 else
+                    std::cout << ERRTAG << "stop RC command failed" << std::endl;
+              }
 
-           if(!line.compare("reset")) {
+              if(!line.compare("reset")) {
 
-              nm->rc_process(reset);
-              std::cout << INFOTAG << "Fazia DAQ reset" << std::endl;
-           }
+                 cmderr = false;
+                 nm->rc_process(RCcommand::reset);
+                 std::cout << INFOTAG << "Fazia DAQ reset" << std::endl;
+              }
+
+           }	// RC_MODE_LOCAL
 
            if(!line.compare("stats")) {
 
+              cmderr = false;
               std::stringstream in_evbw, out_evbw, in_databw, out_databw;
 
               if(!nm->has_data()) {
@@ -705,6 +720,7 @@ int main(int argc, char *argv[]) {
 
            if(!line.compare("rec")) {
 
+              cmderr = false;
               if(!rec) {
 
                  rd->record(true);
@@ -720,16 +736,19 @@ int main(int argc, char *argv[]) {
            }
 
            if(!line.compare("quit")) {
+              cmderr = false;
               break;
            }
 
-           lastcmd = line;
+           if(cmderr == true) {
+              std::cout << ERRTAG << "command not found" << std::endl;
+           } else lastcmd = line;
         }
     }
 
    std::cout << INFOTAG << "FzNodeManager: closing thread: \t";
    nm->close();
-   nm->rc_process(stop);
+   nm->rc_process(RCcommand::stop);
    std::cout << " DONE" << std::endl;
 
    if(iscompute) {

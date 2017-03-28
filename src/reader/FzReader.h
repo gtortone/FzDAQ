@@ -92,7 +92,6 @@ public:
    void close(void);
    void record(bool val);
 
-   void rc_do(RCcommand cmd);
    void set_rcstate(RCstate s);
 
    Report::FzReader get_report(void); 

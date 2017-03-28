@@ -69,6 +69,10 @@ Build instructions
 
     ```cp $EPICS_BASE/src/tools/O.$EPICS_HOST_ARCH/epics-base*.pc /usr/lib/pkgconfig```
 
+  set EPICS library for system wide usage:
+
+    ```echo ${EPICS_BASE}/lib/${EPICS_HOST_ARCH} > /etc/ld.so.conf.d/epics.conf; ldconfig```
+
 - clone FzDAQ GIT master branch
 
   ```git clone https://github.com/gtortone/FzDAQ.git```
@@ -102,4 +106,27 @@ Installation instructions
 
   ``` make install ```
 
-- 
+ZeroMQ sockets
+--------------
+
+FzReader
+	ZMQ_PUSH	(cfgfile)	producer	(to FzParser)
+	
+FzParser
+	ZMQ_PULL	(cfgfile)	consumer	(from FzReader)
+	ZMQ_PUSH	(cfgfile)	producer	(to FzWriter)
+
+FzWriter
+	ZMQ_PULL	(cfgfile)	consumer	(from FzParser)
+	ZMQ_PUB		(cfgfile)	publisher	(spy)
+
+FzNodeManager
+	ZMQ_PUSH	producer			(to FzController - node report)
+	ZMQ_REP		:5550		reply		(from FzController - run control & setup commands - with reply)
+	ZMQ_PULL	:6660		consumer	(from FzController - run control & setup commands - without reply)
+
+FzController
+	ZMQ_PULL	:7000		consumer	(from FzNodeManager - collector report)
+	ZMQ_REP		:5555		reply		(from outside - run control & setup commands)
+
+

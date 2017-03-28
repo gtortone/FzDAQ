@@ -6,17 +6,32 @@ RCFSM::RCFSM(void) {
    lasterr = RCOK;
 }
 
+RCtransition RCFSM::try_process(RCcommand cmd) {
+
+   uint8_t trans_id;
+
+   if((int)cmd > (RCCOMMAND_NUM-1))
+      return RCERROR;
+
+   trans_id = rc_ttable[(int)cmd][curstate];
+
+   if(trans_id == 0)
+      return RCERROR;
+   else
+      return RCOK;
+}
+
 RCtransition RCFSM::process(RCcommand cmd) {
 
    uint8_t trans_id;  
    RCtransition trans_err = RCOK;
   
-   if(cmd > (RCCOMMAND_NUM-1)) {
+   if((int)cmd > (RCCOMMAND_NUM-1)) {
       lasterr = RCERROR;
       return lasterr;
    }
 
-   trans_id = rc_ttable[cmd][curstate];
+   trans_id = rc_ttable[(int)cmd][curstate];
 
    switch(trans_id) {
 

@@ -1,5 +1,8 @@
 #include "FzNodeManager.h"
 #include "utils/FzUtils.h"
+#include "proto/FzRCS.pb.h"
+
+#include <boost/algorithm/string.hpp>
 
 #ifdef AMQLOG_ENABLED
 FzNodeManager::FzNodeManager(FzReader *rd, std::vector<FzParser *> psr_array, FzWriter *wr, std::string cfgfile, std::string prof, zmq::context_t &ctx, cms::Connection *JMSconn) :
@@ -16,6 +19,8 @@ FzNodeManager::FzNodeManager(FzReader *rd, std::vector<FzParser *> psr_array, Fz
 
    } else hascfg = false;
    
+   log.setFileConnection("fznodemanager", "/var/log/fzdaq/fznodemanager.log");
+
 #ifdef AMQLOG_ENABLED
    if(AMQconn.get())
       log.setJMSConnection("FzNodeManager", JMSconn);
@@ -37,8 +42,25 @@ FzNodeManager::FzNodeManager(FzReader *rd, std::vector<FzParser *> psr_array, Fz
    hostname = buf;
    std::cout << INFOTAG << "FzNodeManager: hostname is " << hostname << std::endl;
 
-   std::string ep;
+   std::string ep, netint;
   
+   if(hascfg && cfg.lookupValue("fzdaq.fznodemanager.runcontrol_mode", rcmode)) {
+
+      if( (rcmode != std::string(RC_MODE_LOCAL)) && (rcmode != std::string(RC_MODE_REMOTE)) ) {
+
+         rcmode = std::string(RC_MODE_LOCAL);
+      }
+
+   } else {
+
+      rcmode = std::string(RC_MODE_LOCAL);
+   }
+
+   if (rcmode == std::string(RC_MODE_REMOTE))
+      state = IDLE;
+
+   std::cout << INFOTAG << "FzNodemanager: Run Control mode set to: " << rcmode << std::endl;
+
    // report monitoring socket
 
    try {
@@ -85,13 +107,11 @@ FzNodeManager::FzNodeManager(FzReader *rd, std::vector<FzParser *> psr_array, Fz
         exit(1);
    }
 
-   // run control socket
+   // run control socket (REQ/REP)
 
    try {
 
       rcontrol = new zmq::socket_t(context, ZMQ_REP);
-      int tval = 500;
-      rcontrol->setsockopt(ZMQ_RCVTIMEO, &tval, sizeof(tval));           // 500 milliseconds timeout on recv
       int linger = 0;
       rcontrol->setsockopt(ZMQ_LINGER, &linger, sizeof(linger));   // linger equal to 0 for a fast socket shutdown
 
@@ -101,24 +121,19 @@ FzNodeManager::FzNodeManager(FzReader *rd, std::vector<FzParser *> psr_array, Fz
         exit(1);
    }
 
-   // run control endpoint setup
+   // run control endpoint setup (REQ/REP)
 
-   if(hascfg) {
+   if(hascfg && cfg.lookupValue("fzdaq.fznodemanager.interface", netint)) {
 
-      ep = getZMQEndpoint(cfg, "fzdaq.fznodemanager.runcontrol");
-
-      if(ep.empty()) {
-
-         std::cout << ERRTAG << "FzNodeManager: run control endpoint not present in config file" << std::endl;
-         exit(1);
-      }
-
-      std::cout << INFOTAG << "FzNodeManager: run control request/reply endpoint: " << ep << " [cfg file]" << std::endl;
+      std::cout << INFOTAG << "FzNodeManager: network interface: " << netint << " [cfg file]" << std::endl;
+      ep = "tcp://" + netint + ":" + std::to_string(FZNM_REP_PORT);
+      std::cout << INFOTAG << "FzNodeManager: run control req/rep endpoint: " << ep << " [cfg file]" << std::endl;
 
    } else {
 
-      ep = "tcp://*:5550";
-      std::cout << INFOTAG << "FzNodeManager: run control request/reply endpoint: " << ep << " [default]" << std::endl;
+      // default setting
+      ep = "tcp://eth0:" + std::to_string(FZNM_REP_PORT);
+      std::cout << INFOTAG << "FzNodeManager: run control req/rep endpoint: " << ep << " [default]" << std::endl;
    }
 
    try {
@@ -127,15 +142,56 @@ FzNodeManager::FzNodeManager(FzReader *rd, std::vector<FzParser *> psr_array, Fz
 
    } catch (zmq::error_t &e) {
 
-      std::cout << ERRTAG << "FzNodeManager: failed to bind ZeroMQ endpoint " << ep << ": " << e.what () << std::endl;
+      std::cout << ERRTAG << "FzNodeManager: failed to bind ZeroMQ req/rep endpoint " << ep << ": " << e.what () << std::endl;
+      exit(1);
+   }
+   
+   // run control socket (PULL)
+   
+   try {
+
+      pcontrol = new zmq::socket_t(context, ZMQ_PULL);
+      int linger = 0;
+      pcontrol->setsockopt(ZMQ_LINGER, &linger, sizeof(linger));   // linger equal to 0 for a fast socket shutdown
+
+   } catch (zmq::error_t &e) {
+
+        std::cout << ERRTAG << "FzNodeManager: failed to start ZeroMQ run control pull: " << e.what () << std::endl;
+        exit(1);
+   }
+
+   // run control endpoint setup (PULL)
+
+   if(hascfg && cfg.lookupValue("fzdaq.fznodemanager.interface", netint)) {
+
+      std::cout << INFOTAG << "FzNodeManager: network interface: " << netint << " [cfg file]" << std::endl;
+      ep = "tcp://" + netint + ":" + std::to_string(FZNM_PULL_PORT);
+      std::cout << INFOTAG << "FzNodeManager: run control pull endpoint: " << ep << " [cfg file]" << std::endl;
+
+   } else {
+
+      // default setting
+      ep = "tcp://eth0:" + std::to_string(FZNM_PULL_PORT);
+      std::cout << INFOTAG << "FzNodeManager: run control pull endpoint: " << ep << " [default]" << std::endl;
+   }
+
+   try {
+
+      pcontrol->bind(ep.c_str());
+
+   } catch (zmq::error_t &e) {
+
+      std::cout << ERRTAG << "FzNodeManager: failed to bind ZeroMQ pull endpoint " << ep << ": " << e.what () << std::endl;
       exit(1);
    }
 };
 
 void FzNodeManager::close(void) {
 
-   thr->interrupt();
-   thr->join();
+   thr_comm->interrupt();
+   thr_comm->join();
+   thr_perfdata->interrupt();
+   thr_perfdata->join();
 }
 
 void FzNodeManager::init(void) {
@@ -143,14 +199,69 @@ void FzNodeManager::init(void) {
    if (!thread_init) {
 
       thread_init = true;
-      thr = new boost::thread(boost::bind(&FzNodeManager::process, this));
-#ifdef EPICS_ENABLED
-      ioc = new boost::thread(boost::bind(&FzNodeManager::epics_ioc, this)); 
-#endif
+      thr_comm = new boost::thread(boost::bind(&FzNodeManager::process_comm, this));
+      thr_perfdata = new boost::thread(boost::bind(&FzNodeManager::process_perfdata, this));
    }
 };
 
-void FzNodeManager::process(void) { 
+void FzNodeManager::process_comm(void) {
+   
+   zmq::message_t req;
+
+   //  Initialize poll set
+   zmq::pollitem_t items[2];
+
+   items[0].socket = (*rcontrol);
+   items[0].fd = 0;
+   items[0].events = ZMQ_POLLIN;
+   items[1].socket = (*pcontrol);
+   items[1].fd = 0;
+   items[1].events = ZMQ_POLLIN;
+
+   while(true) {
+
+      try {
+
+         boost::this_thread::interruption_point();
+	 
+   	 // process messages from both sockets
+	 zmq::poll(items, 2, 100);
+
+	 if(items[0].revents & ZMQ_POLLIN) {
+	    
+            // receive run control & setup messages (REQ/REP socket)
+	    rcontrol->recv(&req);
+
+            zmq::message_t res;
+            res = handle_request(req);
+
+            // a reply is mandatory in every case...    
+            rcontrol->send(res);
+	    items[0].revents = 0;
+	 }
+
+	 if(items[1].revents & ZMQ_POLLIN) {
+	    
+	    // receive run control & setup messages (PULL socket)
+	    pcontrol->recv(&req);
+
+            handle_request(req);
+	    items[1].revents = 0;
+	 }
+
+      } catch(boost::thread_interrupted& interruption) {
+
+         rcontrol->close();
+         pcontrol->close();
+         break;
+
+      } catch(std::exception& e) {
+
+      }
+   }  // end while
+}
+
+void FzNodeManager::process_perfdata(void) { 
 
    unsigned int i;
    unsigned int nparsers = psr_array.size();
@@ -158,8 +269,6 @@ void FzNodeManager::process(void) {
    Report::FzParser psr_report_t0[nparsers], psr_report_t1[nparsers];
    Report::FzFSM fsm_report_t0[nparsers], fsm_report_t1[nparsers];
    Report::FzWriter wr_report_t0, wr_report_t1;
-   zmq::message_t rcreq;
-   int retval;
 
    while(true) {
 
@@ -169,6 +278,7 @@ void FzNodeManager::process(void) {
 
          nodereport.set_hostname(hostname);
          nodereport.set_profile(profile);
+         nodereport.set_status(state_labels[rc_state()]);
          nodereport.set_parser_num(nparsers);
 
          if( (profile == "compute") || (profile == "all") ) {
@@ -251,11 +361,6 @@ void FzNodeManager::process(void) {
             nodereport.mutable_writer()->set_out_events_bw( wr_report_t1.out_events() - wr_report_t0.out_events() );
          }
 
-#ifdef EPICS_ENABLED
-         // update EPICS IOC
-         update_stats_ioc();
-#endif
-
          // send report to FzController
          std::string str;
          nodereport.SerializeToString(&str);
@@ -264,47 +369,6 @@ void FzNodeManager::process(void) {
          str.clear();
  
          report_init = true;
-
-         // receive run control messages
-         retval = rcontrol->recv(&rcreq);
-         std::string request = std::string(static_cast<char*>(rcreq.data()), rcreq.size());
-
-         if(retval) {	// request received...
-
-            std::stringstream msg;
-            msg << "RC request received: " << request;
-            logmtx.lock(); 
-               log.write(INFO, msg.str());
-            logmtx.unlock();
-
-            RCcommand cmd = reset;
-
-            if(request == "configure") {
-
-               cmd = configure;
-
-            } else if(request == "start") {
- 
-               cmd = start;
-
-            } else if(request == "stop") {
-
-               cmd = stop;
-
-            } else if(request == "reset") {
-
-               cmd = reset;
-            }
-
-            rc_process(cmd);
-
-            // create response
-            std::string reply = std::string("OK");
-            zmq::message_t rcrep(reply.size());   
-
-            memcpy (rcrep.data(), reply.data(), reply.size());
-            rcontrol->send(rcrep);
-         }
 
       } catch(boost::thread_interrupted& interruption) {
 
@@ -318,48 +382,128 @@ void FzNodeManager::process(void) {
    }	// end while
 };
 
-#ifdef EPICS_ENABLED
-
-void FzNodeManager::epics_ioc(void) {
-
-   const char *base_dbd = DBD_FILE;
-   char *dbd_file = const_cast<char*>(base_dbd);
-   char xmacro[PVNAME_STRINGSZ + 4];
+zmq::message_t FzNodeManager::handle_request(zmq::message_t& request) {
    
-   std::string rc_status_pv;	
+   RCS::Request req;
+   RCS::Response res;
+   std::string str;
 
-   if (dbLoadDatabase(dbd_file, NULL, NULL)) {
-      std::cout << ERRTAG << "FzNodeManager: failed to load FAZIA dbd file" << std::endl;
-      exit(1);
+   res.set_errorcode(RCS::Response::ERR);
+   res.set_reason("request format error");
+
+   if(req.ParseFromArray(request.data(), request.size()) == false) {
+
+      res.set_errorcode(RCS::Response::ERR);
+      res.set_reason("request deserialization error");
+      
+      std::string str;
+      res.SerializeToString(&str);
+
+      zmq::message_t msg(str.size());
+      memcpy(msg.data(), str.data(), str.size());
+
+      return(msg);
+   } 
+
+   if(req.module() != RCS::Request::NM) {
+
+      res.set_errorcode(RCS::Response::ERR);
+      res.set_reason("module destination error");
+      
+      std::string str;
+      res.SerializeToString(&str);
+
+      zmq::message_t msg(str.size());
+      memcpy(msg.data(), str.data(), str.size());
+
+      return(msg);
    }
 
-   softIoc_registerRecordDeviceDriver(pdbbase);
-   epicsSnprintf(xmacro, sizeof xmacro, "HOSTNAME=%s", hostname.c_str());
- 
-   if (dbLoadRecords(DB_FILE, xmacro)) {
-      std::cout << ERRTAG << "FzNodeManager: failed to load NodeManager db file" << std::endl;
-      exit(1);
+   if(req.channel() == RCS::Request::RC) {		// RUN CONTROL
+
+      if(req.operation() == RCS::Request::READ) {
+
+         if(req.variable() == "status") {
+
+            res.set_value(state_labels[rc_state()]);
+            res.set_errorcode(RCS::Response::OK);
+            res.set_reason("OK");
+
+         } else if(req.variable() == "mode") {
+
+            res.set_value(rcmode);
+            res.set_errorcode(RCS::Response::OK);
+            res.set_reason("OK");
+
+	 } else if(req.variable() == "perfdata") {
+
+	    std::string str;
+	    nodereport.SerializeToString(&str);
+
+	    zmq::message_t msg(str.size());
+            memcpy(msg.data(), str.data(), str.size());
+
+	    return(msg);
+
+         } else res.set_reason("variable not found");
+
+      } else if(req.operation() == RCS::Request::WRITE) {
+
+           if(rcmode == std::string(RC_MODE_REMOTE)) {
+
+              if(req.variable() == "status") {
+
+                 if(req.value() == "idle") {
+                 
+                    state = IDLE;
+                    rc_state_do(state);
+                    res.set_errorcode(RCS::Response::OK);
+                    res.set_reason("OK");
+
+                 } else if(req.value() == "ready") {
+
+                    state = READY;
+                    rc_state_do(state);
+                    res.set_errorcode(RCS::Response::OK);
+                    res.set_reason("OK");
+
+                 } else if(req.value() == "running") {
+
+                    state = RUNNING;
+                    rc_state_do(state);
+                    res.set_errorcode(RCS::Response::OK);
+                    res.set_reason("OK");
+
+                 } else if(req.value() == "paused") {
+
+                    state = PAUSED;
+                    rc_state_do(state);
+                    res.set_errorcode(RCS::Response::OK);
+                    res.set_reason("OK");
+
+                 } else res.set_reason("status value not correct");
+
+              } else res.set_reason("variable not found");
+
+           } else {		// RC_MODE_LOCAL
+
+              res.set_errorcode(RCS::Response::DENY);
+              res.set_reason("FzDAQ Run Control set to local mode"); 
+           }
+      }
+
+
+   } else if(req.channel() == RCS::Request::SETUP) {	// SETUP
+
+
    }
 
-   iocInit();
-   epicsThreadSleep(0.2);
+   res.SerializeToString(&str);
+   zmq::message_t msg(str.size());
+   memcpy(msg.data(), str.data(), str.size());
 
-   if(ca_context_create(ca_enable_preemptive_callback) != ECA_NORMAL) {
-
-      std::cout << ERRTAG << "FzNodeManager: failed to create EPICS CA context" << std::endl;
-      exit(1);
-   }
-
-   // update DAQ node profile PV
-   PVwrite_db(hostname + ":profile", profile);
-
-   while(true) {
-
-      epicsThreadSleep(0.5);
-   }
+   return(msg);
 }
-
-#endif
 
 Report::Node FzNodeManager::get_nodereport(void) {
    return(nodereport);
@@ -369,200 +513,40 @@ bool FzNodeManager::has_data(void) {
    return(report_init);
 }
 
-void FzNodeManager::rc_do(RCcommand cmd) {
+void FzNodeManager::rc_event_do(RCcommand cmd) {
 
    if( (profile == "compute") || (profile == "all") ) {
 
-      rd->rc_do(cmd);
-      rd->set_rcstate(rc.state());
+      if(rcmode == std::string(RC_MODE_LOCAL))
+         rd->set_rcstate(rc.state());
 
       for(unsigned int i=0; i<psr_array.size(); i++) {
-         psr_array[i]->rc_do(cmd);
-         psr_array[i]->set_rcstate(rc.state());
+
+         if(rcmode == std::string(RC_MODE_LOCAL))
+            psr_array[i]->set_rcstate(rc.state());
       }
    }
 
    if( (profile == "storage") || (profile == "all") ) {
 
-      wr->rc_do(cmd);
-      wr->set_rcstate(rc.state());
+      if(rcmode == std::string(RC_MODE_LOCAL))
+         wr->set_rcstate(rc.state());
    }
 }
 
-#ifdef EPICS_ENABLED
-
-void FzNodeManager::update_rc_ioc(void) {
-
-   PVwrite_db(hostname + ":RC:transition.DISP", 0);
-   PVwrite_db(hostname + ":RC:transition", rc.error());
-   PVwrite_db(hostname + ":RC:transition.DISP", 1);
-
-   PVwrite_db(hostname + ":RC:state.DISP", 0);
-   PVwrite_db(hostname + ":RC:state", rc.state());
-   PVwrite_db(hostname + ":RC:state.DISP", 1);  
-}
-
-void FzNodeManager::update_stats_ioc(void) {
+void FzNodeManager::rc_state_do(RCstate state) {
 
    if( (profile == "compute") || (profile == "all") ) {
 
-      Report::FzReader rd_report = nodereport.reader();
-      Report::FzParser psr_report;
-      Report::FzFSM fsm_report;
+      rd->set_rcstate(state);
 
-      double value;
-      std::string unit;
-
-      double in_data, in_data_bw, in_ev, in_ev_bw;
-      double out_data, out_data_bw, out_ev, out_ev_bw;
-      double ev_good, ev_bad, ev_empty, st_invalid;
-
-      // FzReader data statistics
-
-      human_byte(rd_report.in_bytes(), &value, &unit);
-      PVwrite_db(hostname + ":reader:in:data", value);
-      PVwrite_db(hostname + ":reader:in:data.EGU", unit);
-
-      PVwrite_db(hostname + ":reader:in:databw", rd_report.in_bytes_bw() * 8E-6);	// Mbit/s
- 
-      PVwrite_db(hostname + ":reader:in:ev", (double)rd_report.in_events());
-
-      PVwrite_db(hostname + ":reader:in:evbw", (long)rd_report.in_events_bw());
-
-      human_byte(rd_report.out_bytes(), &value, &unit);
-      PVwrite_db(hostname + ":reader:out:data", value);
-      PVwrite_db(hostname + ":reader:out:data.EGU", unit);
-
-      PVwrite_db(hostname + ":reader:out:databw", rd_report.out_bytes_bw() * 8E-6);	// Mbit/s
-
-      PVwrite_db(hostname + ":reader:out:ev", (double)rd_report.out_events());
-
-      PVwrite_db(hostname + ":reader:out:evbw", (long)rd_report.out_events_bw());
-
-      // FzParser pool data statistics
-
-      in_data = in_data_bw = in_ev = in_ev_bw = 0;
-      out_data = out_data_bw = out_ev = out_ev_bw = 0;
-
-      for(unsigned int i=0; i<nodereport.parser_num(); i++) {
-
-         psr_report = nodereport.parser(i);
- 
-         in_data += psr_report.in_bytes();
-         in_data_bw += psr_report.in_bytes_bw();
-         in_ev += psr_report.in_events();
-         in_ev_bw += psr_report.in_events_bw();
-
-         out_data += psr_report.out_bytes();
-         out_data_bw += psr_report.out_bytes_bw();
-         out_ev += psr_report.out_events();
-         out_ev_bw += psr_report.out_events_bw();
-      }
-
-      human_byte(in_data, &value, &unit);
-      PVwrite_db(hostname + ":parser:in:data", value);
-      PVwrite_db(hostname + ":parser:in:data.EGU", unit);
-
-      PVwrite_db(hostname + ":parser:in:databw", in_data_bw * 8E-6);	// Mbit/s
-
-      PVwrite_db(hostname + ":parser:in:ev", (double)in_ev);
-
-      PVwrite_db(hostname + ":parser:in:evbw", (long)in_ev_bw);
-
-      human_byte(out_data, &value, &unit);
-      PVwrite_db(hostname + ":parser:out:data", value);
-      PVwrite_db(hostname + ":parser:out:data.EGU", unit);
-
-      PVwrite_db(hostname + ":parser:out:databw", out_data_bw * 8E-6);	// Mbit/s
-
-      PVwrite_db(hostname + ":parser:out:ev", (double)out_ev);
-
-      PVwrite_db(hostname + ":parser:out:evbw", (long)out_ev_bw);
-
-      // FzFSM pool data statistics
-      
-      in_data = in_data_bw = in_ev = in_ev_bw = 0;
-      out_data = out_data_bw = out_ev = out_ev_bw = 0;
-      ev_good = ev_bad = ev_empty = st_invalid = 0;
-
-      for(unsigned int i=0; i<nodereport.parser_num(); i++) {
- 
-         fsm_report = nodereport.fsm(i);
-
-         in_data += fsm_report.in_bytes();
-         in_data_bw += fsm_report.in_bytes_bw();
-         in_ev += fsm_report.in_events();
-         in_ev_bw += fsm_report.in_events_bw();
-
-         out_data += fsm_report.out_bytes();
-         out_data_bw += fsm_report.out_bytes_bw();
-         out_ev += fsm_report.out_events();
-         out_ev_bw += fsm_report.out_events_bw();
-
-         ev_good += fsm_report.events_good();
-         ev_bad += fsm_report.events_bad();
-         ev_empty += fsm_report.events_empty();
-         st_invalid += fsm_report.state_invalid(); 
-      }
-      
-      human_byte(in_data, &value, &unit);
-      PVwrite_db(hostname + ":fsm:in:data", value);
-      PVwrite_db(hostname + ":fsm:in:data.EGU", unit);
-
-      PVwrite_db(hostname + ":fsm:in:databw", in_data_bw * 8E-6);	// Mbit/s
-
-      PVwrite_db(hostname + ":fsm:in:ev", (double)in_ev);
-
-      PVwrite_db(hostname + ":fsm:in:evbw", (long)in_ev_bw);
-
-      human_byte(out_data, &value, &unit);
-      PVwrite_db(hostname + ":fsm:out:data", value);
-      PVwrite_db(hostname + ":fsm:out:data.EGU", unit);
-
-      PVwrite_db(hostname + ":fsm:out:databw", out_data_bw * 8E-6);	// Mbit/s
-
-      PVwrite_db(hostname + ":fsm:out:ev", (double)out_ev);
-
-      PVwrite_db(hostname + ":fsm:out:evbw", (long)out_ev_bw);
- 
-      PVwrite_db(hostname + ":fsm:events:good", ev_good); 
-      PVwrite_db(hostname + ":fsm:events:bad", ev_bad); 
-      PVwrite_db(hostname + ":fsm:events:empty", ev_empty); 
-      PVwrite_db(hostname + ":fsm:states:invalid", st_invalid); 
+      for(unsigned int i=0; i<psr_array.size(); i++) 
+         psr_array[i]->set_rcstate(state);
    }
 
-   if( (profile == "storage") || (profile == "all") ) {
-
-      Report::FzWriter wr_report = nodereport.writer();
-
-      double value;
-      std::string unit;
-
-      // FzWriter data statistics
-
-      human_byte(wr_report.in_bytes(), &value, &unit);
-      PVwrite_db(hostname + ":writer:in:data", value);
-      PVwrite_db(hostname + ":writer:in:data.EGU", unit);
-
-      PVwrite_db(hostname + ":writer:in:databw", wr_report.in_bytes_bw() * 8E-6);	// Mbit/s
-
-      PVwrite_db(hostname + ":writer:in:ev", (double)wr_report.in_events());
-
-      PVwrite_db(hostname + ":writer:in:evbw", (long)wr_report.in_events_bw());
-
-      human_byte(wr_report.out_bytes(), &value, &unit);
-      PVwrite_db(hostname + ":writer:out:data", value);
-      PVwrite_db(hostname + ":writer:out:data.EGU", unit);
-
-      PVwrite_db(hostname + ":writer:out:databw", wr_report.out_bytes_bw() * 1E-6);	// Mbyte/s;
-
-      PVwrite_db(hostname + ":writer:out:ev", (double)wr_report.out_events());
-
-      PVwrite_db(hostname + ":writer:out:evbw", (long)wr_report.out_events_bw());      
-   }
+   if( (profile == "storage") || (profile == "all") ) 
+      wr->set_rcstate(state);
 }
-
-#endif	// EPICS_ENABLED
 
 //
 // wrapper methods for RC FSM
@@ -573,7 +557,7 @@ RCtransition FzNodeManager::rc_process(RCcommand cmd) {
    RCtransition trans_err = rc.process(cmd);
    RCstate cur_state = rc.state();
 
-   if( (cmd == reset) || ((trans_err == RCOK) && (cur_state != prev_state)) ) {
+   if( (cmd == RCcommand::reset) || ((trans_err == RCOK) && (cur_state != prev_state)) ) {
 
       // a state transition occurred...
       std::stringstream msg;
@@ -581,19 +565,22 @@ RCtransition FzNodeManager::rc_process(RCcommand cmd) {
       logmtx.lock();
          log.write(INFO, msg.str());
       logmtx.unlock();
-      rc_do(cmd);
+      rc_event_do(cmd);
    }
-
-#ifdef EPICS_ENABLED
-   update_rc_ioc();
-#endif
 
    return(rc.error());
 }
 
 RCstate FzNodeManager::rc_state(void) {
 
-   return(rc.state());
+   if(rcmode == std::string(RC_MODE_REMOTE))
+      return(state);
+   else
+      return(rc.state());
+}
+
+std::string FzNodeManager::rc_mode(void) {
+   return(rcmode);
 }
 
 RCtransition FzNodeManager::rc_error(void) {

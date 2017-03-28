@@ -4,37 +4,8 @@
 #include <unistd.h>
 #include "boost/thread.hpp"
 
-#ifdef EPICS_ENABLED
-
-#include "epicsThread.h"
-#include "epicsExit.h"
-#include "epicsStdio.h"
-#include "dbStaticLib.h"
-#include "subRecord.h"
-#include "dbAccess.h"
-#include "asDbLib.h"
-#include "iocInit.h"
-#include "iocsh.h"
-#include "rc/FzEpics.h"
-
-#undef DBR_CTRL_DOUBLE
-#undef DBR_CTRL_LONG
-#undef DBR_GR_DOUBLE
-#undef DBR_GR_LONG
-#undef DBR_PUT_ACKS
-#undef DBR_PUT_ACKT
-#undef DBR_SHORT
-#undef INVALID_DB_REQ
-#undef VALID_DB_REQ
-
-#include "cadef.h"
-
-#define DBD_FILE "/etc/default/fazia/softIoc.dbd"
-#define DB_FILE	 "/etc/default/fazia/Fazia-NM.db"
-
-extern "C" int softIoc_registerRecordDeviceDriver(struct dbBase *pdbbase);
-
-#endif	// EPICS_ENABLED
+#define	RC_MODE_LOCAL	"local"
+#define	RC_MODE_REMOTE	"remote"
 
 #include "main/FzConfig.h"
 #include "reader/FzReader.h"
@@ -48,13 +19,14 @@ class FzNodeManager {
 
 private:
 
-   boost::thread *thr;
-   boost::thread *ioc;
+   boost::thread *thr_perfdata;
+   boost::thread *thr_comm;
    bool thread_init;
 
    zmq::context_t &context;
    zmq::socket_t *pushmon;	// push socket for monitoring reports
    zmq::socket_t *rcontrol;	// req/rep socket for run control
+   zmq::socket_t *pcontrol;	// pull socket for run control
 
    libconfig::Config cfg;
    std::string profile;
@@ -75,21 +47,17 @@ private:
    Report::Node nodereport;
    bool report_init;   
 
-   RCFSM rc;
+   std::string rcmode;
+   RCFSM rc;			// used in local Run Control mode
+   RCstate state;		// used in remote Run Control mode
 
-   void process(void);   
+   void process_perfdata(void);   
+   void process_comm(void);
 
-#ifdef EPICS_ENABLED
-   void epics_ioc(void);   
+   zmq::message_t handle_request(zmq::message_t& request);
 
-   static void ca_connection_cb(struct connection_handler_args args);
-   static void rc_event_cb(struct event_handler_args eha);
-
-   void update_rc_ioc(void);
-   void update_stats_ioc(void);
-#endif
-
-   void rc_do(RCcommand cmd);
+   void rc_event_do(RCcommand cmd);	// used in local Run Control mode
+   void rc_state_do(RCstate state);	// used in remote Run Control mode
 
 public:
 
@@ -108,6 +76,7 @@ public:
    // wrapper methods for RC FSM
    RCtransition rc_process(RCcommand cmd);
    RCstate rc_state(void);
+   std::string rc_mode(void);
    RCtransition rc_error(void);
 };
 

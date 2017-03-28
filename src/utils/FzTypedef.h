@@ -5,11 +5,16 @@
 
 #define MAX_EVENT_SIZE	10000000LL		// 10 megabyte
 
+#define FZNM_REP_PORT		5550
+#define FZNM_PULL_PORT		6660
+#define FZC_COLLECTOR_PORT	7000
+#define FZC_RC_PORT		5555
+
 // vector of raw data
 typedef std::vector<unsigned short int> FzRawData;
 
 // DAQ Run Control
-enum RCcommand { configure = 0, start, stop, reset };
+enum class RCcommand { configure = 0, start, stop, reset };
 static char const* const state_labels[] = { "IDLE", "READY", "RUNNING", "PAUSED" };
 
 enum RCstate { IDLE = 0,  READY, RUNNING, PAUSED };

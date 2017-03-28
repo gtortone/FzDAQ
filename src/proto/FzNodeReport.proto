@@ -63,13 +63,19 @@ message Node {
 
   required string hostname = 1;
   required string profile = 2;		// compute, storage or all
+  required string status = 3;		
 
-  optional uint32 parser_num = 3;
-  optional uint32 parser_busy = 4;
-  optional uint32 parser_free = 5;
+  optional uint32 parser_num = 4;
+  optional uint32 parser_busy = 5;
+  optional uint32 parser_free = 6;
 
-  optional FzReader reader = 6;
-  repeated FzParser parser = 7; 
-  repeated FzFSM fsm = 8;
-  optional FzWriter writer = 9;
+  optional FzReader reader = 7;		// multiplicity: 1
+  repeated FzParser parser = 8; 	// multiplicity: n
+  repeated FzFSM fsm = 9;		// multiplicity: n
+  optional FzWriter writer = 10;	// multiplicity: 1
+}
+
+message NodeSet {
+  
+  repeated Node node = 1;
 }

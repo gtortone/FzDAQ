@@ -45,6 +45,7 @@ public:
    RCFSM(void);
 
    RCtransition process(RCcommand cmd);
+   RCtransition try_process(RCcommand cmd);
    
    RCstate state(void); 
    RCtransition error(void);

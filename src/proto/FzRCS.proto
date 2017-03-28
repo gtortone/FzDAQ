@@ -1,0 +1,53 @@
+package RCS;
+
+option optimize_for = SPEED;
+option cc_generic_services = false;
+
+message Request {
+
+  enum Channel {
+    RC = 0;
+    SETUP = 1;
+  }
+
+  enum Operation {
+    READ = 0;
+    WRITE = 1;
+  }
+
+  enum Module {
+    RD = 0;		// FzReader
+    PSR = 1;		// FzParser pool
+    WR = 2;		// FzWriter
+    NM = 3;		// FzNodeManager
+    CNT = 4;		// FzController
+  }
+
+  required Channel channel = 1;
+  required Operation operation = 2;
+  required Module module = 3;
+  optional string hostname = 4;
+  required string variable = 5;
+  optional string value = 6;
+}
+
+message Response {
+
+  enum ErrorCode {
+    OK = 0;
+    ERR = 1;
+    DENY = 2;
+  }
+
+  optional string value = 1;
+  required ErrorCode errorcode = 2;
+  required string reason = 3;
+  repeated Node node = 4;
+}
+
+message Node {
+
+  required string hostname = 1;
+  required string profile = 2;
+  required string status = 3;  
+}

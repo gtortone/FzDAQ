@@ -584,10 +584,6 @@ void FzReader::usb_close(void) {
 };
 #endif
 
-void FzReader::rc_do(RCcommand cmd) {
-
-}
-
 void FzReader::set_rcstate(RCstate s) {
 
    rcstate = s;

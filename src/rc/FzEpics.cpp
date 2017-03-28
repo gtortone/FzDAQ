@@ -61,10 +61,107 @@ void PVwrite_db(const std::string pvname, long value) {
    dbPutField(&from,DBR_LONG,(long *)(&value),1);
 }
 
-/*
-int PVread_db(const std::string pvname) {
+int PVwrite(const std::string pvname, int value) {
+
+   chid pv;
+
+   int status = ca_create_channel(pvname.c_str(), NULL, NULL, 0, &pv);
+
+   if(status != ECA_NORMAL)
+      return 1;
+
+   status = ca_pend_io(1.0);
+   
+   if(status != ECA_NORMAL)
+      return 1;
+
+   status = ca_put(1, pv, (int *)&value);
+   ca_flush_io();
+
+   if(status != ECA_NORMAL)
+      return 1;
+
+   ca_clear_channel(pv);
+
+   return 0;
+}
+
+int PVwrite(const std::string pvname, double value) {
+
+   chid pv;
+
+   int status = ca_create_channel(pvname.c_str(), NULL, NULL, 0, &pv);
+
+   if(status != ECA_NORMAL)
+      return 1;
+
+   status = ca_pend_io(1.0);
+
+   if(status != ECA_NORMAL)
+      return 1;
+
+   status = ca_put(DBR_DOUBLE, pv, (double *)&value);
+   ca_flush_io();
+
+   if(status != ECA_NORMAL)
+      return 1;
+
+   ca_clear_channel(pv);
+
+   return 0;
 
 }
-*/
+
+int PVwrite(const std::string pvname, std::string value) {
+
+   chid pv;
+
+   int status = ca_create_channel(pvname.c_str(), NULL, NULL, 0, &pv);
+
+   if(status != ECA_NORMAL)
+      return 1;
+
+   status = ca_pend_io(1.0);
+
+   if(status != ECA_NORMAL)
+      return 1;
+
+   status = ca_put(DBR_STRING, pv, value.c_str());
+   ca_flush_io();
+
+   if(status != ECA_NORMAL)
+      return 1;
+
+   ca_clear_channel(pv);
+
+   return 0;
+
+}
+
+int PVwrite(const std::string pvname, long value) {
+
+   chid pv;
+
+   int status = ca_create_channel(pvname.c_str(), NULL, NULL, 0, &pv);
+
+   if(status != ECA_NORMAL)
+      return 1;
+
+   status = ca_pend_io(1.0);
+
+   if(status != ECA_NORMAL)
+      return 1;
+
+   status = ca_put(DBR_LONG, pv, (long *)&value);
+   ca_flush_io();
+
+   if(status != ECA_NORMAL)
+      return 1;
+
+   ca_clear_channel(pv);
+
+   return 0;
+
+}
 
 #endif

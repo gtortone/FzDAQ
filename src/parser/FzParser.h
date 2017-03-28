@@ -55,7 +55,6 @@ public:
    void init(void);
    void close(void);
 
-   void rc_do(RCcommand cmd);
    void set_rcstate(RCstate s);
 
    Report::FzParser get_report(void);

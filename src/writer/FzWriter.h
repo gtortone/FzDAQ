@@ -74,7 +74,6 @@ public:
 
    Report::FzWriter get_report(void);
 
-   void rc_do(RCcommand cmd);
    void set_rcstate(RCstate s);
 };
 

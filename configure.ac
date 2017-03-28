@@ -1,4 +1,4 @@
-AC_INIT([FzDAQ], [1.3])
+AC_INIT([FzDAQ], [1.5])
 AC_CONFIG_SRCDIR([src/main/FzDAQ-mt.cpp])
 ac_default_prefix=/opt/FzDAQ
 
@@ -11,6 +11,8 @@ AC_PROG_INSTALL
 
 AC_LANG(C++)
 CXXFLAGS="-O3 -std=c++0x -Wall"
+#to enable debug - run with "gdb --args ./FzController --cfg config/local-daq-topology.cfg"
+#CXXFLAGS="-O3 -std=c++0x -Wall -g" 
 
 AC_CANONICAL_BUILD
 AC_CANONICAL_HOST

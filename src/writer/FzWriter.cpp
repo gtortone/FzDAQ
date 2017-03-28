@@ -294,9 +294,9 @@ Report::FzWriter FzWriter::get_report(void) {
    return(report);
 };
 
-void FzWriter::rc_do(RCcommand cmd) {
+void FzWriter::set_rcstate(RCstate s) {
 
-   if(cmd == start) {
+   if( ( (rcstate == PAUSED) || (rcstate == READY) ) && (s == RUNNING) ) {
 
       if(!start_newdir) {
 
@@ -305,14 +305,11 @@ void FzWriter::rc_do(RCcommand cmd) {
          // READY  -> start -> RUNNING
          setup_newdir();
          setup_newfile();
-         esize = dsize = 0; 
+         esize = dsize = 0;
       }
 
-      start_newdir = false;	// prevent first 'start' create a new run directory
+      start_newdir = false;     // prevent first 'start' create a new run directory
    }
-}
-
-void FzWriter::set_rcstate(RCstate s) {
 
    rcstate = s;
 }

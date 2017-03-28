@@ -247,13 +247,7 @@ Report::FzFSM FzParser::get_fsm_report(void) {
    return(sm.get_report());
 }
 
-void FzParser::rc_do(RCcommand cmd) {
-
-}
-
 void FzParser::set_rcstate(RCstate s) {
 
    rcstate = s;
-
 }
-
