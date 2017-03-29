@@ -114,12 +114,28 @@ Installation
 Configuration
 -------------
 
+The main executables of FzDAQ is 'FzDAQ-mt' and 'FzController'.
+
+FzDAQ-mt command line options:
+
+|option|mandatory|value|default|description|
+|---|---|---|---|---|
+|--help|no|-|-|produce help message|
+|--cfg|yes|config_file|-|configuration file|
+|--profile|no|{compute, storage, all}|all|profile to start|
+
+FzController command line options:
+
+|option|mandatory|value|default|description|
+|---|---|---|---|---|
+|--help|no|-|-|produce help message|
+|--cfg|yes|config_file|-|configuration file|
+
 FzDAQ configuration file format is based on [libconfig](http://www.hyperrealm.com/libconfig) and each module properties are defined in a separate config section. This is a sample of config section:
 
 ```
 fzreader: {
       consumer: {
-         device = "net";
          url = "udp://eth0:50000";
       }; 
       producer: {
@@ -130,9 +146,9 @@ fzreader: {
  
 Some config file examples are available in GIT repository [config directory](config/). To explain various configuration attributes we will use the following convention: the attribute 'device' in the sample section above will be defined as
 
-```fzreader.consumer.device```
+```fzreader.consumer.url```
 
-It is also possible to specify some configuration parameters with command line arguments. This option will be listed in related module table.
+Configuration options will be listed in related module table.
  
 - Global configuration attributes
  
