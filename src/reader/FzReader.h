@@ -13,13 +13,6 @@
 #include "logger/FzLogger.h"
 #include "utils/FzTypedef.h"
 
-#define CYPRESS_VID     0x04B4
-#define CYPRESS_PID     0x8613 
-
-#define EP_IN           (0x08 | LIBUSB_ENDPOINT_IN)
-#define USB_TIMEOUT     100    // 100 ms 
-#define BUFFER_SIZE     16384
-
 #include <vector>
 
 struct _cb_data {
@@ -56,10 +49,8 @@ private:
 
    Report::FzReader report;
 
-   int setupUsb(void);
    int setupNet(void);
 
-   int initUsb(void);
    int initNet(void);
 
    static void udp_handler(struct ns_connection *nc, int ev, void *ev_data);

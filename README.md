@@ -62,10 +62,6 @@ Build
   
   ```apt-get install git screen g++ autoconf automake libprotobuf9 libprotobuf-dev protobuf-compiler libboost-thread1.55.0 libboost-thread1.55-dev liblog4cpp5 liblog4cpp5-dev libboost-system1.55.0 libboost-system1.55-dev libboost-program-options1.55.0 libboost-program-options1.55-dev libzmq3 libzmq3-dev libconfig++9 libconfig++-dev libudev1 libudev-dev```
   
-- USB acquisition channel dependencies
-
-  ```apt-get install libusb-1.0-0 libusb-1.0-0-dev``` 
-
 - Weblog message interface dependencies
 
   ```apt-get install libcurl3 libcurl4-openssl-dev```
@@ -96,7 +92,6 @@ Build
 
   ```
   --with-boost-libdir	  directory for Boost libraries
-  --enable-usb            enable USB acquisition channel
   --enable-weblog         enable WebLog message interface
   --enable-amqlog         enable ActiveMQ log message interface
   ```

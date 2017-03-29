@@ -73,17 +73,6 @@ LIBS="$zmq_LIBS $LIBS"
 
 # optional features
 
-AC_ARG_ENABLE([usb],
-    AS_HELP_STRING([--enable-usb], [enable USB acquisition channel]))
-
-AS_IF([test "x$enable_usb" = "xyes"], [
-  PKG_CHECK_MODULES([usb], [libusb-1.0] ,[], [
-    AC_MSG_ERROR([unable to find libusb library])
-  ])
-  AC_DEFINE([USB_ENABLED])
-  LIBS="$usb_LIBS $LIBS"
-])
-
 AC_ARG_ENABLE([weblog],
     AS_HELP_STRING([--enable-weblog], [enable WebLog message interface]))
 AS_IF([test "x$enable_weblog" = "xyes"], [
