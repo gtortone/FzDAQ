@@ -24,7 +24,6 @@ int main(int argc, char *argv[]) {
    zmq::context_t context(1);	// for ZeroMQ communications
 
    unsigned int i;
-   std::string devname;
    std::string neturl;
    unsigned int nthreads;
    std::string subdir;
@@ -63,23 +62,23 @@ int main(int argc, char *argv[]) {
    
    desc.add_options()
     ("help", "produce help message")
-#ifdef USB_ENABLED
-    ("dev", po::value<std::string>(), "acquisition device {usb, net} (default: usb)")
-#endif
-    ("neturl", po::value<std::string>(), "network UDP consumer url (default: udp://eth0:50000)")
-    ("nt", po::value<unsigned int>(), "number of parser threads\ndefault: 1")
-    ("subdir", po::value<std::string>(), "base output directory")
-    ("runtag", po::value<std::string>(), "label for run directory identification (e.g. LNS, GANIL)\ndefault: run")
-    ("runid", po::value<uint32_t>(), "id for run identification (e.g. 100, 205)")
-    ("esize", po::value<uint32_t>(), "[optional] max size of event file in Mbytes\ndefault: 10 Mb")
-    ("dsize", po::value<uint32_t>(), "[optional] max size of event directory in Mbytes\ndefault: 100 Mb")
-    ("ensubid", "[optional] enable subid for run identification (eg. run000220.0, run000220.1 ...)")
-    ("cfg", po::value<std::string>(), "[optional] configuration file")
-    ("profile", po::value<std::string>(), "[optional] profile to start {compute, storage, all}")
+    ("cfg", po::value<std::string>(), "[mandatory] configuration file")
+    ("profile", po::value<std::string>(), "[mandatory] profile to start {compute, storage, all}")
    ;
 
    po::variables_map vm;
-   po::store(po::parse_command_line(argc, argv, desc), vm);
+
+   try {
+      
+      po::store(po::parse_command_line(argc, argv, desc), vm);
+   
+   } catch (po::error& e) {
+
+      std::cerr << "ERROR: " << e.what() << std::endl << std::endl; 
+      std::cerr << desc << std::endl;
+      exit(1);
+   }
+   
    po::notify(vm);    
 
 
@@ -144,13 +143,6 @@ int main(int argc, char *argv[]) {
       }
    }  
 
-   /*
-     options will be set by priority:
-        - command line parameter
-        - configuration file
-        - default value
-   */
-
 #ifdef AMQLOG_ENABLED
    // configure ActiveMQ JMS log
    if(cfg.lookupValue("fzdaq.global.log.url", brokerURI)) {
@@ -182,92 +174,42 @@ int main(int argc, char *argv[]) {
 
    if(iscompute) {		
 
-      devname = neturl = "";
+      neturl = "";
 
       // configure FzReader and FzParser
 
-      if(vm.count("dev")) {
+      if(cfg.lookupValue("fzdaq.fzreader.consumer.url", neturl)) {
 
-        devname = vm["dev"].as<std::string>();
+	 std::cout << INFOTAG << "FzReader network UDP url: " << neturl << "\t[cfg file]" << std::endl;
 
-#ifdef USB_ENABLED
-        if( (devname == "usb") || (devname == "net") ) {
-#else
-	if (devname == "net") {
-#endif
-           std::cout << INFOTAG << "FzReader device: " << devname << "\t[cmd param]" << std::endl;
+      } else {
 
-        } else {
-
-           std::cout << ERRTAG << "FzReader device unknown: " << devname << "\t[cmd param]" << std::endl;
-           exit(1);
-        }
-
-      } else if(cfg.lookupValue("fzdaq.fzreader.consumer.device", devname)) {
-
-         std::cout << INFOTAG << "FzReader device: " << devname << "\t[cfg file]" << std::endl;
-      }
-#ifdef USB_ENABLED
-      else {
-
-         devname = "usb";
-         std::cout << INFOTAG << "FzReader device: usb\t[default]" << std::endl;
-      }
-#endif
-
-      if(devname == "net") {  	// fetch neturl parameter
-
-         if(vm.count("neturl")) {
-
-            neturl = vm["neturl"].as<std::string>();
-            if(neturl.substr(0,3) == "udp") {
-
-               std::cout << INFOTAG << "FzReader network UDP url: " << neturl << "\t[cmd param]" << std::endl;
-
-            } else {
-
-               std::cout << ERRTAG << "FzReader network UDP url not valid: " << neturl << "\t[cmd param]" << std::endl;
-               exit(1);
-            }
-
-         } else if(cfg.lookupValue("fzdaq.fzreader.consumer.url", neturl)) {
-
-            std::cout << INFOTAG << "FzReader network UDP url: " << neturl << "\t[cfg file]" << std::endl;
-
-         } else {
-
-            neturl = "udp://eth0:50000";
-            std::cout << INFOTAG << "FzReader network UDP url: udp://eth0:5000\t[default]" << std::endl;
-         }
-
-         if(!urlparse(neturl, &netdev, &port)) {
-
-            std::cout << ERRTAG << "FzReader: unable to parse UDP url" << std::endl;
-            exit(1);
-         }
-
-         devip = devtoip(netdev);
-
-         if(devip.empty()) {
-
-            std::cout << ERRTAG << "FzReader: unable to get ip address of " << netdev << std::endl;
-            exit(1);
-         }
-
-         // reassemble neturl with IP 
-         std::ostringstream s;
-         s << "udp://" << devip << ":" << port;
-         neturl = s.str();
-    
-         std::cout << INFOTAG << "FzReader: UDP socket will be bind on IP " << devip << " (" << netdev << ")" << std::endl;
+	 neturl = "udp://eth0:50000";
+	 std::cout << INFOTAG << "FzReader network UDP url: udp://eth0:5000\t[default]" << std::endl;
       }
 
-      if (vm.count("nt")) {
+      if(!urlparse(neturl, &netdev, &port)) {
 
-         nthreads = vm["nt"].as<unsigned int>();
-         std::cout << INFOTAG << "FzParser nthreads: " << nthreads << "\t[cmd param]" << std::endl;
+	 std::cout << ERRTAG << "FzReader: unable to parse UDP url" << std::endl;
+	 exit(1);
+      }
 
-      } else if(cfg.lookupValue("fzdaq.fzparser.nthreads", nthreads)) {
+      devip = devtoip(netdev);
+
+      if(devip.empty()) {
+
+	 std::cout << ERRTAG << "FzReader: unable to get ip address of " << netdev << std::endl;
+	 exit(1);
+      }
+
+      // reassemble neturl with IP 
+      std::ostringstream s;
+      s << "udp://" << devip << ":" << port;
+      neturl = s.str();
+ 
+      std::cout << INFOTAG << "FzReader: UDP socket will be bind on IP " << devip << " (" << netdev << ")" << std::endl;
+
+      if(cfg.lookupValue("fzdaq.fzparser.nthreads", nthreads)) {
 
          std::cout << INFOTAG << "FzParser nthreads: " << nthreads << "\t[cfg file]" << std::endl;
 
@@ -282,12 +224,7 @@ int main(int argc, char *argv[]) {
 
       // configure FzWriter
 
-      if (vm.count("subdir")) {
-
-         subdir = vm["subdir"].as<std::string>();
-         std::cout << INFOTAG << "FzWriter subdir: " << subdir << "\t[cmd param]" << std::endl;
-
-      } else if(cfg.lookupValue("fzdaq.fzwriter.subdir", subdir)) {
+      if(cfg.lookupValue("fzdaq.fzwriter.subdir", subdir)) {
 
          std::cout << INFOTAG << "FzWriter subdir: " << subdir << "\t[cfg file]" << std::endl;
 
@@ -297,12 +234,7 @@ int main(int argc, char *argv[]) {
          exit(1);
       }
 
-      if (vm.count("runtag")) {
-
-         runtag = vm["runtag"].as<std::string>();
-         std::cout << INFOTAG << "FzWriter runtag: " << runtag << "\t[cmd param]" << std::endl;
-
-      } else if(cfg.lookupValue("fzdaq.fzwriter.runtag", runtag)) {
+      if(cfg.lookupValue("fzdaq.fzwriter.runtag", runtag)) {
 
          std::cout << INFOTAG << "FzWriter runtag: " << runtag << "\t[cfg file]" << std::endl;
 
@@ -312,13 +244,7 @@ int main(int argc, char *argv[]) {
          std::cout << INFOTAG << "FzWriter runtag: " << runtag << "\t[default]" << std::endl;
       }
    
-      if (vm.count("runid")) {
-
-         //runid = vm["runid"].as<unsigned long int>();
-         runid = vm["runid"].as<uint32_t>();
-         std::cout << INFOTAG << "FzWriter runid: " << runid << "\t[cmd param]" << std::endl;
-
-      } else if(cfg.lookupValue("fzdaq.fzwriter.runid", runid)) {
+      if(cfg.lookupValue("fzdaq.fzwriter.runid", runid)) {
   
           std::cout << INFOTAG << "FzWriter runid: " << runid << "\t[cfg file]" << std::endl;
 
@@ -328,12 +254,7 @@ int main(int argc, char *argv[]) {
          exit(1);
       }
 
-      if (vm.count("esize")) {
-
-         esize = vm["esize"].as<uint32_t>();
-         std::cout << INFOTAG << "FzWriter esize: " << esize << "\t[cmd param]" << std::endl;
-
-      } else if(cfg.lookupValue("fzdaq.fzwriter.esize", esize)) {
+      if(cfg.lookupValue("fzdaq.fzwriter.esize", esize)) {
 
          std::cout << INFOTAG << "FzWriter esize: " << esize << "\t[cfg file]" << std::endl;
 
@@ -343,12 +264,7 @@ int main(int argc, char *argv[]) {
          std::cout << INFOTAG << "FzWriter esize: " << esize << "\t[default]" << std::endl;
       } 
 
-      if (vm.count("dsize")) {
-
-         esize = vm["dsize"].as<uint32_t>();
-         std::cout << INFOTAG << "FzWriter dsize: " << dsize << "\t[cmd param]" << std::endl;
-
-      } else if(cfg.lookupValue("fzdaq.fzwriter.dsize", dsize)) {
+      if(cfg.lookupValue("fzdaq.fzwriter.dsize", dsize)) {
 
          std::cout << INFOTAG << "FzWriter dsize: " << dsize << "\t[cfg file]" << std::endl;
 
@@ -357,11 +273,6 @@ int main(int argc, char *argv[]) {
          dsize = 100; // default is 100 MBytes
          std::cout << INFOTAG << "FzWriter dsize: " << dsize << "\t[default]" << std::endl;
       } 
-
-      if (vm.count("ensubid"))
-         subid = true;
-      else
-         subid = false;
 
       // create FzWriter base directory
 
@@ -387,9 +298,9 @@ int main(int argc, char *argv[]) {
 
 #ifdef AMQLOG_ENABLED
       // create FzReader thread
-      rd = new FzReader(devname, neturl, cfgfile, context, JMSconn);
+      rd = new FzReader(neturl, cfgfile, context, JMSconn);
 #else
-      rd = new FzReader(devname, neturl, cfgfile, context);
+      rd = new FzReader(neturl, cfgfile, context);
 #endif
 
       if(!rd) {

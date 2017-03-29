@@ -21,9 +21,6 @@
 #define BUFFER_SIZE     16384
 
 #include <vector>
-#ifdef USB_ENABLED
-   #include <libusb-1.0/libusb.h>
-#endif
 
 struct _cb_data {
 
@@ -37,7 +34,6 @@ class FzReader {
 
 private:
 
-   std::string devname;
    std::string neturl;
    libconfig::Config cfg;
    bool hascfg;
@@ -48,15 +44,6 @@ private:
    zmq::socket_t *reader;
 
    RCstate rcstate;
-
-#ifdef USB_ENABLED
-   libusb_device_handle *usbh;
-   libusb_context *ctx;
-   libusb_transfer *xfr;
-   unsigned char ubuf[BUFFER_SIZE];
-   int usbstatus;
-   static void cb_usbin(struct libusb_transfer *xfr);
-#endif
 
    struct _cb_data cb_data;
 
@@ -82,9 +69,9 @@ private:
 public:
 
 #ifdef AMQLOG_ENABLED
-   FzReader(std::string dname, std::string nurl, std::string cfgfile, zmq::context_t &ctx, cms::Connection *JMSconn);
+   FzReader(std::string nurl, std::string cfgfile, zmq::context_t &ctx, cms::Connection *JMSconn);
 #else
-   FzReader(std::string dname, std::string nurl, std::string cfgfile, zmq::context_t &ctx);
+   FzReader(std::string nurl, std::string cfgfile, zmq::context_t &ctx);
 #endif
 
    int setup(void);
@@ -95,10 +82,6 @@ public:
    void set_rcstate(RCstate s);
 
    Report::FzReader get_report(void); 
-
-#ifdef USB_ENABLED
-   void usb_close(void);
-#endif
 };
 
 #endif
