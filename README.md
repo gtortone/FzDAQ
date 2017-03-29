@@ -155,14 +155,14 @@ Configuration options will be listed in related module table.
 - FzReader configuration attributes
 
 |cfgfile attribute|mandatory|cmdline param|default|description|
-|---|---|---|---|---|
+|---|---|---|---|
 |fzreader.consumer.url|no|udp://eth0:50000|UDP socket to bind for event acquisition|
 |fzreader.producer.url|yes|-|set to inproc://fzreader|
 
 - FzParser configuration attributes
 
 |cfgfile attribute|mandatory|default|description|
-|---|---|---|---|---|
+|---|---|---|---|
 |fzparser.nthreads|no|1|number of FzParser threads to allocate|
 |fzparser.consumer.url|yes|-|set to $fzdaq.fzreader.producer.url (referral)|
 |fzparser.producer.url|yes|-|set to $fzdaq.fzwriter.consumer.url (referral)|
@@ -170,7 +170,7 @@ Configuration options will be listed in related module table.
 - FzWriter configuration attributes
 
 |cfgfile attribute|mandatory|default|description|
-|---|---|---|---|---|
+|---|---|---|---|
 |fzwriter.subdir|yes|-|base output directory|
 |fzwriter.runtag|no|run|label for run directory identification (e.g. LNS, GANIL)|
 |fzwriter.runid|yes|-|id for run identification (e.g. 100, 205)|
@@ -182,7 +182,7 @@ Configuration options will be listed in related module table.
 - FzNodeManager configuration attributes
 
 |cfgfile attribute|mandatory|default|description|
-|---|---|---|---|---|
+|---|---|---|---|
 |fznodemanager.runcontrol_mode|yes|-|local or remote run control mode|
 |fznodemanager.interface|no|eth0|network interface for run control|
 |fznodemanager.stats.url|no|tcp://eth0:7000|endpoint of FzController report collector|
@@ -190,7 +190,7 @@ Configuration options will be listed in related module table.
 - FzController configuration attributes
 
 |cfgfile attribute|mandatory|default|description|
-|---|---|---|---|---|
+|---|---|---|---|
 |fzcontroller.interface|no|eth0|report collector network interface|
 |fzcontroller.weblog.url|no|-|Weblog url|
 |fzcontroller.weblog.username|no|-|Weblog username|
