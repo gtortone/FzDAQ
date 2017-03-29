@@ -154,7 +154,7 @@ Configuration options will be listed in related module table.
  
 - FzReader configuration attributes
 
-|cfgfile attribute|mandatory|cmdline param|default|description|
+|cfgfile attribute|mandatory|default|description|
 |---|---|---|---|
 |fzreader.consumer.url|no|udp://eth0:50000|UDP socket to bind for event acquisition|
 |fzreader.producer.url|yes|-|set to inproc://fzreader|
