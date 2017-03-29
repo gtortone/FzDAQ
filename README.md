@@ -144,7 +144,7 @@ fzreader: {
  };
  ```
  
-Some config file examples are available in GIT repository [config directory](config/). To explain various configuration attributes we will use the following convention: the attribute 'device' in the sample section above will be defined as
+Some config file examples are available in GIT repository [config directory](config/). To explain various configuration attributes we will use the following convention: the attribute 'url' in the sample section above will be defined as
 
 ```fzreader.consumer.url```
 
@@ -154,48 +154,47 @@ Configuration options will be listed in related module table.
  
 - FzReader configuration attributes
 
-|cfgfile section|mandatory|cmdline param|default|description|
+|cfgfile attribute|mandatory|cmdline param|default|description|
 |---|---|---|---|---|
-|fzreader.consumer.device|no|--dev|net|acquire events from network|
-|fzreader.consumer.url|no|--neturl|udp://eth0:50000|UDP socket to bind for event acquisition|
-|fzreader.producer.url|yes|-|-|set to inproc://fzreader|
+|fzreader.consumer.url|no|udp://eth0:50000|UDP socket to bind for event acquisition|
+|fzreader.producer.url|yes|-|set to inproc://fzreader|
 
 - FzParser configuration attributes
 
-|cfgfile section|mandatory|cmdline param|default|description|
+|cfgfile attribute|mandatory|default|description|
 |---|---|---|---|---|
-|fzparser.nthreads|no|--nt|1|number of FzParser threads to allocate|
-|fzparser.consumer.url|yes|-|-|set to $fzdaq.fzreader.producer.url (referral)|
-|fzparser.producer.url|yes|-|-|set to $fzdaq.fzwriter.consumer.url (referral)|
+|fzparser.nthreads|no|1|number of FzParser threads to allocate|
+|fzparser.consumer.url|yes|-|set to $fzdaq.fzreader.producer.url (referral)|
+|fzparser.producer.url|yes|-|set to $fzdaq.fzwriter.consumer.url (referral)|
 
 - FzWriter configuration attributes
 
-|cfgfile section|mandatory|cmdline param|default|description|
+|cfgfile attribute|mandatory|default|description|
 |---|---|---|---|---|
-|fzwriter.subdir|yes|--subdir|-|base output directory|
-|fzwriter.runtag|no|--runtag|run|label for run directory identification (e.g. LNS, GANIL)|
-|fzwriter.runid|yes|--runid|-|id for run identification (e.g. 100, 205)|
-|fzwriter.esize|no|--esize|10|max size of event file in Mbytes|
-|fzwriter.dsize|no|--dsize|100|max size of event directory in Mbytes|
-|fzwriter.consumer|no|-|inproc://fzwriter|consumer interface|
-|fzwriter.spy|no|-|tcp://*:5563|events spy interface|
+|fzwriter.subdir|yes|-|base output directory|
+|fzwriter.runtag|no|run|label for run directory identification (e.g. LNS, GANIL)|
+|fzwriter.runid|yes|-|id for run identification (e.g. 100, 205)|
+|fzwriter.esize|no|10|max size of event file in Mbytes|
+|fzwriter.dsize|no|100|max size of event directory in Mbytes|
+|fzwriter.consumer|no|inproc://fzwriter|consumer interface|
+|fzwriter.spy|no|tcp://*:5563|events spy interface|
 
 - FzNodeManager configuration attributes
 
-|cfgfile section|mandatory|cmdline param|default|description|
+|cfgfile attribute|mandatory|default|description|
 |---|---|---|---|---|
-|fznodemanager.runcontrol_mode|yes|-|-|local or remote run control mode|
-|fznodemanager.interface|no|-|eth0|network interface for run control|
-|fznodemanager.stats.url|no|-|tcp://eth0:7000|endpoint of FzController report collector|
+|fznodemanager.runcontrol_mode|yes|-|local or remote run control mode|
+|fznodemanager.interface|no|eth0|network interface for run control|
+|fznodemanager.stats.url|no|tcp://eth0:7000|endpoint of FzController report collector|
 
 - FzController configuration attributes
 
-|cfgfile section|mandatory|cmdline param|default|description|
+|cfgfile attribute|mandatory|default|description|
 |---|---|---|---|---|
-|fzcontroller.interface|no|-|eth0|report collector network interface|
-|fzcontroller.weblog.url|no|-|-|Weblog url|
-|fzcontroller.weblog.username|no|-|-|Weblog username|
-|fzcontroller.weblog.interval|no|-|-|Weblog time interval report in seconds|
+|fzcontroller.interface|no|eth0|report collector network interface|
+|fzcontroller.weblog.url|no|-|Weblog url|
+|fzcontroller.weblog.username|no|-|Weblog username|
+|fzcontroller.weblog.interval|no|-|Weblog time interval report in seconds|
 
 EPICS plugin
 ------------
