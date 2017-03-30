@@ -6,6 +6,7 @@ FzDAQ
   * [Deployment](#deployment)
   * [Build](#build)
   * [Installation](#installation)
+  * [Command line arguments](#command-line-arguments)
   * [Configuration](#configuration)
   * [EPICS plugin](#epics-plugin)
   * [Implementation details](#implementation-details)
@@ -111,10 +112,10 @@ Installation
 
   ``` make install ```
   
-Configuration
--------------
+Command line arguments
+----------------------
 
-The main executables of FzDAQ is 'FzDAQ-mt' and 'FzController'.
+The main executables of FzDAQ are 'FzDAQ-mt' and 'FzController'.
 
 FzDAQ-mt command line options:
 
@@ -130,6 +131,9 @@ FzController command line options:
 |---|---|---|---|---|
 |--help|no|-|-|produce help message|
 |--cfg|yes|config_file|-|configuration file|
+
+Configuration
+-------------
 
 FzDAQ configuration file format is based on [libconfig](http://www.hyperrealm.com/libconfig) and each module properties are defined in a separate config section. This is a sample of config section:
 
