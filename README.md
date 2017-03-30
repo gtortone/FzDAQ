@@ -11,7 +11,7 @@ FzDAQ
   * [EPICS plugin](#epics-plugin)
   * [Implementation details](#implementation-details)
     * [ZeroMQ sockets](#zeromq-sockets)
-  
+    
 Introduction
 ------------
 
@@ -168,17 +168,17 @@ of linked attribute. Each field provides a default value and, in principle, ther
  
 ### FzReader configuration attributes
 
-|cfgfile attribute|0MQ endpoint|linked to|mandatory|default|description|
-|---|---|---|---|---|---|
-|fzreader.consumer.url|udp://`<netif>`:`<port>`|-|no|udp://eth0:5000|UDP socket to bind for event acquisition|
-|fzreader.producer.url|inproc://`<label>`|fzparser.consumer.url|no|inproc://fzreader|0MQ channel between FzReader and FzParser|
+|cfgfile attribute|0MQ endpoint|linked to|default|description|
+|---|---|---|---|---|
+|fzreader.consumer.url|udp://`<netif>`:`<port>`|-|udp://eth0:5000|UDP socket to bind for event acquisition|
+|fzreader.producer.url|inproc://`<label>`|fzparser.consumer.url|inproc://fzreader|0MQ channel between FzReader and FzParser|
 
 ### FzParser configuration attributes
 
-|cfgfile attribute|0MQ endpoint|linked to|mandatory|default|description|
-|---|---|---|---|---|---|
-|fzparser.consumer.url|inproc://`<label>`|fzreader.producer.url|no|inproc://fzreader|0MQ channel between FzReader and FzParser|
-|fzparser.producer.url|inproc://`<label>`|fzwriter.consumer.url|no|inproc://fzwriter|0MQ channel between FzParser and FzWriter|
+|cfgfile attribute|0MQ endpoint|linked to|default|description|
+|---|---|---|---|---|
+|fzparser.consumer.url|inproc://`<label>`|fzreader.producer.url|inproc://fzreader|0MQ channel between FzReader and FzParser|
+|fzparser.producer.url|inproc://`<label>`|fzwriter.consumer.url|inproc://fzwriter|0MQ channel between FzParser and FzWriter|
 
 |cfgfile attribute|mandatory|default|description|
 |---|---|---|---|
@@ -186,9 +186,9 @@ of linked attribute. Each field provides a default value and, in principle, ther
 
 ### FzWriter configuration attributes
 
-|cfgfile attribute|0MQ endpoint|linked to|mandatory|default|description|
-|---|---|---|---|---|---|
-|fzwriter.consumer.url|inproc://`<label>`|fzparser.producer.url|no|inproc://fzwriter|0MQ channel between FzParser and FzWriter|
+|cfgfile attribute|0MQ endpoint|linked to|default|description|
+|---|---|---|---|---|
+|fzwriter.consumer.url|inproc://`<label>`|fzparser.producer.url|inproc://fzwriter|0MQ channel between FzParser and FzWriter|
 
 |cfgfile attribute|mandatory|default|description|
 |---|---|---|---|
