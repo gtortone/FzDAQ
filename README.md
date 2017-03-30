@@ -153,25 +153,42 @@ Some config file examples are available in GIT repository [config directory](con
 ```fzreader.consumer.url```
 
 Configuration options will be listed in related module table.
+
+A ZeroMQ endpoint is a string composed by:
+
+	```<transport>://<address>[:port]```
+
+The transport specifies the underlying protocol to use. The address specifies the transport-specific address to connect to.
+Address can be replaced by network interface name (e.g. eth0) when an endpoint is related to a ZeroMQ server (= receive ZeroMQ messages)
+
+In the table below if a config attribute has a value in "linked to" field it means that it must contains the same value
+of linked attribute. Each field provides a default value and, in principle, there is no need to specify these attributes.
  
 - Global configuration attributes
  
 - FzReader configuration attributes
 
-|cfgfile attribute|mandatory|default|description|
-|---|---|---|---|
-|fzreader.consumer.url|no|udp://eth0:50000|UDP socket to bind for event acquisition|
-|fzreader.producer.url|yes|-|set to inproc://fzreader|
+|cfgfile attribute|0MQ endpoint|linked to|mandatory|default|description|
+|---|---|---|---|---|---|
+|fzreader.consumer.url|udp://`<netif>`:`<port>`|-|no|udp://eth0:5000|UDP socket to bind for event acquisition|
+|fzreader.producer.url|inproc://`<label>`|fzparser.consumer.url|no|inproc://fzreader|0MQ channel between FzReader and FzParser|
 
 - FzParser configuration attributes
+
+|cfgfile attribute|0MQ endpoint|linked to|mandatory|default|description|
+|---|---|---|---|---|---|
+|fzparser.consumer.url|inproc://`<label>`|fzreader.producer.url|no|inproc://fzreader|0MQ channel between FzReader and FzParser|
+|fzparser.producer.url|inproc://`<label>`|fzwriter.consumer.url|no|inproc://fzwriter|0MQ channel between FzParser and FzWriter|
 
 |cfgfile attribute|mandatory|default|description|
 |---|---|---|---|
 |fzparser.nthreads|no|1|number of FzParser threads to allocate|
-|fzparser.consumer.url|yes|-|set to $fzdaq.fzreader.producer.url (referral)|
-|fzparser.producer.url|yes|-|set to $fzdaq.fzwriter.consumer.url (referral)|
 
 - FzWriter configuration attributes
+
+|cfgfile attribute|0MQ endpoint|linked to|mandatory|default|description|
+|---|---|---|---|---|---|
+|fzwriter.consumer.url|inproc://`<label>`|fzparser.producer.url|no|inproc://fzwriter|0MQ channel between FzParser and FzWriter|
 
 |cfgfile attribute|mandatory|default|description|
 |---|---|---|---|
@@ -180,8 +197,7 @@ Configuration options will be listed in related module table.
 |fzwriter.runid|yes|-|id for run identification (e.g. 100, 205)|
 |fzwriter.esize|no|10|max size of event file in Mbytes|
 |fzwriter.dsize|no|100|max size of event directory in Mbytes|
-|fzwriter.consumer|no|inproc://fzwriter|consumer interface|
-|fzwriter.spy|no|tcp://*:5563|events spy interface|
+|fzwriter.spy.interface|no|*|network interface to bind for events spy|
 
 - FzNodeManager configuration attributes
 
@@ -189,7 +205,7 @@ Configuration options will be listed in related module table.
 |---|---|---|---|
 |fznodemanager.runcontrol_mode|yes|-|local or remote run control mode|
 |fznodemanager.interface|no|eth0|network interface for run control|
-|fznodemanager.stats.url|no|tcp://eth0:7000|endpoint of FzController report collector|
+|fznodemanager.stats.ip|yes|no|IP address of FzController|
 
 - FzController configuration attributes
 
