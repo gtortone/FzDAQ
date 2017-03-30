@@ -5,6 +5,7 @@
 
 #define MAX_EVENT_SIZE	10000000LL		// 10 megabyte
 
+#define FZW_SPY_PORT		5563
 #define FZNM_REP_PORT		5550
 #define FZNM_PULL_PORT		6660
 #define FZC_COLLECTOR_PORT	7000

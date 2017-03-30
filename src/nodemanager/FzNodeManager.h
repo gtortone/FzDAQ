@@ -30,7 +30,6 @@ private:
 
    libconfig::Config cfg;
    std::string profile;
-   bool hascfg;
 
    // threads communication
    FzReader *rd;

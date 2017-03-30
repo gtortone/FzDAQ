@@ -29,7 +29,6 @@ private:
 
    std::string neturl;
    libconfig::Config cfg;
-   bool hascfg;
 
    boost::thread *thr;
    bool thread_init;

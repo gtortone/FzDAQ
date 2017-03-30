@@ -17,7 +17,6 @@ class FzWriter {
 private:
 
    libconfig::Config cfg;
-   bool hascfg;
 
    boost::thread *thr;
    bool thread_init;

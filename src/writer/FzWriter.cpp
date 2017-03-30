@@ -27,12 +27,7 @@ FzWriter::FzWriter(std::string bdir, std::string run, long int id, bool subid, s
       log.setJMSConnection("FzWriter", JMSconn);
 #endif
 
-   if(!cfgfile.empty()) {
-
-      hascfg = true;
-      cfg.readFile(cfgfile.c_str());    // syntax checks on main
-
-   } else hascfg = false;
+   cfg.readFile(cfgfile.c_str());    // syntax checks on main
 
    pb = new FzProtobuf();
    
@@ -82,24 +77,14 @@ FzWriter::FzWriter(std::string bdir, std::string run, long int id, bool subid, s
 
    }
 
-   if(hascfg) {
-
-      ep = getZMQEndpoint(cfg, "fzdaq.fzwriter.consumer");
+   ep = getZMQEndpoint(cfg, "fzdaq.fzwriter.consumer");
       
-      if(ep.empty()) {
-
-         std::cout << ERRTAG << "FzWriter: consumer endpoint not present in config file" << std::endl;
-         exit(1);
-      }
-
-      std::cout << INFOTAG << "FzParser: consumer endpoint: " << ep << " [cfg file]" << std::endl;
-
-   } else {
+   if(ep.empty()) {
 
       ep = "inproc://fzwriter";
       std::cout << INFOTAG << "FzWriter: consumer endpoint: " << ep << " [default]" << std::endl;
- 
-   }
+
+   } else std::cout << INFOTAG << "FzParser: consumer endpoint: " << ep << " [cfg file]" << std::endl;
 
    try {
 
@@ -124,23 +109,17 @@ FzWriter::FzWriter(std::string bdir, std::string run, long int id, bool subid, s
 
    }
 
-   if(hascfg) {
+   std::string netint;
+   if(cfg.lookupValue("fzdaq.fzwriter.spy.interface", netint)) {
 
-      ep = getZMQEndpoint(cfg, "fzdaq.fzwriter.spy");
-
-      if(ep.empty()) {
-
-         std::cout << ERRTAG << "FzWriter: event spy endpoint not present in config file" << std::endl;
-         exit(1);
-      }
-   
-      std::cout << INFOTAG << "FzParser: event spy endpoint: " << ep << " [cfg file]" << std::endl;
+      std::cout << INFOTAG << "FzWriter: event spy network interface: " << netint << " [cfg file]" << std::endl;
+      ep = "tcp://" + netint + ":" + std::to_string(FZW_SPY_PORT);
+      std::cout << INFOTAG << "FzWriter: event spy endpoint: " << ep << " [cfg file]" << std::endl;
 
    } else {
-   
-      ep = "tcp://*:5563";
-      std::cout << INFOTAG << "FzWriter: event spy endpoint: " << ep << " [default]" << std::endl;
 
+      ep = "tcp://*:" + std::to_string(FZW_SPY_PORT);
+      std::cout << INFOTAG << "FzWriter: event spy endpoint: " << ep << " [default]" << std::endl;
    }
 
    try {

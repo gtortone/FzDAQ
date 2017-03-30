@@ -24,12 +24,7 @@ FzReader::FzReader(std::string nurl, std::string cfgfile, zmq::context_t &ctx) :
       log.setJMSConnection("FzReader", JMSconn);
 #endif
 
-   if(!cfgfile.empty()) {
-
-      hascfg = true;
-      cfg.readFile(cfgfile.c_str()); 	// syntax checks on main
-
-   } else hascfg = false;
+   cfg.readFile(cfgfile.c_str()); 	// syntax checks on main
 
    log.write(INFO, "thread allocated");
 
@@ -47,23 +42,14 @@ FzReader::FzReader(std::string nurl, std::string cfgfile, zmq::context_t &ctx) :
         exit(1);
    }
 
-   if(hascfg) {
+   ep = getZMQEndpoint(cfg, "fzdaq.fzreader.producer");
 
-      ep = getZMQEndpoint(cfg, "fzdaq.fzreader.producer");
-
-      if(ep.empty()) {
-
-         std::cout << ERRTAG << "FzReader: producer endpoint not present in config file" << std::endl;
-         exit(1);
-      }
- 
-      std::cout << INFOTAG << "FzReader: producer endpoint: " << ep << " [cfg file]" << std::endl;
-
-   } else {
+   if(ep.empty()) {
 
       ep = "inproc://fzreader";
       std::cout << INFOTAG << "FzReader: producer endpoint: " << ep << " [default]" << std::endl;
-   }
+
+   } else std::cout << INFOTAG << "FzReader: producer endpoint: " << ep << " [cfg file]" << std::endl;
 
    try {
 

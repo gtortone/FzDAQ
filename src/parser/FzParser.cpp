@@ -24,12 +24,7 @@ FzParser::FzParser(unsigned int id, std::string cfgfile, zmq::context_t &ctx) :
    }
 #endif
 
-   if(!cfgfile.empty()) {
-
-      hascfg = true;
-      cfg.readFile(cfgfile.c_str());    // syntax checks on main
-
-   } else hascfg = false;
+   cfg.readFile(cfgfile.c_str());    // syntax checks on main
 
    msg << "thread " << id << " allocated";
    log.write(INFO, msg.str());
@@ -54,23 +49,14 @@ FzParser::FzParser(unsigned int id, std::string cfgfile, zmq::context_t &ctx) :
         exit(1);
    }
 
-   if(hascfg) {
+   ep = getZMQEndpoint(cfg, "fzdaq.fzparser.consumer");
 
-      ep = getZMQEndpoint(cfg, "fzdaq.fzparser.consumer");
-
-      if(ep.empty()) {
-
-         std::cout << ERRTAG << "FzParser: consumer endpoint not present in config file" << std::endl;
-         exit(1);
-      }
-
-      std::cout << INFOTAG << "FzParser: consumer endpoint: " << ep << " [cfg file]" << std::endl;
-
-   } else {
+   if(ep.empty()) {
 
       ep = "inproc://fzreader";
       std::cout << INFOTAG << "FzParser: consumer endpoint: " << ep << " [default]" << std::endl;
-   }
+
+   } else std::cout << INFOTAG << "FzParser: consumer endpoint: " << ep << " [cfg file]" << std::endl;
 
    try {
 
@@ -94,23 +80,14 @@ FzParser::FzParser(unsigned int id, std::string cfgfile, zmq::context_t &ctx) :
         exit(1);
    }
 
-   if(hascfg) {
+   ep = getZMQEndpoint(cfg, "fzdaq.fzparser.producer");
 
-      ep = getZMQEndpoint(cfg, "fzdaq.fzparser.producer");
-
-      if(ep.empty()) {
-
-         std::cout << ERRTAG << "FzParser: producer endpoint not present in config file" << std::endl;
-         exit(1);
-      }
-
-      std::cout << INFOTAG << "FzParser: producer endpoint: " << ep << " [cfg file]" << std::endl;
-
-   } else {
+   if(ep.empty()) {
 
       ep = "inproc://fzwriter";
       std::cout << INFOTAG << "FzParser: producer endpoint: " << ep << " [default]" << std::endl;
-   }
+
+   } else std::cout << INFOTAG << "FzParser: producer endpoint: " << ep << " [cfg file]" << std::endl;
 
    try {
 

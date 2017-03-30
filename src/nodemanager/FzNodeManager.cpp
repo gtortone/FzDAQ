@@ -12,13 +12,8 @@ FzNodeManager::FzNodeManager(FzReader *rd, std::vector<FzParser *> psr_array, Fz
    context(ctx), rd(rd), psr_array(psr_array), wr(wr) {
 #endif
 
-   if(!cfgfile.empty()) {
+   cfg.readFile(cfgfile.c_str());    // syntax checks on main
 
-      hascfg = true;
-      cfg.readFile(cfgfile.c_str());    // syntax checks on main
-
-   } else hascfg = false;
-   
    log.setFileConnection("fznodemanager", "/var/log/fzdaq/fznodemanager.log");
 
 #ifdef AMQLOG_ENABLED
@@ -44,7 +39,7 @@ FzNodeManager::FzNodeManager(FzReader *rd, std::vector<FzParser *> psr_array, Fz
 
    std::string ep, netint;
   
-   if(hascfg && cfg.lookupValue("fzdaq.fznodemanager.runcontrol_mode", rcmode)) {
+   if(cfg.lookupValue("fzdaq.fznodemanager.runcontrol_mode", rcmode)) {
 
       if( (rcmode != std::string(RC_MODE_LOCAL)) && (rcmode != std::string(RC_MODE_REMOTE)) ) {
 
@@ -77,25 +72,20 @@ FzNodeManager::FzNodeManager(FzReader *rd, std::vector<FzParser *> psr_array, Fz
         exit(1);
    }
 
-   // node report endpoint setup
+   // FzController collector IP setup
 
-   if(hascfg) {
+   std::string fzc_ip;
+   cfg.lookupValue("fzdaq.fznodemanager.stats.ip", fzc_ip);
 
-      ep = getZMQEndpoint(cfg, "fzdaq.fznodemanager.stats");
+   if(fzc_ip.empty()) {
 
-      if(ep.empty()) {
-
-         std::cout << ERRTAG << "FzNodeManager: report endpoint not present in config file" << std::endl;
+         std::cout << ERRTAG << "FzNodeManager: FzController collector IP not present in config file" << std::endl;
          exit(1);
-      }
-
-      std::cout << INFOTAG << "FzNodeManager: report push endpoint: " << ep << " [cfg file]" << std::endl;
-
-   } else {
-
-      ep = "tcp://eth0:7000";
-      std::cout << INFOTAG << "FzNodeManager: report push endpoint: " << ep << " [default]" << std::endl;
    }
+
+   std::cout << INFOTAG << "FzNodeManager: FzController collector IP: " << fzc_ip << " [cfg file]" << std::endl;
+
+   ep = "tcp://" + fzc_ip + ":" + std::to_string(FZC_COLLECTOR_PORT);
 
    try {
 
@@ -123,7 +113,7 @@ FzNodeManager::FzNodeManager(FzReader *rd, std::vector<FzParser *> psr_array, Fz
 
    // run control endpoint setup (REQ/REP)
 
-   if(hascfg && cfg.lookupValue("fzdaq.fznodemanager.interface", netint)) {
+   if(cfg.lookupValue("fzdaq.fznodemanager.interface", netint)) {
 
       std::cout << INFOTAG << "FzNodeManager: network interface: " << netint << " [cfg file]" << std::endl;
       ep = "tcp://" + netint + ":" + std::to_string(FZNM_REP_PORT);
@@ -162,7 +152,7 @@ FzNodeManager::FzNodeManager(FzReader *rd, std::vector<FzParser *> psr_array, Fz
 
    // run control endpoint setup (PULL)
 
-   if(hascfg && cfg.lookupValue("fzdaq.fznodemanager.interface", netint)) {
+   if(cfg.lookupValue("fzdaq.fznodemanager.interface", netint)) {
 
       std::cout << INFOTAG << "FzNodeManager: network interface: " << netint << " [cfg file]" << std::endl;
       ep = "tcp://" + netint + ":" + std::to_string(FZNM_PULL_PORT);
