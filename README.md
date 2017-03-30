@@ -164,16 +164,16 @@ Address can be replaced by network interface name (e.g. eth0) when an endpoint i
 In the table below if a config attribute has a value in "linked to" field it means that it must contains the same value
 of linked attribute. Each field provides a default value and, in principle, there is no need to specify these attributes.
  
-- Global configuration attributes
+### Global configuration attributes
  
-- FzReader configuration attributes
+### FzReader configuration attributes
 
 |cfgfile attribute|0MQ endpoint|linked to|mandatory|default|description|
 |---|---|---|---|---|---|
 |fzreader.consumer.url|udp://`<netif>`:`<port>`|-|no|udp://eth0:5000|UDP socket to bind for event acquisition|
 |fzreader.producer.url|inproc://`<label>`|fzparser.consumer.url|no|inproc://fzreader|0MQ channel between FzReader and FzParser|
 
-- FzParser configuration attributes
+### FzParser configuration attributes
 
 |cfgfile attribute|0MQ endpoint|linked to|mandatory|default|description|
 |---|---|---|---|---|---|
@@ -184,7 +184,7 @@ of linked attribute. Each field provides a default value and, in principle, ther
 |---|---|---|---|
 |fzparser.nthreads|no|1|number of FzParser threads to allocate|
 
-- FzWriter configuration attributes
+### FzWriter configuration attributes
 
 |cfgfile attribute|0MQ endpoint|linked to|mandatory|default|description|
 |---|---|---|---|---|---|
@@ -199,7 +199,7 @@ of linked attribute. Each field provides a default value and, in principle, ther
 |fzwriter.dsize|no|100|max size of event directory in Mbytes|
 |fzwriter.spy.interface|no|*|network interface to bind for events spy|
 
-- FzNodeManager configuration attributes
+### FzNodeManager configuration attributes
 
 |cfgfile attribute|mandatory|default|description|
 |---|---|---|---|
@@ -207,7 +207,7 @@ of linked attribute. Each field provides a default value and, in principle, ther
 |fznodemanager.interface|no|eth0|network interface for run control|
 |fznodemanager.stats.ip|yes|no|IP address of FzController|
 
-- FzController configuration attributes
+### FzController configuration attributes
 
 |cfgfile attribute|mandatory|default|description|
 |---|---|---|---|
