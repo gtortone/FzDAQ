@@ -219,7 +219,7 @@ ZeroMQ sockets
 |FzParser|ZMQ_PUSH|(cfgfile)|producer|to FzWriter|
 ||||||
 |FzWriter|ZMQ_PULL|(cfgfile)|consumer|from FzParser|
-|FzWriter|ZMQ_PUB|(cfgfile)|publisher|spy|
+|FzWriter|ZMQ_PUB|:5563|publisher|spy|
 ||||||
 |FzNodeManager|ZMQ_PUSH|-|producer|to FzController - node report|
 |FzNodeManager|ZMQ_REP|:5550|reply|from FzController - run control & setup commands - with reply|
