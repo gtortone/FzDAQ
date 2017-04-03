@@ -1,12 +1,14 @@
-#!/usr/bin/python2
+#!/usr/bin/python2 -B
 '''
 start with:
     EPICS_CAS_INTF_ADDR_LIST="`/bin/hostname`" ./FzEpics-RC.py
 '''
 
-import numpy
 import zmq
+
 import sys
+sys.path.append('../pyproto')
+
 import FzRCS_pb2 as RCS
 import FzNodeReport_pb2 as NodeReport
 import FzUtils as util
@@ -131,7 +133,7 @@ class myDriver(Driver):
                     except zmq.Again:
                         pass
                     finally:
-                        print("DEBUG: err = " + str(err))
+                        #print("DEBUG: err = " + str(err))
                         if(err == RCS.Response.OK):
                             self.setParam("RC:transition", 0)
                         else:

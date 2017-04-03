@@ -20,7 +20,9 @@ install-sh
 logs/*
 missing
 pbout/*
-plugins/*.pyc
+plugins/epics/*.pyc
+plugins/ganil-ecc/*.pyc
+plugins/pyproto/*.pyc
 utils/*.pyc
-plugins/*_pb2.py
+plugins/pyproto/*_pb2.py
 utils/*_pb2.py
