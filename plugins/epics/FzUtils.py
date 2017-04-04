@@ -1,3 +1,4 @@
+import os
 
 '''
 convert 'num' bytes in humanized *bytes* with suffix and measurement units
@@ -34,3 +35,23 @@ convert 'num' bytes in *Mbytes*
 '''
 def to_Mbyte(num):
     return num/1024/1024
+
+def check_pid(pidfile):
+    if pidfile and os.path.exists(pidfile):
+        try:
+            pid = int(open(pidfile).read().strip())
+            #os.kill(pid, 0)
+            return pid
+        except BaseException:
+            return 0
+    return 0
+
+def write_pid(pidfile):
+    piddir = os.path.dirname(pidfile)
+    if piddir != '':
+        try:
+            os.makedirs(piddir)
+        except OSError:
+            pass
+    with open(pidfile, 'w') as fobj:
+        fobj.write(str(os.getpid()))

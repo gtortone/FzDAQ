@@ -4,8 +4,11 @@ start with:
     EPICS_CAS_INTF_ADDR_LIST="`/bin/hostname`" ./FzEpics-RC.py
 '''
 
+import logging
+import logging.config
 import zmq
 
+import os
 import sys
 sys.path.append('../pyproto')
 
@@ -16,9 +19,25 @@ import FzUtils as util
 from threading import Thread, Event, Lock
 from pcaspy import Driver, SimpleServer, Alarm, Severity
 from time import sleep
+from optparse import OptionParser
 
-fzc_host = "nblupo"
-#fzc_host = "nblupo-wls"
+import daemon
+import signal
+
+forever = True
+pidfile = "/opt/FzDAQ/run/fzc-epics.pid"
+
+parser = OptionParser()
+parser.add_option("-d", "--daemon", action="store_true", dest="daemon", help="start as daemon")
+parser.add_option("-H", "--hostname", action="store", type="string", dest="hostname", help="specify FzController hostname (default: local hostname)")
+parser.add_option("-l", "--log", action="store", type="choice", dest="loglevel", choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'], help="set logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)")
+(options, args) = parser.parse_args()
+
+if options.hostname != None:
+    fzc_host = options.hostname
+else:
+    fzc_host = os.uname()[1]
+
 fzc_port = 5555
 
 url = "tcp://" + fzc_host + ":" + str(fzc_port)
@@ -75,7 +94,9 @@ class myDriver(Driver):
 
         Driver.__init__(self)
         self.context = ctx
+        self.logger = logging.getLogger('')
         self.initSocket()
+        self.fzcok = True
         self.iocstatus = ""
         self.report = NodeReport.NodeSet()
 
@@ -85,10 +106,16 @@ class myDriver(Driver):
         self.tid = Thread(target = self.runIOC) 
         self.tid.setDaemon(True)
         self.tid.start()
+        self.logger.info("main thread started")
 
     def initSocket(self):
         self.socket = self.context.socket(zmq.REQ)
-        self.socket.connect(url)
+        try:
+            self.socket.connect(url)
+        except:
+            print(fzc_host + " hostname not available")
+            self.logger.fatal(fzc_host + " hostname not available")
+            sys.exit(1) 
 
     def runIOC(self):
 
@@ -100,21 +127,33 @@ class myDriver(Driver):
             try:
                 status = self.get_status()
             except zmq.Again:
-                self.iocstatus = "FAIL: FzController not reachable" 
-            else:
-                self.setParam("RC:state", state_enum.index(status))
-                self.iocstatus = "OK: FzController working normally"
-            
-            self.setParam("iocstatus", self.iocstatus)
-
-            try:
-                self.get_report()
-            except zmq.Again:
+                if self.fzcok == True:
+                    self.logger.info("FzController not reachable")
+                self.fzcok = False;
                 pass
             else:
-                self.update_ioc()
+                if self.fzcok == False:
+                    self.logger.info("FzController ok")
+                self.fzcok = True;
 
+            if self.fzcok == False:
+                self.iocstatus = "FAIL: FzController not reachable" 
+            elif self.fzcok == True:
+                self.setParam("RC:state", state_enum.index(status))
+                self.iocstatus = "OK: FzController working normally"
+        
+            self.setParam("iocstatus", self.iocstatus)
             self.updatePVs()
+
+            if self.fzcok == True:
+                try:
+                    self.get_report()
+                except zmq.Again:
+                    pass
+                else:
+                    self.update_ioc()
+
+                self.updatePVs()
 
             self.eid.wait(1)
 
@@ -131,9 +170,9 @@ class myDriver(Driver):
                     try:
                         err = self.set_status(info['command'])
                     except zmq.Again:
+                        self.logger.error("zmq socket not available")
                         pass
                     finally:
-                        #print("DEBUG: err = " + str(err))
                         if(err == RCS.Response.OK):
                             self.setParam("RC:transition", 0)
                         else:
@@ -147,6 +186,7 @@ class myDriver(Driver):
             try:
                 value = self.get_nodelist()
             except zmq.Again:
+                self.logger.error("zmq socket not available")
                 pass
             else:
                 self.setParam("nodelist", value)
@@ -168,6 +208,7 @@ class myDriver(Driver):
         try:
             message = self.socket.recv(zmq.NOBLOCK)
         except zmq.Again:
+            self.logger.error("zmq socket not available")
             self.socket.close()
             self.initSocket()
             self.sockmutex.release()
@@ -178,6 +219,7 @@ class myDriver(Driver):
         res = RCS.Response();
         res.ParseFromString(str(message))
 
+        self.logger.info("request: " + status + " - response: " + res.reason)
         return res.errorcode
 
     def get_status(self):
@@ -306,7 +348,10 @@ class myDriver(Driver):
 
         self.repmutex.release()
 
-if __name__ == '__main__':
+def run():
+
+    util.write_pid(pidfile)
+
     server = SimpleServer()
     server.createPV(prefix, pvdb)
 
@@ -314,5 +359,51 @@ if __name__ == '__main__':
     driver = myDriver(context)
 
     # process CA transactions
-    while True:
+    while forever:
         server.process(0.1)
+
+def terminate(signum, frame):
+
+    forever = False
+    logger = logging.getLogger('')
+    logger.info("got termination signal")
+    logging.shutdown()
+    os.remove(pidfile)
+    sys.exit(0)
+
+if __name__ == '__main__':
+
+    signal.signal(signal.SIGINT, terminate)
+    signal.signal(signal.SIGTERM, terminate)
+    signal.signal(signal.SIGHUP, terminate)
+
+    fmt = "%(asctime)s - %(funcName)s - %(levelname)s - %(message)s"
+    # logging configuration with default consoleHandler
+    if options.loglevel:
+        logging.basicConfig(level=getattr(logging, options.loglevel), format=fmt)
+    else:
+        logging.basicConfig(level=logging.INFO, format=fmt)
+
+    # create RotatingFileHandler and format
+    fileHandler = logging.handlers.RotatingFileHandler(filename="/opt/FzDAQ/logs/fzc-epics.log", maxBytes=10485760, backupCount=20)
+    formatter = logging.Formatter("%(asctime)s - %(funcName)s - %(levelname)s - %(message)s")
+    fileHandler.setFormatter(formatter)
+
+    # add the handler to the root logger
+    logging.getLogger('').addHandler(fileHandler)
+
+    existing_pid = util.check_pid(pidfile)
+    if existing_pid:
+        logging.getLogger('').error("Server already running (pid=%s) or stale pidfile (%s)", existing_pid, pidfile)
+        sys.exit(1)
+
+    if options.daemon:
+
+        ctx = daemon.DaemonContext( working_directory=os.getcwd(),
+            files_preserve=[fileHandler.stream.fileno()],
+            signal_map = { signal.SIGINT: terminate, signal.SIGTERM: terminate, signal.SIGHUP: terminate } ) 
+
+        with ctx:
+            run()
+    else:
+        run()
