@@ -40,7 +40,6 @@ def check_pid(pidfile):
     if pidfile and os.path.exists(pidfile):
         try:
             pid = int(open(pidfile).read().strip())
-            #os.kill(pid, 0)
             return pid
         except BaseException:
             return 0

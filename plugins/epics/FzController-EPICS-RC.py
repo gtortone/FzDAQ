@@ -113,8 +113,8 @@ class myDriver(Driver):
         try:
             self.socket.connect(url)
         except:
-            print(fzc_host + " hostname not available")
             self.logger.fatal(fzc_host + " hostname not available")
+            cleanup()
             sys.exit(1) 
 
     def runIOC(self):
@@ -349,7 +349,6 @@ class myDriver(Driver):
         self.repmutex.release()
 
 def run():
-
     util.write_pid(pidfile)
 
     server = SimpleServer()
@@ -362,13 +361,15 @@ def run():
     while forever:
         server.process(0.1)
 
-def terminate(signum, frame):
-
+def cleanup():
     forever = False
-    logger = logging.getLogger('')
-    logger.info("got termination signal")
     logging.shutdown()
     os.remove(pidfile)
+
+def terminate(signum, frame):
+    logger = logging.getLogger('')
+    logger.info("got termination signal")
+    cleanup()
     sys.exit(0)
 
 if __name__ == '__main__':
