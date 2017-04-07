@@ -1,8 +1,4 @@
 #!/usr/bin/python2 -B
-'''
-start with:
-    EPICS_CAS_INTF_ADDR_LIST="`/bin/hostname`" ./FzEpics-RC.py
-'''
 
 import logging
 import logging.config
@@ -91,7 +87,6 @@ transition_enum = ['OK', 'ERROR']
 class myDriver(Driver):
 
     def __init__(self, ctx):
-
         Driver.__init__(self)
         self.context = ctx
         self.logger = logging.getLogger('')
@@ -118,12 +113,10 @@ class myDriver(Driver):
             sys.exit(1) 
 
     def runIOC(self):
-
         self.setParamStatus("RC:mode", Alarm.NO_ALARM, Severity.NO_ALARM)
         self.setParamStatus("RC:transition", Alarm.NO_ALARM, Severity.NO_ALARM)
 
         while True:
-
             try:
                 status = self.get_status()
             except zmq.Again:
@@ -158,7 +151,6 @@ class myDriver(Driver):
             self.eid.wait(1)
 
     def write(self, reason, value):
-        
         if(reason == "RC:mode"):
             self.setParam(reason, value)
 
@@ -193,7 +185,6 @@ class myDriver(Driver):
         return self.getParam(reason)
 
     def set_status(self, status):
-
         req = RCS.Request()
         req.channel = RCS.Request.RC
         req.operation = RCS.Request.WRITE
@@ -223,7 +214,6 @@ class myDriver(Driver):
         return res.errorcode
 
     def get_status(self):
-
         req = RCS.Request()
         req.channel = RCS.Request.RC
         req.operation = RCS.Request.READ
@@ -250,7 +240,6 @@ class myDriver(Driver):
         return res.value
 
     def get_report(self):
-
         req = RCS.Request()
         req.channel = RCS.Request.RC
         req.operation = RCS.Request.READ
@@ -276,7 +265,6 @@ class myDriver(Driver):
         self.repmutex.release()
 
     def get_nodelist(self):
-
         nodelist = ""
         self.repmutex.acquire()
         for n in self.report.node:
@@ -286,7 +274,6 @@ class myDriver(Driver):
         return nodelist
 
     def update_ioc(self):
-
         self.repmutex.acquire()
 
         for n in self.report.node:
@@ -395,11 +382,15 @@ if __name__ == '__main__':
 
     existing_pid = util.check_pid(pidfile)
     if existing_pid:
-        logging.getLogger('').error("Server already running (pid=%s) or stale pidfile (%s)", existing_pid, pidfile)
+        print("FzController EPICS IOC already running (pid=%s) or stale pidfile (%s)") % (existing_pid, pidfile)
+        ch = raw_input("do you want to stop it? (y/n) ")
+        if str(ch).lower() == 'y':
+            print("stopping... ")
+            os.kill(existing_pid, signal.SIGHUP)
+            print(" [DONE]") 
         sys.exit(1)
 
     if options.daemon:
-
         ctx = daemon.DaemonContext( working_directory=os.getcwd(),
             files_preserve=[fileHandler.stream.fileno()],
             signal_map = { signal.SIGINT: terminate, signal.SIGTERM: terminate, signal.SIGHUP: terminate } ) 
