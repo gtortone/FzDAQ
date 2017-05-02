@@ -1,7 +1,7 @@
 AUTOMAKE_OPTIONS = subdir-objects
 DEFAULT_INCLUDES = -I. -Isrc
 
-bin_PROGRAMS = FzDAQ-mt FzController
+bin_PROGRAMS = FzDAQ-mt FzController FzTransmitter
 
 FzDAQ_mt_SOURCES = \
 src/proto/FzRCS.pb.cpp\
@@ -35,6 +35,12 @@ src/main/FzConfig.cpp \
 src/rc/RCFSM.cpp \
 src/logger/FzLogger.cpp \
 src/utils/FzUtils.cpp
+
+FzTransmitter_SOURCES = \
+src/proto/FzEventSet.pb.cpp \
+src/transmitter/Tcp.cpp \
+src/transmitter/fdtTransmitter.cpp \
+src/transmitter/main.cpp
 
 include Makefile.pb
 include Makefile.init

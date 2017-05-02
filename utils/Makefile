@@ -4,11 +4,15 @@ CFLAGS = -O3
 
 SERIALLIBS = -lpthread -lprotobuf 
 
-SOURCES = ../src/proto/FzEventSet.pb.cpp read-fazia-pb.cpp
-INCDIR = -I.. -I../src/proto
+INCDIR = -I.. -I../src/proto -I../src/utils
 
-read-fazia-pb: 
-	$(C++) $(CFLAGS) $(INCDIR) $(SOURCES) $(SERIALLIBS) -o $@
+all: read-fazia-pb publish-fazia-pb
+
+read-fazia-pb: read-fazia-pb.cpp
+	$(C++) $(CFLAGS) $(INCDIR) ../src/proto/FzEventSet.pb.cpp read-fazia-pb.cpp $(SERIALLIBS) -o $@
+
+publish-fazia-pb: publish-fazia-pb.cpp
+	$(C++) $(CFLAGS) $(INCDIR) ../src/proto/FzEventSet.pb.cpp publish-fazia-pb.cpp $(SERIALLIBS) -lzmq -o $@
 
 clean:
-	rm -f *.o read-fazia-pb 
+	rm -f *.o read-fazia-pb publish-fazia-pb
