@@ -10,9 +10,6 @@
 #include "transmitter/fdtTransmitter.h"
 #include "transmitter/fdt.h"
 
-#define FDT_IP		"127.0.0.1"
-#define FDT_PORT	9090
-
 namespace po = boost::program_options;
 
 int main(int argc, char*argv[]) {
@@ -145,11 +142,49 @@ int main(int argc, char*argv[]) {
 
       if(ev.ParseFromArray(event.data(), event.size()) == true) {
       
+	 std::cout << "I: ev.ev_size() = " << ev.ev_size() << std::endl;
          std::cout << "I: parsing succedeed - event size = " << event.size() << std::endl;
 
 	 long long mfmeventsize = 20 + 4 + ev.ByteSize();	// MFM header + len of pb data + pb data
          if(mfmeventsize % 2)
 	    mfmeventsize++;
+
+	 for(int i=0; i<=12; i++)
+	    mfmevent[i+8] = 0;
+
+         for(int j=0; j<ev.ev(0).trinfo_size(); j++) {
+
+	    if(ev.ev(0).trinfo(j).id() == 0x200) {		// centrum0
+
+	       mfmevent[8] |= (ev.ev(0).trinfo(j).value() & 0x3F) << 2;
+
+	    } else if(ev.ev(0).trinfo(j).id() == 0x201) {	// centrum1
+
+	       // Centrum Timestamp
+	       mfmevent[8] |= (ev.ev(0).trinfo(j).value() >> 28);
+	       mfmevent[9] = (ev.ev(0).trinfo(j).value() >> 20) & 0xFF;
+	       mfmevent[10] = (ev.ev(0).trinfo(j).value() >> 12) & 0xFF;  
+	       mfmevent[11] = (ev.ev(0).trinfo(j).value() >> 4) & 0xFF; 
+	       mfmevent[12] |= (ev.ev(0).trinfo(j).value() & 0xF) << 4;
+
+	    } else if(ev.ev(0).trinfo(j).id() == 0x202) {	// centrum2
+
+	       mfmevent[12] |= (ev.ev(0).trinfo(j).value() >> 26);
+	       mfmevent[13] = (ev.ev(0).trinfo(j).value() >> 18) & 0xFF; 
+	       // Centrum Event Counter
+	       mfmevent[14] = (ev.ev(0).trinfo(j).value() >> 10) & 0xFF;
+	       mfmevent[15] = (ev.ev(0).trinfo(j).value() >> 2) & 0xFF;
+	       mfmevent[16] |= (ev.ev(0).trinfo(j).value() & 0x3) << 6;
+
+	    } else if(ev.ev(0).trinfo(j).id() == 0x203) {	// centrum3
+
+	       mfmevent[16] |= (ev.ev(0).trinfo(j).value() >> 24);
+	       mfmevent[17] = (ev.ev(0).trinfo(j).value() >> 16) & 0xFF;
+	       // Centrum CRC
+	       mfmevent[18] = (ev.ev(0).trinfo(j).value() >> 8) & 0xFF;
+	       mfmevent[19] = ev.ev(0).trinfo(j).value() & 0xFF;
+	    }
+         }
 
 	 std::cout << "I: MFM serialized data length: " << mfmeventsize << std::endl;
 	 // start of MFM header
@@ -167,10 +202,10 @@ int main(int argc, char*argv[]) {
 	 mfmevent[11] = 0x44;
 	 mfmevent[12] = 0x55;
 	 mfmevent[13] = 0x66;
-	 mfmevent[14] = (ev.ev(0).ec() & 0xFF000000) >> 24;	// eventNumber: event number (32 bit integer)
-	 mfmevent[15] = (ev.ev(0).ec() & 0x00FF0000) >> 16;
-	 mfmevent[16] = (ev.ev(0).ec() & 0x0000FF00) >> 8;
-	 mfmevent[17] =  ev.ev(0).ec() & 0x000000FF;
+	 mfmevent[14] = 0x77;					// eventNumber: event number (32 bit integer)
+	 mfmevent[15] = 0x88;
+	 mfmevent[16] = 0x99;
+	 mfmevent[17] = 0xAA;
 	 mfmevent[18] = 0x00;					// reserved: padding (16 bit)
 	 mfmevent[19] = 0x00;
 	 // end of MFM header
@@ -186,7 +221,7 @@ int main(int argc, char*argv[]) {
 	 if(err != OK) {
             std::cout << "E: no FDT connection" << std::endl;
 	    std::cout << "I: try to reconnect..." << std::endl;
-   	    err = trm->connect(FDT_IP, FDT_PORT);
+   	    err = trm->connect(fdthost.c_str(), fdtport);
 
 	    if (err != OK) {
 
