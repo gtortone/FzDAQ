@@ -1373,13 +1373,24 @@ void FzFSM::read_triggerinfo(DAQ::FzBlock *blk, DAQ::FzEvent *ev) {
  
       tri = ev->add_trinfo();
       tri->set_id(wf.sample(i));
-      idx = wf.sample(i) - 0x100;
+      idx = wf.sample(i);
 
-      if( (idx >= 0) && (idx <= 15) )
-         tri->set_attr(FzTriggerInfo_str[idx]);
-      else
-         tri->set_attr("unknown");
-      
+      // idx uses overflow - must be declared and used at 8 bits
+      if(wf.sample(i) >= 0x200) {
+
+         if( (idx >= 0) && (idx <= 4) )
+	    tri->set_attr(FzCentrumInfo_str[idx]);
+	 else
+	    tri->set_attr("unknown");
+
+      } else {
+
+         if( (idx >= 0) && (idx <= 15) )
+            tri->set_attr(FzTriggerInfo_str[idx]);
+         else
+            tri->set_attr("unknown");
+      }
+
       supp = wf.sample(i+1) << 15;
       supp += wf.sample(i+2);
 
@@ -1402,12 +1413,4 @@ void FzFSM::read_triggerinfo(DAQ::FzBlock *blk, DAQ::FzEvent *ev) {
 
       tri->set_value(supp);
    }     
-
-/*
-   std::string text_str;
-   for(int i=0; i<ev->trinfo_size(); i++) {
-      google::protobuf::TextFormat::PrintToString(ev->trinfo(i), &text_str);
-      std::cout << text_str << std::endl;
-   }
-*/
 }

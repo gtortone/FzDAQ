@@ -112,6 +112,7 @@ static char const* const FzTelescope_str[] = { "A", "B", "UNK" };
 static char const* const FzDetector_str[] = { "Si1", "Si2", "CsI", "UNK" };
 static char const* const FzTriggerInfo_str[] = { "validation", "globtrg", "trigger0", "trigger1", "trigger2", "trigger3", "trigger4", "trigger5", "trigger6", "trigger7", \
 						 "mantrig", "exttrig", "totaltime", "gttagmsb", "evtcntrmsb", "trigpattern" }; 
+static char const* const FzCentrumInfo_str[] = { "centrum0", "centrum1", "centrum2", "centrum3" };
 
 class FzFSM {
 
