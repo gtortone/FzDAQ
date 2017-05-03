@@ -85,7 +85,6 @@ int main(int argc, char* argv[]) {
    DAQ::Waveform *wf;
 
    // ==== READ hits from file 0 ====
-while(1) {   
    DAQ::FzEventSet EVSET; 
 
    string filename(argv[1]);
@@ -94,7 +93,6 @@ while(1) {
    cout << "open file: " << filename << endl;
    while (parse_delimited(input, &EVSET) == input.good()) {
    
-#if 0
     for(int s=0; s < EVSET.ev_size(); s++) {
 
       ev = EVSET.ev(s);
@@ -205,7 +203,6 @@ while(1) {
          }
       }
    } 
-#endif
    // send event to spy
    std::string str;
     
@@ -217,12 +214,11 @@ while(1) {
    str.clear();
    EVSET.Clear();
 
-   //std::cout << "I: press enter" << std::endl;
-   //getchar(); 
+   std::cout << "I: press enter" << std::endl;
+   getchar(); 
 
  }
 
-}
    google::protobuf::ShutdownProtobufLibrary();
 
    pub->close();
