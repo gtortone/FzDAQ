@@ -189,7 +189,7 @@ int main(int argc, char* argv[]) {
 
          for(int j=0; j<ev.trinfo_size(); j++) {
 
-            cout << "TRIG ID: " << ev.trinfo(j).id() << "\tATTR: " << ev.trinfo(j).attr() << "\tVALUE: " << ev.trinfo(j).value() << endl;
+            cout << "TRIG ID: " << ev.trinfo(j).id() << "\tATTR: " << ev.trinfo(j).attr() << "\tVALUE: " << hex << "0x" << ev.trinfo(j).value() << dec << endl;
 
          }
       }
