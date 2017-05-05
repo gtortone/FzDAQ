@@ -149,7 +149,19 @@ int main(int argc, char*argv[]) {
          if(mfmeventsize % 2)
 	    mfmeventsize++;
 
-	 for(int i=0; i<=12; i++)
+	
+	 std::cout << "I: MFM serialized data length: " << mfmeventsize << std::endl;
+	 // start of MFM header
+	 mfmevent[0] = 0x41;					// metaType: big endian
+	 mfmevent[1] = (mfmeventsize/2 & 0xFF0000) >> 16;	// frameSize: total size of frame in 16 bit
+	 mfmevent[2] = (mfmeventsize/2 & 0x00FF00) >> 8;
+	 mfmevent[3] = (mfmeventsize/2 & 0x0000FF);
+	 mfmevent[4] = 0x00;					// subsystemNumber: set to 0
+	 mfmevent[5] = 0x00;					// frameType: set to 0x0040
+	 mfmevent[6] = 0x40;
+	 mfmevent[7] = 0x00;					// revision: set to 0
+
+ 	 for(int i=0; i<=12; i++)
 	    mfmevent[i+8] = 0;
 
          for(int j=0; j<ev.ev(0).trinfo_size(); j++) {
@@ -186,28 +198,6 @@ int main(int argc, char*argv[]) {
 	    }
          }
 
-	 std::cout << "I: MFM serialized data length: " << mfmeventsize << std::endl;
-	 // start of MFM header
-	 mfmevent[0] = 0x41;					// metaType: big endian
-	 mfmevent[1] = (mfmeventsize/2 & 0xFF0000) >> 16;	// frameSize: total size of frame in 16 bit
-	 mfmevent[2] = (mfmeventsize/2 & 0x00FF00) >> 8;
-	 mfmevent[3] = (mfmeventsize/2 & 0x0000FF);
-	 mfmevent[4] = 0x00;					// subsystemNumber: set to 0
-	 mfmevent[5] = 0x00;					// frameType: set to 0x0040
-	 mfmevent[6] = 0x40;
-	 mfmevent[7] = 0x00;					// revision: set to 0
-	 mfmevent[8] = 0x11;					// timeStamp: timestamp of event (48 bit integer)
-	 mfmevent[9] = 0x22;
-	 mfmevent[10] = 0x33;
-	 mfmevent[11] = 0x44;
-	 mfmevent[12] = 0x55;
-	 mfmevent[13] = 0x66;
-	 mfmevent[14] = 0x77;					// eventNumber: event number (32 bit integer)
-	 mfmevent[15] = 0x88;
-	 mfmevent[16] = 0x99;
-	 mfmevent[17] = 0xAA;
-	 mfmevent[18] = 0x00;					// reserved: padding (16 bit)
-	 mfmevent[19] = 0x00;
 	 // end of MFM header
 	 mfmevent[20] = (ev.ByteSize() & 0x000000FF);
 	 mfmevent[21] = (ev.ByteSize() & 0x0000FF00) >> 8;
