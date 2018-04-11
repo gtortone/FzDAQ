@@ -1,5 +1,5 @@
 AUTOMAKE_OPTIONS = subdir-objects
-DEFAULT_INCLUDES = -I. -Isrc
+DEFAULT_INCLUDES = -I. -Isrc $(protobuf_CFLAGS) $(configpp_CFLAGS) $(LOG4CPP_CFLAGS) $(zmq_CFLAGS)
 
 bin_PROGRAMS = FzDAQ-mt FzController FzTransmitter
 

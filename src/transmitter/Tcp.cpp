@@ -216,7 +216,10 @@ int TcpWrite(int *sid_pt,char *buffer,long long lg_buffer,long long * lg_ecrit_p
       if (!(FD_ISSET(*sid_pt,&ready))) return R_TCP_TIMEOUT;
     }
 
-    if ((nb_car = send(*sid_pt,buffer,LongEnUneFois,0)) < 0) return R_TCP_WRITE;
+    if ((nb_car = send(*sid_pt,buffer,LongEnUneFois,0)) < 0) {
+       perror("send");
+       return R_TCP_WRITE;
+    }
 
     *lg_ecrit_pt += nb_car;
     buffer += nb_car;

@@ -111,7 +111,7 @@ int main(int argc, char*argv[]) {
    // don't raise SIGPIPE when sending into broken TCP connections
    ::signal(SIGPIPE, SIG_IGN); 
 
-   trm->setTimeout(0); // no timeout
+   trm->setTimeout(10);
    err = trm->connect(fdthost.c_str(), fdtport);
 
    if (err != OK) {
@@ -209,6 +209,7 @@ int main(int argc, char*argv[]) {
 	 err = trm->send(mfmevent, mfmeventsize);
 
 	 if(err != OK) {
+
             std::cout << "E: no FDT connection" << std::endl;
 	    std::cout << "I: try to reconnect..." << std::endl;
    	    err = trm->connect(fdthost.c_str(), fdtport);

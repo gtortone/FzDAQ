@@ -12,8 +12,7 @@ import FzNodeReport_pb2 as NodeReport
 from time import sleep
 from ecc_server import *
 
-fzc_host = "nblupo"
-#fzc_host = "nblupo-wls"
+fzc_host = "ganp549"
 fzc_port = 5555
 
 class EccService(ecc):
@@ -44,7 +43,6 @@ class EccService(ecc):
         request, response = ecc.soap_ServerExit(self, ps, **kw)
         response.ErrorCode = 0
         response.ErrorMessage = ""
-        print("ECC service exit !")
         self.socket.close()
         os._exit(0)        
 

@@ -9,10 +9,10 @@
 #include "proto/FzRCS.pb.h"
 #include "utils/zmq.hpp"
 #include "logger/FzJMS.h"
-#include "logger/FzLogger.h"
 #include "utils/FzTypedef.h"
 #include "rc/RCFSM.h"
 #include "utils/FzUtils.h"
+#include "logger/FzLogger.h"
 
 class FzController {
 
