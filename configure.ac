@@ -25,7 +25,7 @@ m4_include([aclocal/log4cpp.m4])
 
 # mandatory libs
 
-AX_BOOST_BASE([1.55])
+AX_BOOST_BASE([1.62])
 
 CXXFLAGS="$CXXFLAGS $BOOST_CPPFLAGS"
 LDFLAGS="$LDFLAGS $BOOST_LDFLAGS" 

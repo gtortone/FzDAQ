@@ -1,3 +1,4 @@
+/build-aux
 /log4cpp.properties
 /src/*/*.o
 /src/*/*.deps
