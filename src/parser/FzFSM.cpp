@@ -543,7 +543,7 @@ void FzFSM::trans07_tag(void) {	// S4      ->      (DATA)          -> S5
    // store tag but skip void tag (0x3030)
    if(!tag_done) {
       tag = event[event_index] & TAG_MASK;
-		if(tag != VOID_TAG)
+		if(tag != TAG_VOID)
          tag_done = true;
 
 #ifdef FSM_DEBUG
@@ -813,7 +813,7 @@ void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
    if(!tag_done) {
 
       tag = event[event_index] & TAG_MASK;
-      if(tag != VOID_TAG)
+      if(tag != TAG_VOID)
          tag_done = true;
 
 #ifdef FSM_DEBUG
@@ -832,6 +832,36 @@ void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
    log->write(DEBUG, logbuf);
 #endif
 
+   } else {
+
+		if(tag == TAG_PRETRIGGER) {
+
+         wf->set_pretrig(event[event_index]);
+      
+		} else if(tag == TAG_WAVEFORM) {
+
+			int nsample = 0;
+         while (nsample <= rd_wflen) {
+
+				wf->add_sample(event[event_index]);		// collect waveform samples
+				
+				blklen++;
+				save_blkcrc = blkcrc;
+				blkcrc ^= event[event_index];
+
+				feelen++;
+				save_feecrc = feecrc;
+				feecrc ^= event[event_index];
+
+#ifdef FSM_DEBUG
+	sprintf(logbuf, "S5      ->      gathering waveform     -> S5 - word: %4.4X", event[event_index]);
+	log->write(DEBUG, logbuf);
+#endif
+				event_index++;
+            nsample++;
+
+         }	// end while nsample
+      } 
    }
 }
 

@@ -31,7 +31,13 @@
 #define FMT_BASIC		0
 #define FMT_TAG		1
 #define TAG_MASK		0x0FFF
-#define VOID_TAG		0x3030
+
+#define TAG_VOID			0x3030
+#define TAG_SLOW			0x7001
+#define TAG_FAST			0x7002
+#define TAG_BASELINE		0x7003
+#define TAG_PRETRIGGER	0x7004
+#define TAG_WAVEFORM		0x7005
 
 // word type id
 //
