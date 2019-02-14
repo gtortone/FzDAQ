@@ -8,16 +8,16 @@
 #define REGHDR_TAG              0xC800  
 
 #ifdef AMQLOG_ENABLED
-FzReader::FzReader(std::string nurl, std::string cfgfile, zmq::context_t &ctx, cms::Connection *JMSconn) :
-   context(ctx), AMQconn(JMSconn) {
+FzReader::FzReader(std::string nurl, std::string cfgfile, zmq::context_t &ctx, cms::Connection *JMSconn, std::string logdir) :
+   context(ctx), AMQconn(JMSconn), logbase(logdir) {
 #else
-FzReader::FzReader(std::string nurl, std::string cfgfile, zmq::context_t &ctx) :
-   context(ctx) {
+FzReader::FzReader(std::string nurl, std::string cfgfile, zmq::context_t &ctx, std::string logdir) :
+   context(ctx), logbase(logdir) {
 #endif
   
    neturl = nurl;
 
-   log.setFileConnection("fzreader", "/var/log/fzdaq/fzreader.log");
+   log.setFileConnection("fzreader", logbase + "/fzreader.log");
 
 #ifdef AMQLOG_ENABLED
    if(AMQconn.get())

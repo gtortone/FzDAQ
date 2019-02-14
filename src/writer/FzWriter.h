@@ -28,6 +28,7 @@ private:
    FzProtobuf *pb;
 
    FzLogger log;
+   std::string logbase;
 #ifdef AMQLOG_ENABLED
    std::unique_ptr<cms::Connection> AMQconn;
 #endif
@@ -57,9 +58,9 @@ private:
 public:
 
 #ifdef AMQLOG_ENABLED
-   FzWriter(std::string bdir, std::string run, long int id, bool subid, std::string cfgfile, zmq::context_t &ctx, cms::Connection *JMSconn);
+   FzWriter(std::string bdir, std::string run, long int id, bool subid, std::string cfgfile, zmq::context_t &ctx, cms::Connection *JMSconn, std::string logdir);
 #else
-   FzWriter(std::string bdir, std::string run, long int id, bool subid, std::string cfgfile, zmq::context_t &ctx);
+   FzWriter(std::string bdir, std::string run, long int id, bool subid, std::string cfgfile, zmq::context_t &ctx, std::string logdir);
 #endif
 
    void init(void);

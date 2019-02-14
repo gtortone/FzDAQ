@@ -43,6 +43,7 @@ int main(int argc, char *argv[]) {
    std::string brokerURI;
    int evformat = 0;
    std::string evformat_str;
+   std::string logbasedir;
 
    FzReader *rd = NULL;
    std::vector<FzParser *> psr_array;	// vector of (Fzparser *)
@@ -171,6 +172,13 @@ int main(int argc, char *argv[]) {
       std::cout << INFOTAG << "log server connection successfully" << std::endl;
    }
 #endif
+
+   // configure log base directory
+   if(cfg.lookupValue("fzdaq.global.log.basedir", logbasedir)) {
+
+      std::cout << INFOTAG << "log files base directory: " << logbasedir << std::endl;
+
+   } else logbasedir = "/var/log/fazia";
 
    // configure event format
    if(cfg.lookupValue("fzdaq.global.evformat", evformat_str)) {
@@ -318,9 +326,9 @@ int main(int argc, char *argv[]) {
 
 #ifdef AMQLOG_ENABLED
       // create FzReader thread
-      rd = new FzReader(neturl, cfgfile, context, JMSconn);
+      rd = new FzReader(neturl, cfgfile, context, JMSconn, logbasedir);
 #else
-      rd = new FzReader(neturl, cfgfile, context);
+      rd = new FzReader(neturl, cfgfile, context, logbasedir);
 #endif
 
       if(!rd) {
@@ -334,9 +342,9 @@ int main(int argc, char *argv[]) {
       for(i=0; i < nthreads; i++) {
 
 #ifdef AMQLOG_ENABLED
-         psr_array.push_back(new FzParser(i, cfgfile, context, JMSconn, evformat));
+         psr_array.push_back(new FzParser(i, cfgfile, context, JMSconn, evformat, logbasedir));
 #else
-         psr_array.push_back(new FzParser(i, cfgfile, context, evformat));       
+         psr_array.push_back(new FzParser(i, cfgfile, context, evformat, logbasedir));       
 #endif
 
          if(!psr_array[i]) {
@@ -355,9 +363,9 @@ int main(int argc, char *argv[]) {
 
 #ifdef AMQLOG_ENABLED
       // create FzWriter thread 
-      wr = new FzWriter(subdir, runtag, runid, subid, cfgfile, context, JMSconn);
+      wr = new FzWriter(subdir, runtag, runid, subid, cfgfile, context, JMSconn, logbasedir);
 #else
-      wr = new FzWriter(subdir, runtag, runid, subid, cfgfile, context);
+      wr = new FzWriter(subdir, runtag, runid, subid, cfgfile, context, logbasedir);
 #endif
 
       if(!wr) {

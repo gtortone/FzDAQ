@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include "FzFSM.h"
 
-//#define FSM_DEBUG
+#define FSM_DEBUG
 #include <google/protobuf/text_format.h>  // for debug
 
 FzFSM::FzFSM(void) {
@@ -23,6 +23,12 @@ void FzFSM::init(int evf) {
 void FzFSM::initlog(FzLogger *l) {
 
    log = l;
+
+#ifdef FSM_DEBUG
+   sprintf(logbuf, "state machine log initialized");
+   log->write(DEBUG, logbuf);
+#endif
+
 }
 
 inline uint8_t FzFSM::getword_id(unsigned short int word) {

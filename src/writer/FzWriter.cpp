@@ -6,11 +6,11 @@
 #include <sstream>
 
 #ifdef AMQLOG_ENABLED
-FzWriter::FzWriter(std::string bdir, std::string run, long int id, bool subid, std::string cfgfile, zmq::context_t &ctx, cms::Connection *JMSconn) :
-   context(ctx), AMQconn(JMSconn) {
+FzWriter::FzWriter(std::string bdir, std::string run, long int id, bool subid, std::string cfgfile, zmq::context_t &ctx, cms::Connection *JMSconn, std::string logdir) :
+   context(ctx), AMQconn(JMSconn), logbase(logdir) {
 #else
-FzWriter::FzWriter(std::string bdir, std::string run, long int id, bool subid, std::string cfgfile, zmq::context_t &ctx) :
-   context(ctx) {
+FzWriter::FzWriter(std::string bdir, std::string run, long int id, bool subid, std::string cfgfile, zmq::context_t &ctx, std::string logdir) :
+   context(ctx), logbase(logdir) {
 #endif
 
    int status;
@@ -20,7 +20,7 @@ FzWriter::FzWriter(std::string bdir, std::string run, long int id, bool subid, s
    dirid = id;
    this->subid = subid;
 
-   log.setFileConnection("fzwriter", "/var/log/fzdaq/fzwriter.log");
+   log.setFileConnection("fzwriter", logbase + "/fzwriter.log");
 
 #ifdef AMQLOG_ENABLED
    if(AMQconn.get())

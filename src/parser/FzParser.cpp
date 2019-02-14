@@ -3,15 +3,15 @@
 #include "logger/FzLogger.h"
 
 #ifdef AMQLOG_ENABLED
-FzParser::FzParser(unsigned int id, std::string cfgfile, zmq::context_t &ctx, cms::Connection *JMSconn, int evf) :
-   context(ctx), AMQconn(JMSconn), evformat(evf) {
+FzParser::FzParser(unsigned int id, std::string cfgfile, zmq::context_t &ctx, cms::Connection *JMSconn, int evf, std::string logdir) :
+   context(ctx), AMQconn(JMSconn), evformat(evf), logbase(logdir) {
 #else
-FzParser::FzParser(unsigned int id, std::string cfgfile, zmq::context_t &ctx, int evf) :
-   context(ctx), evformat(evf) {
+FzParser::FzParser(unsigned int id, std::string cfgfile, zmq::context_t &ctx, int evf, std::string logdir) :
+   context(ctx), evformat(evf), logbase(logdir) {
 #endif
 
    std::stringstream filename, msg;
-   filename << "/var/log/fzdaq/fzparser.log." << id;
+   filename << logbase << "/fzparser.log." << id;
 
    log.setFileConnection("fzparser", filename.str());
 
