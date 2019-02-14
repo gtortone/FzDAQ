@@ -840,6 +840,8 @@ void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
 
    } else {
 
+		// inside tag values...
+
 		if(tag == TAG_PRETRIGGER) {
 
          wf->set_pretrig(event[event_index]);
@@ -867,7 +869,15 @@ void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
             nsample++;
 
          }	// end while nsample
+
       } 
+
+		// check length...
+		// ...
+
+      // prepare for next tag
+		tag_done = wflen_done = false;
+		rd_wflen = 0;
    }
 }
 
