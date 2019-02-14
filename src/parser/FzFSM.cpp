@@ -243,6 +243,41 @@ int FzFSM::process(void) {
    return(retval);
 }
 
+void FzFSM::update_blk_len(void) {
+   blklen++;
+#ifdef FSM_DEBUG
+   sprintf(logbuf, "blklen: %d", blklen);
+   log->write(DEBUG, logbuf);
+#endif
+}
+
+void FzFSM::update_blk_crc(void) {
+
+	blkcrc ^= event[event_index];
+}
+
+void FzFSM::update_blk(void) {
+
+	update_blk_len();
+	update_blk_crc();
+}
+
+void FzFSM::update_fee_len(void) {
+
+	feelen++;
+}
+
+void FzFSM::update_fee_crc(void) {
+
+   feecrc ^= event[event_index];
+}
+
+void FzFSM::update_fee(void) {
+
+	update_fee_len();
+	update_fee_crc();
+}
+
 /*
 void FzFSM::trans00(void) {	// transition not valid
 
@@ -296,12 +331,7 @@ void FzFSM::trans03(void) {	// S1      ->      (TELID)         -> S2
    DAQ::FzHit::FzTelescope telid = (DAQ::FzHit::FzTelescope) (event[event_index] & TELID_MASK);
    DAQ::FzFee::FzFec feeid = (DAQ::FzFee::FzFec) ((event[event_index] & FEEID_MASK) >> 1);
 
-   blklen++;
-#ifdef FSM_DEBUG
-   sprintf(logbuf, "blklen: %d", blklen);
-   log->write(DEBUG, logbuf);
-#endif
-   blkcrc ^= event[event_index];
+	update_blk();
 
    feelen = 2;  // EC is just acquired
    feecrc = tmp_rawec ^ event[event_index];
@@ -335,16 +365,9 @@ void FzFSM::trans04(void) {	// S2      ->      (DATA)          -> S3
    sprintf(logbuf, "S2      ->      (DATA)          -> S3 - word: %4.4X", event[event_index]);
    log->write(DEBUG, logbuf);
 #endif
-
-   blklen++;
-#ifdef FSM_DEBUG
-   sprintf(logbuf, "blklen: %d", blklen);
-   log->write(DEBUG, logbuf);
-#endif
-   blkcrc ^= event[event_index];
-
-   feelen++;
-   feecrc ^= event[event_index];
+	
+	update_blk();
+	update_fee();
 
    // verify if GTTAG already set
    hit->set_gttag(event[event_index]);
@@ -357,15 +380,8 @@ void FzFSM::trans05(void) {	// S3      ->      (DATA)          -> S3
    log->write(DEBUG, logbuf);
 #endif
 
-   blklen++;
-#ifdef FSM_DEBUG
-   sprintf(logbuf, "blklen: %d", blklen);
-   log->write(DEBUG, logbuf);
-#endif
-   blkcrc ^= event[event_index];
-
-   feelen++;
-   feecrc ^= event[event_index];
+	update_blk();
+	update_fee();
 
    // verify if DETTAG already set
    hit->set_dettag(event[event_index]);
@@ -382,16 +398,9 @@ void FzFSM::trans06(void) {	// S3      ->      (DETID)         -> S4
    unsigned short int detid = (event[event_index] & DETID_MASK) >> 5;
    unsigned short int dtype = (event[event_index] & DTYPE_MASK) >> 8;
 
-   blklen++;
-#ifdef FSM_DEBUG
-   sprintf(logbuf, "blklen: %d", blklen);
-   log->write(DEBUG, logbuf);
-#endif
-   blkcrc ^= event[event_index];
-
-   feelen++;
-   feecrc ^= event[event_index];
-
+	update_blk();
+	update_fee();
+	
    //DAQ::FzData::FzDataType dtype = (DAQ::FzData::FzDataType) sm.w.getContent()[WC_DTYPE];
 
    // validate range of DETID
@@ -491,15 +500,8 @@ void FzFSM::trans07_basic(void) {	// S4      ->      (DATA)          -> S5
 	energy1_done = energy2_done = pretrig_done = wflen_done = false;
 	rd_wflen = 0;
 
-	blklen++;
-#ifdef FSM_DEBUG
-	sprintf(logbuf, "blklen: %d", blklen);
-	log->write(DEBUG, logbuf);
-#endif
-	blkcrc ^= event[event_index];
-
-	feelen++;
-	feecrc ^= event[event_index];
+	update_blk();
+	update_fee();
 
 	if( (d->type() == DAQ::FzData::I1) || (d->type() == DAQ::FzData::QL1) || (d->type() == DAQ::FzData::I2) || (d->type() == DAQ::FzData::ADC) || (d->type() == DAQ::FzData::UNKDT) ) {
 		// waveform without energy - get PRETRIG
@@ -534,21 +536,13 @@ void FzFSM::trans07_tag(void) {	// S4      ->      (DATA)          -> S5
 	tag_done = wflen_done = false;
 	rd_wflen = 0;
 
-   blklen++;
-#ifdef FSM_DEBUG
-	sprintf(logbuf, "blklen: %d", blklen);
-	log->write(DEBUG, logbuf);
-#endif
-	save_blkcrc = blkcrc;
-	blkcrc ^= event[event_index];
-
-	feelen++;
-	save_feecrc = feecrc;
-	feecrc ^= event[event_index];
+	update_blk();
+	update_fee();
 
    // store tag but skip void tag (0x3030)
    if(!tag_done) {
-      tag = event[event_index] & TAG_MASK;
+
+      tag = event[event_index];
 		if(tag != TAG_VOID)
          tag_done = true;
 
@@ -567,17 +561,8 @@ void FzFSM::trans08_basic(void) {	// S5      ->      (DATA)          -> S5
    log->write(DEBUG, logbuf);
 #endif
 
-	blklen++;
-#ifdef FSM_DEBUG
-	sprintf(logbuf, "blklen: %d", blklen);
-	log->write(DEBUG, logbuf);
-#endif
-	save_blkcrc = blkcrc;
-	blkcrc ^= event[event_index];
-
-	feelen++;
-	save_feecrc = feecrc;
-	feecrc ^= event[event_index];
+	update_blk();
+	update_fee();
 
 	if( (d->type() == DAQ::FzData::QH1) || (d->type() == DAQ::FzData::Q2) ) {
 
@@ -609,13 +594,11 @@ void FzFSM::trans08_basic(void) {	// S5      ->      (DATA)          -> S5
 
 				wf->add_sample(event[event_index]);		// collect waveform samples
 				
-				blklen++;
 				save_blkcrc = blkcrc;
-				blkcrc ^= event[event_index];
+				update_blk();
 
-				feelen++;
 				save_feecrc = feecrc;
-				feecrc ^= event[event_index];
+				update_fee();
 
 #ifdef FSM_DEBUG
 	sprintf(logbuf, "S5      ->      gathering waveform     -> S5 - word: %4.4X", event[event_index]);
@@ -676,13 +659,11 @@ void FzFSM::trans08_basic(void) {	// S5      ->      (DATA)          -> S5
 
 				wf->add_sample(event[event_index]);		// collect waveform samples
 				
-				blklen++;
 				save_blkcrc = blkcrc;
-				blkcrc ^= event[event_index];
+				update_blk();
 
-				feelen++;
 				save_feecrc = feecrc;
-				feecrc ^= event[event_index];
+				update_fee();
 
 #ifdef FSM_DEBUG
 	sprintf(logbuf, "S5      ->      gathering waveform     -> S5 - word: %4.4X", event[event_index]);
@@ -748,13 +729,10 @@ void FzFSM::trans08_basic(void) {	// S5      ->      (DATA)          -> S5
 
 			  for(int ix=0; ix<6; ix++) {
 
-				  blklen++; 
-				  feelen++;
-			  
-				  blkcrc ^= event[event_index];
-				  feecrc ^= event[event_index];
-
-				  event_index++;
+					update_blk();
+					update_fee();
+					
+					event_index++;
 			  }
 
 			  save_blkcrc = blkcrc;
@@ -766,13 +744,11 @@ void FzFSM::trans08_basic(void) {	// S5      ->      (DATA)          -> S5
 
 				wf->add_sample(event[event_index]);		// collect waveform samples
 				
-				blklen++;
 				save_blkcrc = blkcrc;
-				blkcrc ^= event[event_index];
+				update_blk();
 
-				feelen++;
 				save_feecrc = feecrc;
-				feecrc ^= event[event_index];
+				update_fee();
 
 #ifdef FSM_DEBUG
 	sprintf(logbuf, "S5      ->      gathering waveform     -> S5 - word: %4.4X", event[event_index]);
@@ -803,22 +779,13 @@ void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
    log->write(DEBUG, logbuf);
 #endif
 
-   blklen++;
-#ifdef FSM_DEBUG
-   sprintf(logbuf, "blklen: %d", blklen);
-   log->write(DEBUG, logbuf);
-#endif
-   save_blkcrc = blkcrc;
-   blkcrc ^= event[event_index];
-
-   feelen++;
-   save_feecrc = feecrc;
-   feecrc ^= event[event_index];
+	update_blk();
+	update_fee();
 
    // store tag but skip void tag (0x3030)
    if(!tag_done) {
 
-      tag = event[event_index] & TAG_MASK;
+      tag = event[event_index];
       if(tag != TAG_VOID)
          tag_done = true;
 
@@ -842,24 +809,22 @@ void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
 
 		// inside tag values...
 
-		if(tag == TAG_PRETRIGGER) {
+		if(tag == TAG_PRETRIGGER) {			// 0x7004
 
          wf->set_pretrig(event[event_index]);
       
-		} else if(tag == TAG_WAVEFORM) {
+		} else if(tag == TAG_WAVEFORM) {		// 0x7005
 
 			int nsample = 0;
          while (nsample <= rd_wflen) {
 
 				wf->add_sample(event[event_index]);		// collect waveform samples
 				
-				blklen++;
 				save_blkcrc = blkcrc;
-				blkcrc ^= event[event_index];
+				update_blk();
 
-				feelen++;
 				save_feecrc = feecrc;
-				feecrc ^= event[event_index];
+				update_fee();
 
 #ifdef FSM_DEBUG
 	sprintf(logbuf, "S5      ->      gathering waveform     -> S5 - word: %4.4X", event[event_index]);
@@ -870,7 +835,52 @@ void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
 
          }	// end while nsample
 
-      } 
+		} else if(tag == TAG_SLOW) {			// 0x7001
+
+			// filter risetime
+			en->set_risetime(event[event_index]);
+
+			// energy_h
+			event_index++;
+         update_blk();
+         update_fee();
+
+			en->add_value(event[event_index]);
+			//
+
+			// energy_l
+			event_index++;
+			update_blk();
+			update_fee();
+
+			en->set_value(0, (en->value(0) << 15) + event[event_index]);
+			//
+
+		} else if(tag == TAG_FAST) {			// 0x7002
+
+			// filter risetime
+			en->set_risetime(event[event_index]);
+
+			// energy_h
+         event_index++;
+         update_blk();
+         update_fee();
+
+         en->add_value(event[event_index]);
+         //
+
+         // energy_l
+         event_index++;
+         update_blk();
+         update_fee();
+
+         en->set_value(0, (en->value(0) << 15) + event[event_index]);
+         //
+
+		} else if(tag == TAG_BASELINE) {		// 0x7003
+
+			d->set_baseline(event[event_index]);
+		}
 
 		// check length...
 		// ...
@@ -895,15 +905,8 @@ void FzFSM::trans09(void) {	// S5      ->      (DETID)         -> S4
    unsigned short int detid = (event[event_index] & DETID_MASK) >> 5;
    unsigned short int dtype = (event[event_index] & DTYPE_MASK) >> 8;
 
-   blklen++;
-#ifdef FSM_DEBUG
-   sprintf(logbuf, "blklen: %d", blklen);
-   log->write(DEBUG, logbuf);
-#endif
-   blkcrc ^= event[event_index];
-
-   feelen++;
-   feecrc ^= event[event_index];
+	update_blk();
+	update_fee();
 
    // verify waveform length of event just acquired
 
@@ -1090,15 +1093,8 @@ void FzFSM::trans10(void) {	// S5      ->      (TELID)         -> S2
    //unsigned short int detid = (event[event_index] & DETID_MASK) >> 5;
    //unsigned short int dtype = (event[event_index] & DTYPE_MASK) >> 8;
 
-   blklen++;
-#ifdef FSM_DEBUG
-   sprintf(logbuf, "blklen: %d", blklen); 
-   log->write(DEBUG, logbuf);
-#endif
-   blkcrc ^= event[event_index];
-
-   feelen++;
-   feecrc ^= event[event_index];
+	update_blk();
+	update_fee();
 
    // verify waveform length of event just acquired
 
@@ -1177,12 +1173,7 @@ void FzFSM::trans11(void) {	// S5      ->      (LENGTH)        -> S6
 
    rd_feelen = len;
 
-   blklen++;
-#ifdef FSM_DEBUG
-   sprintf(logbuf, "blklen: %d", blklen);
-   log->write(DEBUG, logbuf);
-#endif
-   blkcrc ^= event[event_index];
+	update_blk();
 
    // verify waveform length of event just acquired
 
@@ -1240,12 +1231,7 @@ void FzFSM::trans12(void) {	// S6      ->      (CRCFE)         -> S7
    unsigned short int crcfe = ((event[event_index] & CRCFE_MASK) >> 4);
    uint8_t crc_lsb, crc_msb, crc_calc;
 
-   blklen++;
-#ifdef FSM_DEBUG
-   sprintf(logbuf, "blklen: %d", blklen);
-   log->write(DEBUG, logbuf);
-#endif
-   blkcrc ^= event[event_index];
+	update_blk();
 
    rd_feecrc = crcfe;
    rd_feecrc &= 0x00FF;   // convert to 8 bit
@@ -1301,12 +1287,7 @@ void FzFSM::trans13(void) {	// S7      ->      (EC)            -> S1
    tmp_ec = ec;
    tmp_rawec = event[event_index];
 
-   blklen++;
-#ifdef FSM_DEBUG
-   sprintf(logbuf, "blklen: %d", blklen);
-   log->write(DEBUG, logbuf);
-#endif
-   blkcrc ^= event[event_index];
+	update_blk();
 
    // verify (tmp_ec == ev->ec())
 }
@@ -1320,12 +1301,7 @@ void FzFSM::trans14(void) {	// S1      ->      (BLKID)         -> S8
 
    unsigned short int blkid = event[event_index] & BLKID_MASK;
 
-   blklen++;
-#ifdef FSM_DEBUG
-   sprintf(logbuf, "blklen: %d", blklen);
-   log->write(DEBUG, logbuf);
-#endif
-   blkcrc ^= event[event_index];
+	update_blk();
 
    blk->set_blkid(blkid);
 }

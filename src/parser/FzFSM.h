@@ -30,7 +30,6 @@
 
 #define FMT_BASIC		0
 #define FMT_TAG		1
-#define TAG_MASK		0x0FFF
 
 #define TAG_VOID			0x3030
 #define TAG_SLOW			0x7001
@@ -204,6 +203,14 @@ private:
    char logbuf[256];
 
    Report::FzFSM fsm_report;
+
+   void update_blk(void);
+	void update_blk_crc(void);
+	void update_blk_len(void);
+
+	void update_fee(void);
+	void update_fee_crc(void);
+	void update_fee_len(void);
 
 public:
 
