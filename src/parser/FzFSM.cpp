@@ -11,12 +11,13 @@ FzFSM::FzFSM(void) {
    fsm_report.Clear();
 }
 
-void FzFSM::init(void) {
+void FzFSM::init(int evf) {
 
    event = 0;
    event_size = event_index = 0;   
 
    state_id = 0;
+	evformat = evf;
 }
 
 void FzFSM::initlog(FzLogger *l) {
@@ -156,12 +157,18 @@ int FzFSM::process(void) {
             break;
                      
          case 7:
-            trans07();		// S4      ->      (DATA)          -> S5
+            if(evformat == FMT_BASIC)
+               trans07_basic();		// S4      ->      (DATA)          -> S5
+            else if(evformat == FMT_TAG)
+               trans07_tag();
             state_id = 5;
             break;
                      
          case 8:
-            trans08(); 		// S5      ->      (DATA)          -> S5
+            if(evformat == FMT_BASIC)
+               trans08_basic(); 		// S5      ->      (DATA)          -> S5
+            else if(evformat == FMT_TAG)
+               trans08_tag();
             state_id = 5;	
             break;
                      
@@ -467,50 +474,323 @@ void FzFSM::trans06(void) {	// S3      ->      (DETID)         -> S4
    }
 }
 
-void FzFSM::trans07(void) {	// S4      ->      (DATA)          -> S5
+void FzFSM::trans07_basic(void) {	// S4      ->      (DATA)          -> S5
 
 #ifdef FSM_DEBUG
    sprintf(logbuf, "S4      ->      (DATA)          -> S5 - word: %4.4X", event[event_index]);
    log->write(DEBUG, logbuf);
 #endif
 
-   // init data flags
-   energy1_done = energy2_done = pretrig_done = wflen_done = false;
-   rd_wflen = 0;
+	// init data flags
+	energy1_done = energy2_done = pretrig_done = wflen_done = false;
+	rd_wflen = 0;
+
+	blklen++;
+#ifdef FSM_DEBUG
+	sprintf(logbuf, "blklen: %d", blklen);
+	log->write(DEBUG, logbuf);
+#endif
+	blkcrc ^= event[event_index];
+
+	feelen++;
+	feecrc ^= event[event_index];
+
+	if( (d->type() == DAQ::FzData::I1) || (d->type() == DAQ::FzData::QL1) || (d->type() == DAQ::FzData::I2) || (d->type() == DAQ::FzData::ADC) || (d->type() == DAQ::FzData::UNKDT) ) {
+		// waveform without energy - get PRETRIG
+
+		if(!pretrig_done) {
+
+			wf->set_pretrig(event[event_index]);
+			pretrig_done = true;
+
+		} // else error
+
+	} else if ( (d->type() == DAQ::FzData::QH1) || (d->type() == DAQ::FzData::Q2) || (d->type() == DAQ::FzData::Q3) ) {
+
+		// energy and waveform - get ENERGYH
+
+		if(!energy1_done) {
+
+			en->add_value(event[event_index]);
+
+		} // else error
+	}
+}
+
+void FzFSM::trans07_tag(void) {	// S4      ->      (DATA)          -> S5
+
+#ifdef FSM_DEBUG
+   sprintf(logbuf, "S4      ->      (DATA)          -> S5 - word: %4.4X", event[event_index]);
+   log->write(DEBUG, logbuf);
+#endif
+
+	// init data flags
+	tag_done = wflen_done = false;
+	rd_wflen = 0;
 
    blklen++;
 #ifdef FSM_DEBUG
-   sprintf(logbuf, "blklen: %d", blklen);
-   log->write(DEBUG, logbuf);
+	sprintf(logbuf, "blklen: %d", blklen);
+	log->write(DEBUG, logbuf);
 #endif
-   blkcrc ^= event[event_index];
+	save_blkcrc = blkcrc;
+	blkcrc ^= event[event_index];
 
-   feelen++;
-   feecrc ^= event[event_index];
+	feelen++;
+	save_feecrc = feecrc;
+	feecrc ^= event[event_index];
 
-   if( (d->type() == DAQ::FzData::I1) || (d->type() == DAQ::FzData::QL1) || (d->type() == DAQ::FzData::I2) || (d->type() == DAQ::FzData::ADC) || (d->type() == DAQ::FzData::UNKDT) ) {
-      // waveform without energy - get PRETRIG
- 
-      if(!pretrig_done) {
+   // store tag but skip void tag (0x3030)
+   if(!tag_done) {
+      tag = event[event_index] & TAG_MASK;
+		if(tag != VOID_TAG)
+         tag_done = true;
 
-         wf->set_pretrig(event[event_index]);
-         pretrig_done = true;
+#ifdef FSM_DEBUG
+	sprintf(logbuf, "tag: %4.4X", tag);
+	log->write(DEBUG, logbuf);
+#endif
 
-      } // else error
-
-   } else if ( (d->type() == DAQ::FzData::QH1) || (d->type() == DAQ::FzData::Q2) || (d->type() == DAQ::FzData::Q3) ) {
-
-      // energy and waveform - get ENERGYH
-
-      if(!energy1_done) {
-
-         en->add_value(event[event_index]);
-
-      } // else error
    }
 }
 
-void FzFSM::trans08(void) {	// S5      ->      (DATA)          -> S5
+void FzFSM::trans08_basic(void) {	// S5      ->      (DATA)          -> S5
+
+#ifdef FSM_DEBUG
+   sprintf(logbuf, "S5      ->      (DATA)          -> S5 - word: %4.4X", event[event_index]);
+   log->write(DEBUG, logbuf);
+#endif
+
+	blklen++;
+#ifdef FSM_DEBUG
+	sprintf(logbuf, "blklen: %d", blklen);
+	log->write(DEBUG, logbuf);
+#endif
+	save_blkcrc = blkcrc;
+	blkcrc ^= event[event_index];
+
+	feelen++;
+	save_feecrc = feecrc;
+	feecrc ^= event[event_index];
+
+	if( (d->type() == DAQ::FzData::QH1) || (d->type() == DAQ::FzData::Q2) ) {
+
+		// energy and waveform		( 1 word energyH, 1 word energyL , 1 word pretrig, 1 word wflen , 1 word energy , n samples )
+
+		if(!energy1_done) {
+
+			en->set_value(0, (en->value(0) << 15) + event[event_index]);
+			energy1_done = true;
+
+		} else if(!pretrig_done) {
+
+			wf->set_pretrig(event[event_index]);
+			pretrig_done = true;
+
+		} else if(!wflen_done) {
+
+			// store wflen for later check
+			rd_wflen = event[event_index];
+			wflen_done = true;
+
+		} else { 
+ 
+			blkcrc = save_blkcrc;
+			feecrc = save_feecrc;
+
+			// boost patch 
+			while(event[event_index] <= 0x7FFF) {
+
+				wf->add_sample(event[event_index]);		// collect waveform samples
+				
+				blklen++;
+				save_blkcrc = blkcrc;
+				blkcrc ^= event[event_index];
+
+				feelen++;
+				save_feecrc = feecrc;
+				feecrc ^= event[event_index];
+
+#ifdef FSM_DEBUG
+	sprintf(logbuf, "S5      ->      gathering waveform     -> S5 - word: %4.4X", event[event_index]);
+	log->write(DEBUG, logbuf);
+#endif
+				event_index++;
+
+			}	// end while
+
+#ifdef FSM_DEBUG
+	sprintf(logbuf, "S5      ->      exit gathering waveform     - word: %4.4X", event[event_index]);
+	log->write(DEBUG, logbuf);
+#endif
+
+	 event_index--;
+	 blklen--;
+	 feelen--;
+	 //blkcrc = save_blkcrc;
+	 //feecrc = save_feecrc;
+		}
+
+	} else if(d->type() == DAQ::FzData::Q3) {
+
+		// two energy values and waveform	( 1 word energy1H, 1 word energy1L, 1 word energy2H, 1 word energy2L, 1 word pretrig, 1 word wflen, n samples )
+
+		if(!energy1_done) {
+
+			en->set_value(0, (en->value(0) << 15) + event[event_index]);
+			energy1_done = true;
+			
+		} else if(!energy2_done) {
+
+			if (en->value_size() == 1)		// only first energy is acquired
+				en->add_value(event[event_index]);
+			else {
+				en->set_value(1, (en->value(1) << 15) + event[event_index]);
+				energy2_done = true;
+			}
+
+		} else if(!pretrig_done) {
+
+			wf->set_pretrig(event[event_index]);
+			pretrig_done = true;
+
+		} else if(!wflen_done) {
+
+			// store wflen for later check
+			rd_wflen = event[event_index];
+			wflen_done = true;
+
+		} else { 
+
+			blkcrc = save_blkcrc;
+			feecrc = save_feecrc;
+
+			// boost patch 
+			while(event[event_index] <= 0x7FFF) {
+
+				wf->add_sample(event[event_index]);		// collect waveform samples
+				
+				blklen++;
+				save_blkcrc = blkcrc;
+				blkcrc ^= event[event_index];
+
+				feelen++;
+				save_feecrc = feecrc;
+				feecrc ^= event[event_index];
+
+#ifdef FSM_DEBUG
+	sprintf(logbuf, "S5      ->      gathering waveform     -> S5 - word: %4.4X", event[event_index]);
+	log->write(DEBUG, logbuf);
+#endif
+				event_index++;
+
+			}	// end while
+
+#ifdef FSM_DEBUG
+	sprintf(logbuf, "S5      ->      exit gathering waveform     - word: %4.4X", event[event_index]);
+	log->write(DEBUG, logbuf);
+#endif
+
+	 event_index--;
+	 blklen--;
+	 feelen--;
+	 //blkcrc = save_blkcrc;
+	 //feecrc = save_feecrc;
+		}
+
+	} else if( (d->type() == DAQ::FzData::I1) || (d->type() == DAQ::FzData::I2) || (d->type() == DAQ::FzData::QL1) || (d->type() == DAQ::FzData::ADC) || (d->type() == DAQ::FzData::UNKDT) ) {
+
+	  // waveform without energy	( 1 word pretrig, 1 word wflen, n word sample )
+
+	  /* if(!sm.pretrig_done) {
+
+		  sm.wf->set_pretrig(sm.w.getContent()[WC_DATA]);
+		  sm.pretrig_done = true;
+
+	  } else */ if(!wflen_done) {
+
+			// store wflen for later check
+			rd_wflen = event[event_index];
+			wflen_done = true;
+
+	  } else {
+
+		  blkcrc = save_blkcrc;
+		  feecrc = save_feecrc;
+
+		  if(d->type() == DAQ::FzData::ADC) {
+
+			  // fetch sine and cosine from waveform (first six samples)
+
+			  int64_t sine = 0; 
+			  int64_t cosine = 0;
+
+			  // sine (3 words)
+			  sine = (event[event_index] << 22) + (event[event_index+1] << 7) + (event[event_index+2] >> 8);
+
+			  // cosine (3 words)
+			  cosine = (event[event_index+3] << 22) + (event[event_index+4] << 7) + (event[event_index+5] >> 8);
+			  
+			  if(sine & 0x1000000000)
+				  sine = 0xFFFFFFE000000000 + sine;
+
+			  if(cosine & 0x1000000000)
+				  cosine = 0xFFFFFFE000000000 + cosine;
+
+			  d->set_sine(sine);
+			  d->set_cosine(cosine);
+
+			  for(int ix=0; ix<6; ix++) {
+
+				  blklen++; 
+				  feelen++;
+			  
+				  blkcrc ^= event[event_index];
+				  feecrc ^= event[event_index];
+
+				  event_index++;
+			  }
+
+			  save_blkcrc = blkcrc;
+			  save_feecrc = feecrc;
+		  } 
+ 
+		  // boost patch 
+		  while(event[event_index] <= 0x7FFF) {
+
+				wf->add_sample(event[event_index]);		// collect waveform samples
+				
+				blklen++;
+				save_blkcrc = blkcrc;
+				blkcrc ^= event[event_index];
+
+				feelen++;
+				save_feecrc = feecrc;
+				feecrc ^= event[event_index];
+
+#ifdef FSM_DEBUG
+	sprintf(logbuf, "S5      ->      gathering waveform     -> S5 - word: %4.4X", event[event_index]);
+	log->write(DEBUG, logbuf);
+#endif
+				event_index++;
+
+			}	// end while
+
+#ifdef FSM_DEBUG
+	sprintf(logbuf, "S5      ->      exit gathering waveform     - word: %4.4X", event[event_index]);
+	log->write(DEBUG, logbuf);
+#endif
+
+	 event_index--;
+	 blklen--;
+	 feelen--;
+	 //blkcrc = save_blkcrc;
+	 //feecrc = save_feecrc;
+	  }
+	}
+}
+
+void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
 
 #ifdef FSM_DEBUG
    sprintf(logbuf, "S5      ->      (DATA)          -> S5 - word: %4.4X", event[event_index]);
@@ -529,220 +809,29 @@ void FzFSM::trans08(void) {	// S5      ->      (DATA)          -> S5
    save_feecrc = feecrc;
    feecrc ^= event[event_index];
 
-   if( (d->type() == DAQ::FzData::QH1) || (d->type() == DAQ::FzData::Q2) ) {
+   // store tag but skip void tag (0x3030)
+   if(!tag_done) {
 
-      // energy and waveform		( 1 word energyH, 1 word energyL , 1 word pretrig, 1 word wflen , 1 word energy , n samples )
-
-      if(!energy1_done) {
-
-         en->set_value(0, (en->value(0) << 15) + event[event_index]);
-         energy1_done = true;
-
-      } else if(!pretrig_done) {
-
-         wf->set_pretrig(event[event_index]);
-         pretrig_done = true;
-
-      } else if(!wflen_done) {
-
-         // store wflen for later check
-         rd_wflen = event[event_index];
-         wflen_done = true;
-
-      } else { 
- 
-         blkcrc = save_blkcrc;
-         feecrc = save_feecrc;
-
-         // boost patch 
-         while(event[event_index] <= 0x7FFF) {
-
-            wf->add_sample(event[event_index]);		// collect waveform samples
-            
-            blklen++;
-            save_blkcrc = blkcrc;
-            blkcrc ^= event[event_index];
-
-            feelen++;
-            save_feecrc = feecrc;
-            feecrc ^= event[event_index];
+      tag = event[event_index] & TAG_MASK;
+      if(tag != VOID_TAG)
+         tag_done = true;
 
 #ifdef FSM_DEBUG
-   sprintf(logbuf, "S5      ->      gathering waveform     -> S5 - word: %4.4X", event[event_index]);
-   log->write(DEBUG, logbuf);
-#endif
-            event_index++;
-
-         }	// end while
-
-#ifdef FSM_DEBUG
-   sprintf(logbuf, "S5      ->      exit gathering waveform     - word: %4.4X", event[event_index]);
+   sprintf(logbuf, "tag: %4.4X", tag);
    log->write(DEBUG, logbuf);
 #endif
 
-	 event_index--;
-	 blklen--;
-	 feelen--;
-	 //blkcrc = save_blkcrc;
-	 //feecrc = save_feecrc;
-      }
-
-   } else if(d->type() == DAQ::FzData::Q3) {
-
-      // two energy values and waveform	( 1 word energy1H, 1 word energy1L, 1 word energy2H, 1 word energy2L, 1 word pretrig, 1 word wflen, n samples )
-
-      if(!energy1_done) {
-
-         en->set_value(0, (en->value(0) << 15) + event[event_index]);
-         energy1_done = true;
-         
-      } else if(!energy2_done) {
-
-         if (en->value_size() == 1)		// only first energy is acquired
-            en->add_value(event[event_index]);
-         else {
-            en->set_value(1, (en->value(1) << 15) + event[event_index]);
-            energy2_done = true;
-         }
-
-      } else if(!pretrig_done) {
-
-         wf->set_pretrig(event[event_index]);
-         pretrig_done = true;
-
-      } else if(!wflen_done) {
-
-         // store wflen for later check
-         rd_wflen = event[event_index];
-         wflen_done = true;
-
-      } else { 
-
-         blkcrc = save_blkcrc;
-         feecrc = save_feecrc;
-
-         // boost patch 
-         while(event[event_index] <= 0x7FFF) {
-
-            wf->add_sample(event[event_index]);		// collect waveform samples
-            
-            blklen++;
-            save_blkcrc = blkcrc;
-            blkcrc ^= event[event_index];
-
-            feelen++;
-            save_feecrc = feecrc;
-            feecrc ^= event[event_index];
+   } else if(!wflen_done) {
+   
+      // store wflen for later check
+      rd_wflen = event[event_index];
+      wflen_done = true;
 
 #ifdef FSM_DEBUG
-   sprintf(logbuf, "S5      ->      gathering waveform     -> S5 - word: %4.4X", event[event_index]);
-   log->write(DEBUG, logbuf);
-#endif
-            event_index++;
-
-         }	// end while
-
-#ifdef FSM_DEBUG
-   sprintf(logbuf, "S5      ->      exit gathering waveform     - word: %4.4X", event[event_index]);
+   sprintf(logbuf, "length: %d", rd_wflen);
    log->write(DEBUG, logbuf);
 #endif
 
-	 event_index--;
-	 blklen--;
-	 feelen--;
-	 //blkcrc = save_blkcrc;
-	 //feecrc = save_feecrc;
-      }
-
-   } else if( (d->type() == DAQ::FzData::I1) || (d->type() == DAQ::FzData::I2) || (d->type() == DAQ::FzData::QL1) || (d->type() == DAQ::FzData::ADC) || (d->type() == DAQ::FzData::UNKDT) ) {
-
-     // waveform without energy	( 1 word pretrig, 1 word wflen, n word sample )
-
-     /* if(!sm.pretrig_done) {
-
-        sm.wf->set_pretrig(sm.w.getContent()[WC_DATA]);
-        sm.pretrig_done = true;
-
-     } else */ if(!wflen_done) {
-
-         // store wflen for later check
-         rd_wflen = event[event_index];
-         wflen_done = true;
-
-     } else {
-
-        blkcrc = save_blkcrc;
-        feecrc = save_feecrc;
-
-        if(d->type() == DAQ::FzData::ADC) {
-
-           // fetch sine and cosine from waveform (first six samples)
-
-           int64_t sine = 0; 
-           int64_t cosine = 0;
-
-           // sine (3 words)
-           sine = (event[event_index] << 22) + (event[event_index+1] << 7) + (event[event_index+2] >> 8);
-
-           // cosine (3 words)
-           cosine = (event[event_index+3] << 22) + (event[event_index+4] << 7) + (event[event_index+5] >> 8);
-           
-           if(sine & 0x1000000000)
-              sine = 0xFFFFFFE000000000 + sine;
-
-           if(cosine & 0x1000000000)
-              cosine = 0xFFFFFFE000000000 + cosine;
-
-           d->set_sine(sine);
-           d->set_cosine(cosine);
-
-           for(int ix=0; ix<6; ix++) {
-
-              blklen++; 
-              feelen++;
-           
-              blkcrc ^= event[event_index];
-              feecrc ^= event[event_index];
-
-              event_index++;
-           }
-
-           save_blkcrc = blkcrc;
-           save_feecrc = feecrc;
-        } 
- 
-        // boost patch 
-        while(event[event_index] <= 0x7FFF) {
-
-            wf->add_sample(event[event_index]);		// collect waveform samples
-            
-            blklen++;
-            save_blkcrc = blkcrc;
-            blkcrc ^= event[event_index];
-
-            feelen++;
-            save_feecrc = feecrc;
-            feecrc ^= event[event_index];
-
-#ifdef FSM_DEBUG
-   sprintf(logbuf, "S5      ->      gathering waveform     -> S5 - word: %4.4X", event[event_index]);
-   log->write(DEBUG, logbuf);
-#endif
-            event_index++;
-
-         }	// end while
-
-#ifdef FSM_DEBUG
-   sprintf(logbuf, "S5      ->      exit gathering waveform     - word: %4.4X", event[event_index]);
-   log->write(DEBUG, logbuf);
-#endif
-
-	 event_index--;
-	 blklen--;
-	 feelen--;
-	 //blkcrc = save_blkcrc;
-	 //feecrc = save_feecrc;
-     }
    }
 }
 

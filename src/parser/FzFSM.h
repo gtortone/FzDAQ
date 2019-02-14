@@ -6,11 +6,11 @@
 #include "proto/FzNodeReport.pb.h"
 #include "logger/FzLogger.h"
 
-#define WORDTYPE_NUM	18
+#define WORDTYPE_NUM		18
 #define TRANSITION_NUM	19
-#define STATES_NUM	11
+#define STATES_NUM		11
 
-#define REGID_MASK	0x07FF
+#define REGID_MASK		0x07FF
 #define BLKID_MASK      0x07FF
 #define EC_MASK         0x0FFF
 #define TELID_MASK      0x0001
@@ -25,8 +25,13 @@
 #define nibble(n,word)	((word >> (n*4)) & 0x000F)
 #define bit(n,word)	((word >> n) & 0x0001)
 
-#define PARSE_OK 	1
+#define PARSE_OK		1
 #define PARSE_FAIL	0
+
+#define FMT_BASIC		0
+#define FMT_TAG		1
+#define TAG_MASK		0x0FFF
+#define VOID_TAG		0x3030
 
 // word type id
 //
@@ -57,23 +62,23 @@ static char const* const state_names[] = { "IdleState", "State1", "State2", "Sta
 // 
 //	0	TRANSITION NOT VALID
 //	1	idle 	->	(*)		-> idle
-//	2	idle 	-> 	(EC) 		-> S1
-//	3	S1 	-> 	(TELID) 	-> S2
-//	4	S2 	-> 	(DATA)		-> S3
-//	5	S3 	-> 	(DATA)		-> S3
-//	6	S3 	-> 	(DETID)		-> S4
-//	7	S4 	->	(DATA)		-> S5
-//	8	S5 	-> 	(DATA)		-> S5
-//	9	S5 	->	(DETID)		-> S4
-//     10	S5 	->	(TELID)		-> S2
-//     11	S5 	->	(LENGTH)	-> S6
-//     12	S6 	->	(CRCFE)		-> S7
-//     13	S7 	->	(EC)		-> S1
-//     14	S1 	->	(BLKID)		-> S8
-//     15	S8 	-> 	(LENGTH)	-> S9
-//     16	S9 	->	(CRCBL)		-> S10
-//     17	S10 	->	(EC)		-> S1
-//     18	S10 	->	(REGID)		-> idle
+//	2	idle 	-> (EC) 		-> S1
+//	3	S1 	-> (TELID) 	-> S2
+//	4	S2 	-> (DATA)	-> S3
+//	5	S3 	-> (DATA)	-> S3
+//	6	S3 	-> (DETID)	-> S4
+//	7	S4 	->	(DATA)	-> S5
+//	8	S5 	-> (DATA)	-> S5
+//	9	S5 	->	(DETID)	-> S4
+// 10	S5 	->	(TELID)	-> S2
+// 11	S5 	->	(LENGTH)	-> S6
+// 12	S6 	->	(CRCFE)	-> S7
+// 13	S7 	->	(EC)		-> S1
+// 14	S1 	->	(BLKID)	-> S8
+// 15	S8 	-> (LENGTH)	-> S9
+// 16	S9 	->	(CRCBL)	-> S10
+// 17	S10 	->	(EC)		-> S1
+// 18	S10 	->	(REGID)	-> idle
 
 static char const* const transition_names[] = { "not valid", "idle", "idle->S1", "S1->S2", "S2->S3", "S3->S3", "S3->S4", "S4->S5", "S5->S5", "S5->S4", "S5->S2", "S5->S6", "S6->S7", "S7->S1", "S1->S8", "S8->S9", "S9->S10", "S10->S1", "S10->idle" };
 
@@ -89,20 +94,20 @@ static const uint8_t ttable[WORDTYPE_NUM][STATES_NUM] =
 /* id =  1 - DATA */     	{	 1,	 0,	 4,	 5,	 7,	 8,	 0,	 0,	 0,	 0,	 0 	},
 /* id =  2 - DATA */     	{	 1,	 0,	 4,	 5,	 7,	 8,	 0,	 0,	 0,	 0,	 0 	},
 /* id =  3 - DATA */     	{	 1,	 0,	 4,	 5,	 7,	 8,	 0,	 0,	 0,	 0,	 0 	},
-/* id =  4 - DATA */		{	 1,	 0,	 4,	 5,	 7,	 8,	 0,	 0,	 0,	 0,	 0 	},
+/* id =  4 - DATA */			{	 1,	 0,	 4,	 5,	 7,	 8,	 0,	 0,	 0,	 0,	 0 	},
 /* id =  5 - DATA */     	{	 1,	 0,	 4,	 5,	 7,	 8,	 0,	 0,	 0,	 0,	 0 	},
 /* id =  6 - DATA */     	{	 1,	 0,	 4,	 5,	 7,	 8,	 0,	 0,	 0,	 0,	 0 	},
 /* id =  7 - DATA */     	{	 1,	 0,	 4,	 5,	 7,	 8,	 0,	 0,	 0,	 0,	 0 	},
-/* id =  8 - EMPTY */		{	 0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0      }, // case inside 'process' loop	
-/* id =  9 - TELID */ 		{	 1,	 3,	 0,	 0,	 0,	10,	 0,	 0,	 0,	 0,	 0	},
-/* id = 10 - LENGTH */		{	 1,	 0,	 0,	 0,	 0,	11,	 0,	 0,	15,	 0,	 0	},
-/* id = 11 - CRCFE */		{	 1,	 0,	 0,	 0,	 0,	 0,	12,	 0,	 0,	 0,	 0	},
-/* id = 12 - REGID */		{	 1,	 0,	 0,	 0,	 0,	 0,	 0,	 0,	 0,	 0,	18	},
-/* id = 13 - CRCBL */		{	 1,	 0,	 0,	 0,	 0,	 0,	 0,	 0,	 0,	16,	 0	},
-/* id = 14 - EC */	 	{	 2,	 0,	 0,	 0,	 0,	 0,	 0,	13,	 0, 	 0,	17	},
-/* id = 15 - EOE */ 	 	{	 1,	 0,	 0,	 0,	 0,	 0,	 0,	 0,	 0,	 0,	 0	}, //
-/* id = 16 - DETID */		{	 1,	 0,	 0,	 6,	 0,	 9,	 0,	 0,	 0,	 0,	 0	},
-/* id = 17 - BLKID */		{	 1,	14,	 0,	 0,	 0,	 0,	 0,	 0,	 0,	 0,	 0	}
+/* id =  8 - EMPTY */		{	 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0    }, // case inside 'process' loop	
+/* id =  9 - TELID */ 		{	 1,	 3,	 0,	 0,	 0,	10,	 0,	 0,	 0,	 0,	 0		},
+/* id = 10 - LENGTH */		{	 1,	 0,	 0,	 0,	 0,	11,	 0,	 0,	15,	 0,	 0		},
+/* id = 11 - CRCFE */		{	 1,	 0,	 0,	 0,	 0,	 0,	12,	 0,	 0,	 0,	 0		},
+/* id = 12 - REGID */		{	 1,	 0,	 0,	 0,	 0,	 0,	 0,	 0,	 0,	 0,	18		},
+/* id = 13 - CRCBL */		{	 1,	 0,	 0,	 0,	 0,	 0,	 0,	 0,	 0,	16,	 0		},
+/* id = 14 - EC */			{	 2,	 0,	 0,	 0,	 0,	 0,	 0,	13,	 0, 	 0,	17		},
+/* id = 15 - EOE */			{	 1,	 0,	 0,	 0,	 0,	 0,	 0,	 0,	 0,	 0,	 0		}, 
+/* id = 16 - DETID */		{	 1,	 0,	 0,	 6,	 0,	 9,	 0,	 0,	 0,	 0,	 0		},
+/* id = 17 - BLKID */		{	 1,	14,	 0,	 0,	 0,	 0,	 0,	 0,	 0,	 0,	 0		}
 
    };	
 
@@ -135,8 +140,10 @@ private:
    void trans04(void);
    void trans05(void);
    void trans06(void);
-   void trans07(void);
-   void trans08(void);
+   void trans07_basic(void);
+   void trans07_tag(void);
+   void trans08_basic(void);
+   void trans08_tag(void);
    void trans09(void);
    void trans10(void);
    void trans11(void);
@@ -162,6 +169,9 @@ private:
 
    uint16_t tmp_ec;
    uint16_t tmp_rawec;
+
+   uint16_t tag;
+   bool tag_done;
 
    bool energy1_done;
    bool energy2_done;
@@ -194,8 +204,9 @@ public:
    FzFSM(void);
 
    bool event_is_empty;
+   int evformat;
 
-   void init(void);
+   void init(int evf);
    void initlog(FzLogger *l);
 
    void import(unsigned short int *evraw, uint32_t size, DAQ::FzEvent *e);

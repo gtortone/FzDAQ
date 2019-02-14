@@ -31,6 +31,7 @@ private:
 
    RCstate rcstate;
 
+   int evformat;
    FzFSM sm;
    DAQ::FzEvent ev;
  
@@ -46,9 +47,9 @@ private:
 public:
 
 #ifdef AMQLOG_ENABLED
-   FzParser(unsigned int id, std::string cfgfile, zmq::context_t &ctx, cms::Connection *JMSconn);
+   FzParser(unsigned int id, std::string cfgfile, zmq::context_t &ctx, cms::Connection *JMSconn, int evf);
 #else
-   FzParser(unsigned int id, std::string cfgfile, zmq::context_t &ctx);
+   FzParser(unsigned int id, std::string cfgfile, zmq::context_t &ctx, int evf);
 #endif
 
    void init(void);

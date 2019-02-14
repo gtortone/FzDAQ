@@ -41,6 +41,8 @@ int main(int argc, char *argv[]) {
    std::string netdev, devip;
    unsigned int port;
    std::string brokerURI;
+   int evformat = 0;
+   std::string evformat_str;
 
    FzReader *rd = NULL;
    std::vector<FzParser *> psr_array;	// vector of (Fzparser *)
@@ -169,6 +171,24 @@ int main(int argc, char *argv[]) {
       std::cout << INFOTAG << "log server connection successfully" << std::endl;
    }
 #endif
+
+   // configure event format
+   if(cfg.lookupValue("fzdaq.global.evformat", evformat_str)) {
+
+      if(evformat_str == "basic")
+         evformat = 0;
+      else if(evformat_str == "tag")
+         evformat = 1;
+      else { 
+         std::cout << ERRTAG << "FzDAQ: unable to parse event format" << std::endl;
+         exit(1);
+      }
+   } else {
+         std::cout << ERRTAG << "FzDAQ: event format not specified in configuration file" << std::endl;
+         exit(1);
+   }
+
+   std::cout << INFOTAG << "*** Selected event format: " << evformat_str << " ***" << std::endl; 
 
    std::cout << INFOTAG << "FzDAQ profile selected: " << profile << std::endl;
 
@@ -314,9 +334,9 @@ int main(int argc, char *argv[]) {
       for(i=0; i < nthreads; i++) {
 
 #ifdef AMQLOG_ENABLED
-         psr_array.push_back(new FzParser(i, cfgfile, context, JMSconn));
+         psr_array.push_back(new FzParser(i, cfgfile, context, JMSconn, evformat));
 #else
-         psr_array.push_back(new FzParser(i, cfgfile, context));       
+         psr_array.push_back(new FzParser(i, cfgfile, context, evformat));       
 #endif
 
          if(!psr_array[i]) {

@@ -3,11 +3,11 @@
 #include "logger/FzLogger.h"
 
 #ifdef AMQLOG_ENABLED
-FzParser::FzParser(unsigned int id, std::string cfgfile, zmq::context_t &ctx, cms::Connection *JMSconn) :
-   context(ctx), AMQconn(JMSconn) {
+FzParser::FzParser(unsigned int id, std::string cfgfile, zmq::context_t &ctx, cms::Connection *JMSconn, int evf) :
+   context(ctx), AMQconn(JMSconn), evformat(evf) {
 #else
-FzParser::FzParser(unsigned int id, std::string cfgfile, zmq::context_t &ctx) :
-   context(ctx) {
+FzParser::FzParser(unsigned int id, std::string cfgfile, zmq::context_t &ctx, int evf) :
+   context(ctx), evformat(evf) {
 #endif
 
    std::stringstream filename, msg;
@@ -31,7 +31,7 @@ FzParser::FzParser(unsigned int id, std::string cfgfile, zmq::context_t &ctx) :
    msg.str("");
 
    sm.initlog(&log);
-   sm.init();
+   sm.init(evformat);
 
    std::string ep;
 
@@ -154,7 +154,7 @@ void FzParser::process(void) {
                psr_report.set_in_bytes( psr_report.in_bytes() + message.size() );
                psr_report.set_in_events( psr_report.in_events() + 1 );
            
-               sm.init();
+               sm.init(evformat);
                sm.import(bufusint, bufsize, &ev);
                retval = sm.process();
 
