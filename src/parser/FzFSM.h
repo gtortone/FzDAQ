@@ -200,6 +200,7 @@ private:
    bool err_in_event;
 
    FzLogger *log;
+   FzLogger logsimple;
    char logbuf[256];
 
    Report::FzFSM fsm_report;
@@ -220,7 +221,7 @@ public:
    int evformat;
 
    void init(int evf);
-   void initlog(FzLogger *l);
+   void initlog(FzLogger *l, std::string logdir, int id);
 
    void import(unsigned short int *evraw, uint32_t size, DAQ::FzEvent *e);
 

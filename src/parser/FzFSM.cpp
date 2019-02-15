@@ -20,9 +20,18 @@ void FzFSM::init(int evf) {
 	evformat = evf;
 }
 
-void FzFSM::initlog(FzLogger *l) {
+void FzFSM::initlog(FzLogger *l, std::string logdir, int id) {
 
-   log = l;
+	std::stringstream filename;
+   filename << logdir << "/fzparser.log." << id;
+
+	// TO FIX
+   //log = l;
+	logsimple.setFileConnection("fzparser", filename.str());
+	//logsimple.write(DEBUG, "test from logsimple");
+	// TO FIX
+
+	log = &logsimple;
 
 #ifdef FSM_DEBUG
    sprintf(logbuf, "state machine log initialized");
@@ -834,6 +843,15 @@ void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
             nsample++;
 
          }	// end while nsample
+
+#ifdef FSM_DEBUG
+	sprintf(logbuf, "S5      ->      exit gathering waveform     - word: %4.4X", event[event_index]);
+	log->write(DEBUG, logbuf);
+#endif
+
+			event_index--;
+			blklen--;
+			feelen--;
 
 		} else if(tag == TAG_SLOW) {			// 0x7001
 

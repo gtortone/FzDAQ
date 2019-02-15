@@ -30,7 +30,7 @@ FzParser::FzParser(unsigned int id, std::string cfgfile, zmq::context_t &ctx, in
    log.write(INFO, msg.str());
    msg.str("");
 
-   sm.initlog(&log);
+   sm.initlog(&log, logbase, id);
    sm.init(evformat);
 
    std::string ep;
