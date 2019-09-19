@@ -23,20 +23,16 @@ void FzFSM::init(int evf) {
 void FzFSM::initlog(FzLogger *l, std::string logdir, int id) {
 
 	std::stringstream filename;
-   filename << logdir << "/fzparser.log." << id;
+   filename << logdir << "/fzfsm.log." << id;
+   
+   log = l;
+	log->setFileConnection("fzfsm." + id, filename.str());
+	log->write(DEBUG, "test from log pointer");
 
-	// TO FIX
-   //log = l;
-	logsimple.setFileConnection("fzparser", filename.str());
-	//logsimple.write(DEBUG, "test from logsimple");
-	// TO FIX
-
-	log = &logsimple;
-
-#ifdef FSM_DEBUG
+   #ifdef FSM_DEBUG
    sprintf(logbuf, "state machine log initialized");
    log->write(DEBUG, logbuf);
-#endif
+   #endif
 
 }
 
@@ -110,10 +106,10 @@ int FzFSM::process(void) {
    fsm_report.set_in_events( fsm_report.in_events() + 1 );
    fsm_report.set_in_bytes( fsm_report.in_bytes() + (event_size*2) );	// event_size[i] contains 2 bytes
 
-#ifdef FSM_DEBUG
+   #ifdef FSM_DEBUG
    sprintf(logbuf, "received event size: %d", event_size);
    log->write(DEBUG, logbuf);
-#endif
+   #endif
 
    for(event_index=0; event_index<event_size; event_index++) {
 
@@ -121,9 +117,9 @@ int FzFSM::process(void) {
 
       if(word_id == 8) {	// EMPTY word
 
-#ifdef FSM_DEBUG
+         #ifdef FSM_DEBUG
          log->write(DEBUG, "empty word (0x8080) detected");
-#endif
+         #endif
          continue;	// no transition
       }
       
@@ -133,13 +129,13 @@ int FzFSM::process(void) {
 
          case 0: // transition not valid
 
-#ifdef FSM_DEBUG
+            #ifdef FSM_DEBUG
             sprintf(logbuf, "transition not valid WORD = %4.4X - word_id = %d - curr_state = %d - trans_id = %d\n", event[event_index], int(word_id), int(state_id), int(trans_id));
             log->write(DEBUG, logbuf);
-#endif
+            #endif
 
             state_id = 0; 	// reset FSM	
-	    ev->Clear();	// clear incomplete event
+	         ev->Clear();	// clear incomplete event
             fsm_report.set_state_invalid( fsm_report.state_invalid() + 1 );
             break;		
  
@@ -188,17 +184,26 @@ int FzFSM::process(void) {
             break;
                      
          case 9:
-            trans09();		// S5      ->      (DETID)         -> S4
+            if(evformat == FMT_BASIC)
+               trans09_basic();		// S5      ->      (DETID)         -> S4
+            else if(evformat == FMT_TAG)
+               trans09_tag();
             state_id = 4;
             break;
                      
          case 10:
-            trans10();		// S5      ->      (TELID)         -> S2
+            if(evformat == FMT_BASIC)
+               trans10_basic();		// S5      ->      (TELID)         -> S2
+            else if(evformat == FMT_TAG)
+               trans10_tag();
             state_id = 2;
             break;
                      
          case 11:
-            trans11();		// S5      ->      (LENGTH)        -> S6
+            if(evformat == FMT_BASIC)
+            trans11_basic();		// S5      ->      (LENGTH)        -> S6
+            else if(evformat == FMT_TAG)
+               trans11_tag();
             state_id = 6;
             break;
                      
@@ -254,10 +259,10 @@ int FzFSM::process(void) {
 
 void FzFSM::update_blk_len(void) {
    blklen++;
-#ifdef FSM_DEBUG
+   #ifdef FSM_DEBUG
    sprintf(logbuf, "blklen: %d", blklen);
    log->write(DEBUG, logbuf);
-#endif
+   #endif
 }
 
 void FzFSM::update_blk_crc(void) {
@@ -290,25 +295,25 @@ void FzFSM::update_fee(void) {
 /*
 void FzFSM::trans00(void) {	// transition not valid
 
-#ifdef FSM_DEBUG
+   #ifdef FSM_DEBUG
    std::cout << "transition not valid" << std::endl;
-#endif
+   #endif
 }
 
 void FzFSM::trans01(void) {	// idle    ->      (*)             -> idle
 
-#ifdef FSM_DEBUG
+   #ifdef FSM_DEBUG
    std::cout << "idle    ->      (*)             -> idle" << std::endl;
-#endif
+   #endif
 }
 */
 
 void FzFSM::trans02(void) {	// idle    ->      (EC)            -> S1
 
-#ifdef FSM_DEBUG
+   #ifdef FSM_DEBUG
    sprintf(logbuf, "idle    ->      (EC)            -> S1 - word: %4.4X", event[event_index]);
    log->write(DEBUG, logbuf);
-#endif
+   #endif
 
    unsigned short int ec = event[event_index] & EC_MASK;
 
@@ -319,10 +324,12 @@ void FzFSM::trans02(void) {	// idle    ->      (EC)            -> S1
    blk->set_crc_error(true);
 
    blklen = 1;
-#ifdef FSM_DEBUG
+   
+   #ifdef FSM_DEBUG
    sprintf(logbuf, "blklen: %d", blklen);
    log->write(DEBUG, logbuf);
-#endif
+   #endif
+
    blkcrc = event[event_index];
 
    tmp_rawec = event[event_index];
@@ -332,10 +339,10 @@ void FzFSM::trans02(void) {	// idle    ->      (EC)            -> S1
 
 void FzFSM::trans03(void) {	// S1      ->      (TELID)         -> S2
 
-#ifdef FSM_DEBUG
+   #ifdef FSM_DEBUG
    sprintf(logbuf, "S1      ->      (TELID)         -> S2 - word: %4.4X", event[event_index]);
    log->write(DEBUG, logbuf);
-#endif
+   #endif
 
    DAQ::FzHit::FzTelescope telid = (DAQ::FzHit::FzTelescope) (event[event_index] & TELID_MASK);
    DAQ::FzFee::FzFec feeid = (DAQ::FzFee::FzFec) ((event[event_index] & FEEID_MASK) >> 1);
@@ -370,10 +377,10 @@ void FzFSM::trans03(void) {	// S1      ->      (TELID)         -> S2
 
 void FzFSM::trans04(void) {	// S2      ->      (DATA)          -> S3
 
-#ifdef FSM_DEBUG
+   #ifdef FSM_DEBUG
    sprintf(logbuf, "S2      ->      (DATA)          -> S3 - word: %4.4X", event[event_index]);
    log->write(DEBUG, logbuf);
-#endif
+   #endif
 	
 	update_blk();
 	update_fee();
@@ -384,10 +391,10 @@ void FzFSM::trans04(void) {	// S2      ->      (DATA)          -> S3
 
 void FzFSM::trans05(void) {	// S3      ->      (DATA)          -> S3
 
-#ifdef FSM_DEBUG
+   #ifdef FSM_DEBUG
    sprintf(logbuf, "S3      ->      (DATA)          -> S3 - word: %4.4X", event[event_index]);
    log->write(DEBUG, logbuf);
-#endif
+   #endif
 
 	update_blk();
 	update_fee();
@@ -398,10 +405,10 @@ void FzFSM::trans05(void) {	// S3      ->      (DATA)          -> S3
 
 void FzFSM::trans06(void) {	// S3      ->      (DETID)         -> S4
 
-#ifdef FSM_DEBUG
+   #ifdef FSM_DEBUG
    sprintf(logbuf, "S3      ->      (DETID)         -> S4 - word: %4.4X", event[event_index]);
    log->write(DEBUG, logbuf); 
-#endif
+   #endif
 
    DAQ::FzFee::FzFec feeid = (DAQ::FzFee::FzFec) ((event[event_index] & FEEID_MASK) >> 1);
    unsigned short int detid = (event[event_index] & DETID_MASK) >> 5;
@@ -444,66 +451,82 @@ void FzFSM::trans06(void) {	// S3      ->      (DETID)         -> S4
    if (feeid == DAQ::FzFee::ADCF) {	// ADC
 
       d->set_type(DAQ::FzData::ADC);
-      wf = d->mutable_waveform();
-      wf->set_len_error(true);
+      if(evformat == FMT_BASIC) {
+         wf = d->mutable_waveform();
+         wf->set_len_error(true);
+      }
 
    } else if (dtype == DAQ::FzData::QH1) {
 
       d->set_type(DAQ::FzData::QH1);
-      en = d->mutable_energy();
-      en->set_len_error(true);
-      wf = d->mutable_waveform();
-      wf->set_len_error(true);
+      if(evformat == FMT_BASIC) {
+         en = d->mutable_energy();
+         en->set_len_error(true);
+         wf = d->mutable_waveform();
+         wf->set_len_error(true);
+      }
 
    } else if(dtype == DAQ::FzData::I1) {
 
       d->set_type(DAQ::FzData::I1);
-      wf = d->mutable_waveform();
-      wf->set_len_error(true);
+      if(evformat == FMT_BASIC) {
+         wf = d->mutable_waveform();
+         wf->set_len_error(true);
+      }
 
    } else if(dtype == DAQ::FzData::QL1) {
 
       d->set_type(DAQ::FzData::QL1);
-      wf = d->mutable_waveform();
-      wf->set_len_error(true);
+      if(evformat == FMT_BASIC) {
+         wf = d->mutable_waveform();
+         wf->set_len_error(true);
+      }
 
    } else if(dtype == DAQ::FzData::Q2) {
 
       d->set_type(DAQ::FzData::Q2);
-      en = d->mutable_energy();
-      en->set_len_error(true);
-      wf = d->mutable_waveform();
-      wf->set_len_error(true);
+      if(evformat == FMT_BASIC) {
+         en = d->mutable_energy();
+         en->set_len_error(true);
+         wf = d->mutable_waveform();
+         wf->set_len_error(true);
+      }
 
    } else if(dtype == DAQ::FzData::I2) {
 
       d->set_type(DAQ::FzData::I2);
-      wf = d->mutable_waveform();
-      wf->set_len_error(true);
+      if(evformat == FMT_BASIC) {
+         wf = d->mutable_waveform();
+         wf->set_len_error(true);
+      }
 
    } else if(dtype == DAQ::FzData::Q3) {
 
       d->set_type(DAQ::FzData::Q3);
-      en = d->mutable_energy();
-      en->set_len_error(true);
-      wf = d->mutable_waveform();
-      wf->set_len_error(true);
+      if(evformat == FMT_BASIC) {
+         en = d->mutable_energy();
+         en->set_len_error(true);
+         wf = d->mutable_waveform();
+         wf->set_len_error(true);
+      }
 
    } else {	// unknown datatype
     
       d->set_type(DAQ::FzData::UNKDT);
-      wf = d->mutable_waveform();
-      wf->set_len_error(true);
+      if(evformat == FMT_BASIC) {
+         wf = d->mutable_waveform();
+         wf->set_len_error(true);
+      }
       err_in_event = true;
    }
 }
 
 void FzFSM::trans07_basic(void) {	// S4      ->      (DATA)          -> S5
 
-#ifdef FSM_DEBUG
+   #ifdef FSM_DEBUG
    sprintf(logbuf, "S4      ->      (DATA)          -> S5 - word: %4.4X", event[event_index]);
    log->write(DEBUG, logbuf);
-#endif
+   #endif
 
 	// init data flags
 	energy1_done = energy2_done = pretrig_done = wflen_done = false;
@@ -536,10 +559,10 @@ void FzFSM::trans07_basic(void) {	// S4      ->      (DATA)          -> S5
 
 void FzFSM::trans07_tag(void) {	// S4      ->      (DATA)          -> S5
 
-#ifdef FSM_DEBUG
+   #ifdef FSM_DEBUG
    sprintf(logbuf, "S4      ->      (DATA)          -> S5 - word: %4.4X", event[event_index]);
    log->write(DEBUG, logbuf);
-#endif
+   #endif
 
 	// init data flags
 	tag_done = wflen_done = false;
@@ -552,23 +575,47 @@ void FzFSM::trans07_tag(void) {	// S4      ->      (DATA)          -> S5
    if(!tag_done) {
 
       tag = event[event_index];
-		if(tag != TAG_VOID)
-         tag_done = true;
+		if(tag != TAG_VOID) {
+       
+         if(tag == TAG_PRETRIGGER) {  
+            if(d->has_waveform() == false) {
+               wf = d->mutable_waveform();
+               wf->set_len_error(true);
+            }
+         } else if(tag == TAG_WAVEFORM) { 
+            if(d->has_waveform() == false) {
+               wf = d->mutable_waveform();
+               wf->set_len_error(true);
+            }
+         } else if(tag == TAG_SLOW) { 
+            if(d->has_energy() == false) {
+               en = d->mutable_energy();
+               en->set_len_error(true);
+            }
+         } else if(tag == TAG_FAST) { 
+            if(d->has_energy() == false) {
+               en = d->mutable_energy();
+               en->set_len_error(true);
+            }
+         } 
 
-#ifdef FSM_DEBUG
+         tag_done = true;
+      }
+
+   #ifdef FSM_DEBUG
 	sprintf(logbuf, "tag: %4.4X", tag);
 	log->write(DEBUG, logbuf);
-#endif
+   #endif
 
    }
 }
 
 void FzFSM::trans08_basic(void) {	// S5      ->      (DATA)          -> S5
 
-#ifdef FSM_DEBUG
+   #ifdef FSM_DEBUG
    sprintf(logbuf, "S5      ->      (DATA)          -> S5 - word: %4.4X", event[event_index]);
    log->write(DEBUG, logbuf);
-#endif
+   #endif
 
 	update_blk();
 	update_fee();
@@ -609,25 +656,25 @@ void FzFSM::trans08_basic(void) {	// S5      ->      (DATA)          -> S5
 				save_feecrc = feecrc;
 				update_fee();
 
-#ifdef FSM_DEBUG
-	sprintf(logbuf, "S5      ->      gathering waveform     -> S5 - word: %4.4X", event[event_index]);
-	log->write(DEBUG, logbuf);
-#endif
+            #ifdef FSM_DEBUG
+	         sprintf(logbuf, "S5      ->      gathering waveform     -> S5 - word: %4.4X", event[event_index]);
+	         log->write(DEBUG, logbuf);
+            #endif
 				event_index++;
 
 			}	// end while
 
-#ifdef FSM_DEBUG
-	sprintf(logbuf, "S5      ->      exit gathering waveform     - word: %4.4X", event[event_index]);
-	log->write(DEBUG, logbuf);
-#endif
+         #ifdef FSM_DEBUG
+	      sprintf(logbuf, "S5      ->      exit gathering waveform     - word: %4.4X", event[event_index]);
+	      log->write(DEBUG, logbuf);
+         #endif
 
-	 event_index--;
-	 blklen--;
-	 feelen--;
-	 //blkcrc = save_blkcrc;
-	 //feecrc = save_feecrc;
-		}
+	      event_index--;
+	      blklen--;
+	      feelen--;
+	      //blkcrc = save_blkcrc;
+	      //feecrc = save_feecrc;
+	   }
 
 	} else if(d->type() == DAQ::FzData::Q3) {
 
@@ -674,24 +721,25 @@ void FzFSM::trans08_basic(void) {	// S5      ->      (DATA)          -> S5
 				save_feecrc = feecrc;
 				update_fee();
 
-#ifdef FSM_DEBUG
-	sprintf(logbuf, "S5      ->      gathering waveform     -> S5 - word: %4.4X", event[event_index]);
-	log->write(DEBUG, logbuf);
-#endif
+            #ifdef FSM_DEBUG
+	         sprintf(logbuf, "S5      ->      gathering waveform     -> S5 - word: %4.4X", event[event_index]);
+	         log->write(DEBUG, logbuf);
+            #endif
+
 				event_index++;
 
 			}	// end while
 
-#ifdef FSM_DEBUG
-	sprintf(logbuf, "S5      ->      exit gathering waveform     - word: %4.4X", event[event_index]);
-	log->write(DEBUG, logbuf);
-#endif
+         #ifdef FSM_DEBUG
+	      sprintf(logbuf, "S5      ->      exit gathering waveform     - word: %4.4X", event[event_index]);
+	      log->write(DEBUG, logbuf);
+         #endif
 
-	 event_index--;
-	 blklen--;
-	 feelen--;
-	 //blkcrc = save_blkcrc;
-	 //feecrc = save_feecrc;
+	      event_index--;
+	      blklen--;
+	      feelen--;
+	      //blkcrc = save_blkcrc;
+	      //feecrc = save_feecrc;
 		}
 
 	} else if( (d->type() == DAQ::FzData::I1) || (d->type() == DAQ::FzData::I2) || (d->type() == DAQ::FzData::QL1) || (d->type() == DAQ::FzData::ADC) || (d->type() == DAQ::FzData::UNKDT) ) {
@@ -759,34 +807,35 @@ void FzFSM::trans08_basic(void) {	// S5      ->      (DATA)          -> S5
 				save_feecrc = feecrc;
 				update_fee();
 
-#ifdef FSM_DEBUG
-	sprintf(logbuf, "S5      ->      gathering waveform     -> S5 - word: %4.4X", event[event_index]);
-	log->write(DEBUG, logbuf);
-#endif
+            #ifdef FSM_DEBUG
+	         sprintf(logbuf, "S5      ->      gathering waveform     -> S5 - word: %4.4X", event[event_index]);
+	         log->write(DEBUG, logbuf);
+            #endif
+
 				event_index++;
 
 			}	// end while
 
-#ifdef FSM_DEBUG
-	sprintf(logbuf, "S5      ->      exit gathering waveform     - word: %4.4X", event[event_index]);
-	log->write(DEBUG, logbuf);
-#endif
+         #ifdef FSM_DEBUG
+	      sprintf(logbuf, "S5      ->      exit gathering waveform     - word: %4.4X", event[event_index]);
+	      log->write(DEBUG, logbuf);
+         #endif
 
-	 event_index--;
-	 blklen--;
-	 feelen--;
-	 //blkcrc = save_blkcrc;
-	 //feecrc = save_feecrc;
-	  }
+	      event_index--;
+	      blklen--;
+	      feelen--;
+	      //blkcrc = save_blkcrc;
+	      //feecrc = save_feecrc;
+	   }
 	}
 }
 
 void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
 
-#ifdef FSM_DEBUG
+   #ifdef FSM_DEBUG
    sprintf(logbuf, "S5      ->      (DATA)          -> S5 - word: %4.4X", event[event_index]);
    log->write(DEBUG, logbuf);
-#endif
+   #endif
 
 	update_blk();
 	update_fee();
@@ -795,24 +844,48 @@ void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
    if(!tag_done) {
 
       tag = event[event_index];
-      if(tag != TAG_VOID)
+      if(tag != TAG_VOID) {
+
+         if(tag == TAG_PRETRIGGER) {  
+            if(d->has_waveform() == false) {
+               wf = d->mutable_waveform();
+               wf->set_len_error(true);
+            }
+         } else if(tag == TAG_WAVEFORM) { 
+            if(d->has_waveform() == false) {
+               wf = d->mutable_waveform();
+               wf->set_len_error(true);
+            }
+         } else if(tag == TAG_SLOW) { 
+            if(d->has_energy() == false) {
+               en = d->mutable_energy();
+               en->set_len_error(true);
+            }
+         } else if(tag == TAG_FAST) { 
+            if(d->has_energy() == false) {
+               en = d->mutable_energy();
+               en->set_len_error(true);
+            }
+         } 
+         
          tag_done = true;
+      }
 
-#ifdef FSM_DEBUG
-   sprintf(logbuf, "tag: %4.4X", tag);
-   log->write(DEBUG, logbuf);
-#endif
+      #ifdef FSM_DEBUG
+      sprintf(logbuf, "tag: %4.4X", tag);
+      log->write(DEBUG, logbuf);
+      #endif
 
-   } else if(!wflen_done) {
+   } else if(!wflen_done) {         // wflen is used to check tag data length 
    
       // store wflen for later check
       rd_wflen = event[event_index];
       wflen_done = true;
 
-#ifdef FSM_DEBUG
-   sprintf(logbuf, "length: %d", rd_wflen);
-   log->write(DEBUG, logbuf);
-#endif
+      #ifdef FSM_DEBUG
+      sprintf(logbuf, "length: %d", rd_wflen);
+      log->write(DEBUG, logbuf);
+      #endif
 
    } else {
 
@@ -827,6 +900,11 @@ void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
 			int nsample = 0;
          while (nsample <= rd_wflen) {
 
+            #ifdef FSM_DEBUG
+            sprintf(logbuf, "wf->sample_size(): %d", wf->sample_size());
+            log->write(DEBUG, logbuf);
+            #endif
+
 				wf->add_sample(event[event_index]);		// collect waveform samples
 				
 				save_blkcrc = blkcrc;
@@ -835,19 +913,20 @@ void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
 				save_feecrc = feecrc;
 				update_fee();
 
-#ifdef FSM_DEBUG
-	sprintf(logbuf, "S5      ->      gathering waveform     -> S5 - word: %4.4X", event[event_index]);
-	log->write(DEBUG, logbuf);
-#endif
+            #ifdef FSM_DEBUG
+	         sprintf(logbuf, "S5      ->      gathering waveform     -> S5 - word: %4.4X", event[event_index]);
+	         log->write(DEBUG, logbuf);
+            #endif
+
 				event_index++;
             nsample++;
 
          }	// end while nsample
 
-#ifdef FSM_DEBUG
-	sprintf(logbuf, "S5      ->      exit gathering waveform     - word: %4.4X", event[event_index]);
-	log->write(DEBUG, logbuf);
-#endif
+         #ifdef FSM_DEBUG
+	      sprintf(logbuf, "S5      ->      exit gathering waveform     - word: %4.4X", event[event_index]);
+	      log->write(DEBUG, logbuf);
+         #endif
 
 			event_index--;
 			blklen--;
@@ -900,8 +979,21 @@ void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
 			d->set_baseline(event[event_index]);
 		}
 
-		// check length...
-		// ...
+      // verify waveform length of event just acquired
+
+      if( tag == TAG_WAVEFORM) {
+
+         if (rd_wflen == wf->sample_size())
+            wf->set_len_error(false);
+         else {
+            sprintf(logbuf, "(S5->S4) B%d.%s.Tel%s.%s-%s - EC: %d (0x%X) WAVEFORM len error (value read: %d (0x%X) - value calc: %d (0x%X) - current word: 0x%X", blk->blkid(), FzFec_str[hit->feeid()], \
+            FzTelescope_str[hit->telid()], FzDetector_str[hit->detid()], FzDataType_str[d->type()], ev->ec(), ev->ec(), rd_wflen, rd_wflen, wf->sample_size(), \
+            wf->sample_size(), event[event_index]);
+            log->write(WARN, logbuf);
+            wf->set_len_error(true);
+            err_in_event = true;
+         }
+      }
 
       // prepare for next tag
 		tag_done = wflen_done = false;
@@ -909,12 +1001,12 @@ void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
    }
 }
 
-void FzFSM::trans09(void) {	// S5      ->      (DETID)         -> S4
+void FzFSM::trans09_basic(void) {	   // S5      ->      (DETID)         -> S4
 
-#ifdef FSM_DEBUG
+   #ifdef FSM_DEBUG
    sprintf(logbuf, "S5      ->      (DETID)         -> S4 - word: %4.4X", event[event_index]);
    log->write(DEBUG, logbuf);
-#endif
+   #endif
 
    unsigned int gttag;
    unsigned int dettag;
@@ -1099,12 +1191,177 @@ void FzFSM::trans09(void) {	// S5      ->      (DETID)         -> S4
    }
 }
 
-void FzFSM::trans10(void) {	// S5      ->      (TELID)         -> S2
+void FzFSM::trans09_tag(void) {	   // S5      ->      (DETID)         -> S4
 
-#ifdef FSM_DEBUG
+   #ifdef FSM_DEBUG
+   sprintf(logbuf, "S5      ->      (DETID)         -> S4 - word: %4.4X", event[event_index]);
+   log->write(DEBUG, logbuf);
+   #endif
+
+   unsigned int gttag;
+   unsigned int dettag;
+   DAQ::FzFee::FzFec feeid = (DAQ::FzFee::FzFec) ((event[event_index] & FEEID_MASK) >> 1);
+   DAQ::FzHit::FzTelescope telid = (DAQ::FzHit::FzTelescope) (event[event_index] & TELID_MASK);
+   unsigned short int detid = (event[event_index] & DETID_MASK) >> 5;
+   unsigned short int dtype = (event[event_index] & DTYPE_MASK) >> 8;
+
+	update_blk();
+	update_fee();
+
+   // verify waveform length of event just acquired
+
+   if( tag == TAG_WAVEFORM) {
+
+      if (rd_wflen == wf->sample_size())
+         wf->set_len_error(false);
+      else {
+         sprintf(logbuf, "(S5->S4) B%d.%s.Tel%s.%s-%s - EC: %d (0x%X) WAVEFORM len error (value read: %d (0x%X) - value calc: %d (0x%X) - current word: 0x%X", blk->blkid(), FzFec_str[hit->feeid()], \
+         FzTelescope_str[hit->telid()], FzDetector_str[hit->detid()], FzDataType_str[d->type()], ev->ec(), ev->ec(), rd_wflen, rd_wflen, wf->sample_size(), \
+         wf->sample_size(), event[event_index]);
+         log->write(WARN, logbuf);
+         wf->set_len_error(true);
+         err_in_event = true;
+      }
+   }
+
+   // copy previous hit values
+   gttag = hit->gttag();
+   dettag = hit->dettag();
+
+   hit = fee->add_hit();
+   hit->set_ec(ev->ec());
+   hit->set_gttag(gttag);
+   hit->set_dettag(dettag);
+
+   // validate range of FEEID
+   if( (feeid < DAQ::FzFee::FEC0) || (feeid > DAQ::FzFee::ADCF) )
+      feeid = DAQ::FzFee::UNKFEC;	// unknown fec  
+   else
+      feeid = (DAQ::FzFee::FzFec) feeid;
+
+   // validate range of TELID
+   if( (telid < DAQ::FzHit::A) || (telid > DAQ::FzHit::B) )
+      telid = DAQ::FzHit::UNKT;	// unknown telescope
+   else
+      telid = (DAQ::FzHit::FzTelescope) telid;
+
+   if( (detid == 0) && (dtype == 0)) {
+
+      dtype = DAQ::FzData::QH1;
+
+   } else if( (detid == 0) && (dtype == 1)) {
+
+      dtype = DAQ::FzData::I1; 
+      
+   } else if( (detid == 0) && (dtype == 2)) {
+
+      dtype = DAQ::FzData::QL1;
+
+   } else if( (detid == 1) && (dtype == 0)) {
+
+      dtype = DAQ::FzData::Q2; 
+   
+   } else if( (detid == 1) && (dtype == 1)) {
+
+      dtype = DAQ::FzData::I2;
+   
+   } else if( (detid == 2) && (dtype == 0)) {
+
+      dtype = DAQ::FzData::Q3;
+
+   } else {
+	
+     dtype = DAQ::FzData::UNKDT;
+   }
+
+   //hit->set_detid((DAQ::FzHit::FzDetector) detid);      
+   hit->set_detid((DAQ::FzHit::FzDetector) detid);      
+   hit->set_telid((DAQ::FzHit::FzTelescope) telid);
+   hit->set_feeid((DAQ::FzHit::FzFec) feeid);
+
+   d = hit->add_data();
+
+   if (feeid == DAQ::FzFee::ADCF) {       // ADC
+
+      d->set_type(DAQ::FzData::ADC);
+
+   } else if(dtype == DAQ::FzData::QH1) {
+
+      d->set_type(DAQ::FzData::QH1);
+
+   } else if(dtype == DAQ::FzData::I1) {
+
+      d->set_type(DAQ::FzData::I1);
+
+   } else if(dtype == DAQ::FzData::QL1) {
+
+      d->set_type(DAQ::FzData::QL1);
+
+   } else if(dtype == DAQ::FzData::Q2) {
+
+      d->set_type(DAQ::FzData::Q2);
+
+   } else if(dtype == DAQ::FzData::I2) {
+
+      d->set_type(DAQ::FzData::I2);
+
+   } else if(dtype == DAQ::FzData::Q3) {
+
+      d->set_type(DAQ::FzData::Q3);
+
+   } else {
+
+      d->set_type(DAQ::FzData::UNKDT);
+      err_in_event = true;
+   }
+
+   // store tag but skip void tag (0x3030)
+   /*
+   if(!tag_done) {
+
+      tag = event[event_index];
+		if(tag != TAG_VOID) {
+       
+         if(tag == TAG_PRETRIGGER) {  
+            if(d->has_waveform() == false) {
+               wf = d->mutable_waveform();
+               wf->set_len_error(true);
+            }
+         } else if(tag == TAG_WAVEFORM) { 
+            if(d->has_waveform() == false) {
+               wf = d->mutable_waveform();
+               wf->set_len_error(true);
+            }
+         } else if(tag == TAG_SLOW) { 
+            if(d->has_energy() == false) {
+               en = d->mutable_energy();
+               en->set_len_error(true);
+            }
+         } else if(tag == TAG_FAST) { 
+            if(d->has_energy() == false) {
+               en = d->mutable_energy();
+               en->set_len_error(true);
+            }
+         } 
+
+         tag_done = true;
+      }
+
+      #ifdef FSM_DEBUG
+	   sprintf(logbuf, "tag: %4.4X", tag);
+	   log->write(DEBUG, logbuf);
+      #endif
+
+   }
+   */
+}
+
+void FzFSM::trans10_basic(void) {	   // S5      ->      (TELID)         -> S2
+
+   #ifdef FSM_DEBUG
    sprintf(logbuf, "S5      ->      (TELID)         -> S2 - word: %4.4X", event[event_index]);
    log->write(DEBUG, logbuf);
-#endif
+   #endif
 
    DAQ::FzFee::FzFec feeid = (DAQ::FzFee::FzFec) ((event[event_index] & FEEID_MASK) >> 1);
    DAQ::FzHit::FzTelescope telid = (DAQ::FzHit::FzTelescope) (event[event_index] & TELID_MASK);
@@ -1180,12 +1437,59 @@ void FzFSM::trans10(void) {	// S5      ->      (TELID)         -> S2
    //hit->set_feeid((DAQ::FzHit::FzFec) feeid);
 }
 
-void FzFSM::trans11(void) {	// S5      ->      (LENGTH)        -> S6
+void FzFSM::trans10_tag(void) {	   // S5      ->      (TELID)         -> S2
 
-#ifdef FSM_DEBUG
+   #ifdef FSM_DEBUG
+   sprintf(logbuf, "S5      ->      (TELID)         -> S2 - word: %4.4X", event[event_index]);
+   log->write(DEBUG, logbuf);
+   #endif
+
+   DAQ::FzFee::FzFec feeid = (DAQ::FzFee::FzFec) ((event[event_index] & FEEID_MASK) >> 1);
+   DAQ::FzHit::FzTelescope telid = (DAQ::FzHit::FzTelescope) (event[event_index] & TELID_MASK);
+   //unsigned short int detid = (event[event_index] & DETID_MASK) >> 5;
+   //unsigned short int dtype = (event[event_index] & DTYPE_MASK) >> 8;
+
+	update_blk();
+	update_fee();
+
+   // verify waveform length of event just acquired
+
+   if( tag == TAG_WAVEFORM) {
+
+      if (rd_wflen == wf->sample_size())
+         wf->set_len_error(false);
+      else {
+         sprintf(logbuf, "(S5->S2) B%d.%s.Tel%s.%s-%s - EC: %d (0x%X) WAVEFORM len error (value read: %d (0x%X) - value calc: %d (0x%X) - current word: 0x%X", blk->blkid(), FzFec_str[hit->feeid()], \
+            FzTelescope_str[hit->telid()], FzDetector_str[hit->detid()], FzDataType_str[d->type()], ev->ec(), ev->ec(), rd_wflen, rd_wflen, wf->sample_size(), \
+            wf->sample_size(), event[event_index]); 
+         log->write(WARN, logbuf);
+         wf->set_len_error(true);
+         err_in_event = true;
+      }
+   }
+
+   hit = fee->add_hit();
+   hit->set_ec(ev->ec());
+      
+   // validate range of FEEID
+   if( (feeid < DAQ::FzFee::FEC0) || (feeid > DAQ::FzFee::ADCF) )
+      hit->set_feeid((DAQ::FzHit::FzFec) DAQ::FzFee::UNKFEC); // unknown fec  
+   else
+      hit->set_feeid((DAQ::FzHit::FzFec) feeid);
+
+   // validate range of TELID
+   if( (telid < DAQ::FzHit::A) || (telid > DAQ::FzHit::B) )
+      hit->set_telid((DAQ::FzHit::FzTelescope) DAQ::FzHit::UNKT);   // unknown telescope
+   else
+      hit->set_telid((DAQ::FzHit::FzTelescope) telid);
+}
+
+void FzFSM::trans11_basic(void) {	   // S5      ->      (LENGTH)        -> S6
+
+   #ifdef FSM_DEBUG
    sprintf(logbuf, "S5      ->      (LENGTH)        -> S6 - word: %4.4X", event[event_index]);
    log->write(DEBUG, logbuf);
-#endif
+   #endif
 
    unsigned short int len = event[event_index] & LENGTH_MASK;
 
@@ -1239,12 +1543,42 @@ void FzFSM::trans11(void) {	// S5      ->      (LENGTH)        -> S6
    }
 }
 
+void FzFSM::trans11_tag(void) {	   // S5      ->      (LENGTH)        -> S6
+
+   #ifdef FSM_DEBUG
+   sprintf(logbuf, "S5      ->      (LENGTH)        -> S6 - word: %4.4X", event[event_index]);
+   log->write(DEBUG, logbuf);
+   #endif
+
+   unsigned short int len = event[event_index] & LENGTH_MASK;
+
+   rd_feelen = len;
+
+	update_blk();
+
+   // verify waveform length of event just acquired
+
+   if( tag == TAG_WAVEFORM) {
+
+      if (rd_wflen == wf->sample_size())
+         wf->set_len_error(false);
+      else {
+         sprintf(logbuf, "(S5->S2) B%d.%s.Tel%s.%s-%s - EC: %d (0x%X) WAVEFORM len error (value read: %d (0x%X) - value calc: %d (0x%X) - current word: 0x%X", blk->blkid(), FzFec_str[hit->feeid()], \
+            FzTelescope_str[hit->telid()], FzDetector_str[hit->detid()], FzDataType_str[d->type()], ev->ec(), ev->ec(), rd_wflen, rd_wflen, wf->sample_size(), \
+            wf->sample_size(), event[event_index]); 
+         log->write(WARN, logbuf);
+         wf->set_len_error(true);
+         err_in_event = true;
+      }
+   }
+}
+
 void FzFSM::trans12(void) {	// S6      ->      (CRCFE)         -> S7
 
-#ifdef FSM_DEBUG
+   #ifdef FSM_DEBUG
    sprintf(logbuf, "S6      ->      (CRCFE)         -> S7 - word: %4.4X", event[event_index]);
    log->write(DEBUG, logbuf);
-#endif
+   #endif
 
    unsigned short int crcfe = ((event[event_index] & CRCFE_MASK) >> 4);
    uint8_t crc_lsb, crc_msb, crc_calc;
@@ -1295,10 +1629,10 @@ void FzFSM::trans12(void) {	// S6      ->      (CRCFE)         -> S7
 
 void FzFSM::trans13(void) {	// S7      ->      (EC)            -> S1
 
-#ifdef FSM_DEBUG
+   #ifdef FSM_DEBUG
    sprintf(logbuf, "S7      ->      (EC)            -> S1 - word: %4.4X", event[event_index]);
    log->write(DEBUG, logbuf);
-#endif
+   #endif
 
    unsigned short int ec = event[event_index] & EC_MASK;
 
@@ -1312,10 +1646,10 @@ void FzFSM::trans13(void) {	// S7      ->      (EC)            -> S1
 
 void FzFSM::trans14(void) {	// S1      ->      (BLKID)         -> S8
 
-#ifdef FSM_DEBUG
+   #ifdef FSM_DEBUG
    sprintf(logbuf, "S1      ->      (BLKID)         -> S8 - word: %4.4X", event[event_index]);
    log->write(DEBUG, logbuf);
-#endif
+   #endif
 
    unsigned short int blkid = event[event_index] & BLKID_MASK;
 
@@ -1326,15 +1660,15 @@ void FzFSM::trans14(void) {	// S1      ->      (BLKID)         -> S8
 
 void FzFSM::trans15(void) {	// S8      ->      (LENGTH)        -> S9
 
-#ifdef FSM_DEBUG
+   #ifdef FSM_DEBUG
    sprintf(logbuf, "S8      ->      (LENGTH)        -> S9 - word: %4.4X", event[event_index]);
    log->write(DEBUG, logbuf);
-#endif
+   #endif
  
-#ifdef FSM_DEBUG
+   #ifdef FSM_DEBUG
    sprintf(logbuf, "blklen: %d", blklen);
    log->write(DEBUG, logbuf);
-#endif
+   #endif
 
    unsigned short int len = event[event_index] & LENGTH_MASK; 
 
@@ -1347,15 +1681,15 @@ void FzFSM::trans15(void) {	// S8      ->      (LENGTH)        -> S9
 
 void FzFSM::trans16(void) {	// S9      ->      (CRCBL)         -> S10
 
-#ifdef FSM_DEBUG
+   #ifdef FSM_DEBUG
    sprintf(logbuf, "S9      ->      (CRCBL)         -> S10 - word: %4.4X", event[event_index]);
    log->write(DEBUG, logbuf);
-#endif
+   #endif
 
-#ifdef FSM_DEBUG
+   #ifdef FSM_DEBUG
    sprintf(logbuf, "blklen: %d", blklen);
    log->write(DEBUG, logbuf);
-#endif
+   #endif
 
    unsigned short int crcbl = ((event[event_index] & CRCBL_MASK) >> 4);
    uint8_t crc_lsb, crc_msb, crc_calc;
@@ -1407,10 +1741,10 @@ void FzFSM::trans16(void) {	// S9      ->      (CRCBL)         -> S10
 
 void FzFSM::trans17(void) {	// S10     ->      (EC)            -> S1
 
-#ifdef FSM_DEBUG
+   #ifdef FSM_DEBUG
    sprintf(logbuf, "S10     ->      (EC)            -> S1 - word: %4.4X", event[event_index]);
    log->write(DEBUG, logbuf);
-#endif
+   #endif
 
    unsigned short int ec = event[event_index] & EC_MASK;
 
@@ -1419,10 +1753,12 @@ void FzFSM::trans17(void) {	// S10     ->      (EC)            -> S1
    blk->set_crc_error(true);
 
    blklen = 1;
-#ifdef FSM_DEBUG
+
+   #ifdef FSM_DEBUG
    sprintf(logbuf, "blklen: %d", blklen);
    log->write(DEBUG, logbuf);
-#endif
+   #endif
+
    blkcrc = event[event_index];
 
    tmp_rawec = event[event_index];
@@ -1432,15 +1768,15 @@ void FzFSM::trans17(void) {	// S10     ->      (EC)            -> S1
 
 void FzFSM::trans18(void) {	// S10     ->      (REGID)         -> idle
 
-#ifdef FSM_DEBUG
+   #ifdef FSM_DEBUG
    sprintf(logbuf, "S10     ->      (REGID)         -> idle - word: %4.4X", event[event_index]);
    log->write(DEBUG, logbuf);
-#endif
+   #endif
 
-#ifdef FSM_DEBUG
+   #ifdef FSM_DEBUG
    sprintf(logbuf, "blklen: %d", blklen);
    log->write(DEBUG, logbuf);
-#endif
+   #endif
 
    unsigned short int regid = event[event_index] & REGID_MASK;
 

@@ -32,7 +32,7 @@ message FzData {
     Q2  = 3;
     I2  = 4;
     Q3  = 5;
-    ADC = 6;
+    ADC = 6;  
     UNKDT = 7;	// unknown datatype
   }
 

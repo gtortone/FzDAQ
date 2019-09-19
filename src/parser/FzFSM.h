@@ -149,9 +149,12 @@ private:
    void trans07_tag(void);
    void trans08_basic(void);
    void trans08_tag(void);
-   void trans09(void);
-   void trans10(void);
-   void trans11(void);
+   void trans09_basic(void);
+   void trans09_tag(void);
+   void trans10_basic(void);
+   void trans10_tag(void);
+   void trans11_basic(void);
+   void trans11_tag(void);
    void trans12(void);
    void trans13(void);
    void trans14(void);
@@ -200,7 +203,6 @@ private:
    bool err_in_event;
 
    FzLogger *log;
-   FzLogger logsimple;
    char logbuf[256];
 
    Report::FzFSM fsm_report;
