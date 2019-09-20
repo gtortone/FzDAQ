@@ -279,6 +279,10 @@ void FzFSM::update_blk(void) {
 void FzFSM::update_fee_len(void) {
 
 	feelen++;
+   #ifdef FSM_DEBUG
+   sprintf(logbuf, "feelen: %d", feelen);
+   log->write(DEBUG, logbuf);
+   #endif
 }
 
 void FzFSM::update_fee_crc(void) {
@@ -568,7 +572,7 @@ void FzFSM::trans07_tag(void) {	// S4      ->      (DATA)          -> S5
 	tag_done = wflen_done = false;
 	rd_wflen = 0;
 
-	update_blk();
+   update_blk();
 	update_fee();
 
    // store tag but skip void tag (0x3030)
@@ -797,7 +801,9 @@ void FzFSM::trans08_basic(void) {	// S5      ->      (DATA)          -> S5
 		  } 
  
 		  // boost patch 
-		  while(event[event_index] <= 0x7FFF) {
+		  //while(event[event_index] <= 0x7FFF) {      // FIX
+        int nsample = 0;
+        while (nsample < rd_wflen) {
 
 				wf->add_sample(event[event_index]);		// collect waveform samples
 				
@@ -813,6 +819,8 @@ void FzFSM::trans08_basic(void) {	// S5      ->      (DATA)          -> S5
             #endif
 
 				event_index++;
+
+            nsample++;
 
 			}	// end while
 
@@ -837,7 +845,7 @@ void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
    log->write(DEBUG, logbuf);
    #endif
 
-	update_blk();
+   update_blk();
 	update_fee();
 
    // store tag but skip void tag (0x3030)
@@ -898,7 +906,7 @@ void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
 		} else if(tag == TAG_WAVEFORM) {		// 0x7005
 
 			int nsample = 0;
-         while (nsample <= rd_wflen) {
+         while (nsample < rd_wflen) {
 
             #ifdef FSM_DEBUG
             sprintf(logbuf, "wf->sample_size(): %d", wf->sample_size());
@@ -908,10 +916,7 @@ void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
 				wf->add_sample(event[event_index]);		// collect waveform samples
 				
 				save_blkcrc = blkcrc;
-				update_blk();
-
 				save_feecrc = feecrc;
-				update_fee();
 
             #ifdef FSM_DEBUG
 	         sprintf(logbuf, "S5      ->      gathering waveform     -> S5 - word: %4.4X", event[event_index]);
@@ -919,6 +924,9 @@ void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
             #endif
 
 				event_index++;
+            update_blk();
+			   update_fee();
+
             nsample++;
 
          }	// end while nsample
@@ -932,6 +940,9 @@ void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
 			blklen--;
 			feelen--;
 
+         blkcrc = save_blkcrc;
+         feecrc = save_feecrc;
+
 		} else if(tag == TAG_SLOW) {			// 0x7001
 
 			// filter risetime
@@ -940,18 +951,16 @@ void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
 			// energy_h
 			event_index++;
          update_blk();
-         update_fee();
+	      update_fee();
 
 			en->add_value(event[event_index]);
-			//
 
 			// energy_l
 			event_index++;
-			update_blk();
+         update_blk();
 			update_fee();
 
 			en->set_value(0, (en->value(0) << 15) + event[event_index]);
-			//
 
 		} else if(tag == TAG_FAST) {			// 0x7002
 
@@ -964,7 +973,6 @@ void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
          update_fee();
 
          en->add_value(event[event_index]);
-         //
 
          // energy_l
          event_index++;
@@ -972,11 +980,11 @@ void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
          update_fee();
 
          en->set_value(0, (en->value(0) << 15) + event[event_index]);
-         //
 
 		} else if(tag == TAG_BASELINE) {		// 0x7003
 
 			d->set_baseline(event[event_index]);
+         
 		}
 
       // verify waveform length of event just acquired
@@ -986,7 +994,7 @@ void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
          if (rd_wflen == wf->sample_size())
             wf->set_len_error(false);
          else {
-            sprintf(logbuf, "(S5->S4) B%d.%s.Tel%s.%s-%s - EC: %d (0x%X) WAVEFORM len error (value read: %d (0x%X) - value calc: %d (0x%X) - current word: 0x%X", blk->blkid(), FzFec_str[hit->feeid()], \
+            sprintf(logbuf, "(S5->S5) B%d.%s.Tel%s.%s-%s - EC: %d (0x%X) WAVEFORM len error (value read: %d (0x%X) - value calc: %d (0x%X) - current word: 0x%X", blk->blkid(), FzFec_str[hit->feeid()], \
             FzTelescope_str[hit->telid()], FzDetector_str[hit->detid()], FzDataType_str[d->type()], ev->ec(), ev->ec(), rd_wflen, rd_wflen, wf->sample_size(), \
             wf->sample_size(), event[event_index]);
             log->write(WARN, logbuf);
@@ -1208,22 +1216,6 @@ void FzFSM::trans09_tag(void) {	   // S5      ->      (DETID)         -> S4
 	update_blk();
 	update_fee();
 
-   // verify waveform length of event just acquired
-
-   if( tag == TAG_WAVEFORM) {
-
-      if (rd_wflen == wf->sample_size())
-         wf->set_len_error(false);
-      else {
-         sprintf(logbuf, "(S5->S4) B%d.%s.Tel%s.%s-%s - EC: %d (0x%X) WAVEFORM len error (value read: %d (0x%X) - value calc: %d (0x%X) - current word: 0x%X", blk->blkid(), FzFec_str[hit->feeid()], \
-         FzTelescope_str[hit->telid()], FzDetector_str[hit->detid()], FzDataType_str[d->type()], ev->ec(), ev->ec(), rd_wflen, rd_wflen, wf->sample_size(), \
-         wf->sample_size(), event[event_index]);
-         log->write(WARN, logbuf);
-         wf->set_len_error(true);
-         err_in_event = true;
-      }
-   }
-
    // copy previous hit values
    gttag = hit->gttag();
    dettag = hit->dettag();
@@ -1273,8 +1265,7 @@ void FzFSM::trans09_tag(void) {	   // S5      ->      (DETID)         -> S4
 	
      dtype = DAQ::FzData::UNKDT;
    }
-
-   //hit->set_detid((DAQ::FzHit::FzDetector) detid);      
+   
    hit->set_detid((DAQ::FzHit::FzDetector) detid);      
    hit->set_telid((DAQ::FzHit::FzTelescope) telid);
    hit->set_feeid((DAQ::FzHit::FzFec) feeid);
@@ -1314,46 +1305,6 @@ void FzFSM::trans09_tag(void) {	   // S5      ->      (DETID)         -> S4
       d->set_type(DAQ::FzData::UNKDT);
       err_in_event = true;
    }
-
-   // store tag but skip void tag (0x3030)
-   /*
-   if(!tag_done) {
-
-      tag = event[event_index];
-		if(tag != TAG_VOID) {
-       
-         if(tag == TAG_PRETRIGGER) {  
-            if(d->has_waveform() == false) {
-               wf = d->mutable_waveform();
-               wf->set_len_error(true);
-            }
-         } else if(tag == TAG_WAVEFORM) { 
-            if(d->has_waveform() == false) {
-               wf = d->mutable_waveform();
-               wf->set_len_error(true);
-            }
-         } else if(tag == TAG_SLOW) { 
-            if(d->has_energy() == false) {
-               en = d->mutable_energy();
-               en->set_len_error(true);
-            }
-         } else if(tag == TAG_FAST) { 
-            if(d->has_energy() == false) {
-               en = d->mutable_energy();
-               en->set_len_error(true);
-            }
-         } 
-
-         tag_done = true;
-      }
-
-      #ifdef FSM_DEBUG
-	   sprintf(logbuf, "tag: %4.4X", tag);
-	   log->write(DEBUG, logbuf);
-      #endif
-
-   }
-   */
 }
 
 void FzFSM::trans10_basic(void) {	   // S5      ->      (TELID)         -> S2
@@ -1452,22 +1403,6 @@ void FzFSM::trans10_tag(void) {	   // S5      ->      (TELID)         -> S2
 	update_blk();
 	update_fee();
 
-   // verify waveform length of event just acquired
-
-   if( tag == TAG_WAVEFORM) {
-
-      if (rd_wflen == wf->sample_size())
-         wf->set_len_error(false);
-      else {
-         sprintf(logbuf, "(S5->S2) B%d.%s.Tel%s.%s-%s - EC: %d (0x%X) WAVEFORM len error (value read: %d (0x%X) - value calc: %d (0x%X) - current word: 0x%X", blk->blkid(), FzFec_str[hit->feeid()], \
-            FzTelescope_str[hit->telid()], FzDetector_str[hit->detid()], FzDataType_str[d->type()], ev->ec(), ev->ec(), rd_wflen, rd_wflen, wf->sample_size(), \
-            wf->sample_size(), event[event_index]); 
-         log->write(WARN, logbuf);
-         wf->set_len_error(true);
-         err_in_event = true;
-      }
-   }
-
    hit = fee->add_hit();
    hit->set_ec(ev->ec());
       
@@ -1555,22 +1490,6 @@ void FzFSM::trans11_tag(void) {	   // S5      ->      (LENGTH)        -> S6
    rd_feelen = len;
 
 	update_blk();
-
-   // verify waveform length of event just acquired
-
-   if( tag == TAG_WAVEFORM) {
-
-      if (rd_wflen == wf->sample_size())
-         wf->set_len_error(false);
-      else {
-         sprintf(logbuf, "(S5->S2) B%d.%s.Tel%s.%s-%s - EC: %d (0x%X) WAVEFORM len error (value read: %d (0x%X) - value calc: %d (0x%X) - current word: 0x%X", blk->blkid(), FzFec_str[hit->feeid()], \
-            FzTelescope_str[hit->telid()], FzDetector_str[hit->detid()], FzDataType_str[d->type()], ev->ec(), ev->ec(), rd_wflen, rd_wflen, wf->sample_size(), \
-            wf->sample_size(), event[event_index]); 
-         log->write(WARN, logbuf);
-         wf->set_len_error(true);
-         err_in_event = true;
-      }
-   }
 }
 
 void FzFSM::trans12(void) {	// S6      ->      (CRCFE)         -> S7
