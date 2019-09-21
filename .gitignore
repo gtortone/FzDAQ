@@ -4,7 +4,7 @@
 /src/*/*.deps
 /src/*/*.dirstamp
 /src/proto/*.pb.h
-/src/proto/*.pb.cpp
+/src/proto/*.pb.cc
 .deps/*
 FzDAQ-mt
 FzController

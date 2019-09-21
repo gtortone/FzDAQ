@@ -4,9 +4,9 @@ DEFAULT_INCLUDES = -I. -Isrc $(protobuf_CFLAGS) $(configpp_CFLAGS) $(LOG4CPP_CFL
 bin_PROGRAMS = FzDAQ-mt FzController FzTransmitter
 
 FzDAQ_mt_SOURCES = \
-src/proto/FzRCS.pb.cpp\
-src/proto/FzNodeReport.pb.cpp \
-src/proto/FzEventSet.pb.cpp \
+src/proto/FzRCS.pb.cc\
+src/proto/FzNodeReport.pb.cc \
+src/proto/FzEventSet.pb.cc \
 src/reader/FzReader.cpp \
 src/utils/fossa.c \
 src/parser/FzFSM.cpp \
@@ -20,8 +20,8 @@ src/utils/FzUtils.cpp \
 src/main/FzDAQ-mt.cpp  
 
 FzController_SOURCES = \
-src/proto/FzRCS.pb.cpp\
-src/proto/FzNodeReport.pb.cpp \
+src/proto/FzRCS.pb.cc\
+src/proto/FzNodeReport.pb.cc \
 src/logger/FzHttpPost.cpp \
 src/controller/FzController.cpp \
 src/controller/log.cpp \
@@ -37,7 +37,7 @@ src/logger/FzLogger.cpp \
 src/utils/FzUtils.cpp
 
 FzTransmitter_SOURCES = \
-src/proto/FzEventSet.pb.cpp \
+src/proto/FzEventSet.pb.cc \
 src/transmitter/Tcp.cpp \
 src/transmitter/fdtTransmitter.cpp \
 src/transmitter/main.cpp

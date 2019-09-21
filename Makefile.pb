@@ -7,21 +7,18 @@ space$(EXEEXT):
 	@rm -rf logs/*
 	@echo -e "OK"
 
-src/proto/FzEventSet.pb.cpp$(EXEEXT) src/proto/FzEventSet.pb.h$(EXEEXT): 
+src/proto/FzEventSet.pb.cc$(EXEEXT) src/proto/FzEventSet.pb.h$(EXEEXT): 
 	protoc src/proto/FzEventSet.proto --cpp_out=.
-	mv src/proto/FzEventSet.pb.cc src/proto/FzEventSet.pb.cpp
 	sed -i 's/assert/\/\/assert/' src/proto/FzEventSet.pb.h
 
-src/proto/FzNodeReport.pb.cpp$(EXEEXT) src/proto/FzNodeReport.pb.h$(EXEEXT):
+src/proto/FzNodeReport.pb.cc$(EXEEXT) src/proto/FzNodeReport.pb.h$(EXEEXT):
 	protoc src/proto/FzNodeReport.proto --cpp_out=.
-	mv src/proto/FzNodeReport.pb.cc src/proto/FzNodeReport.pb.cpp
 
-src/proto/FzRCS.pb.cpp$(EXEEXT) src/proto/FzRCS.pb.h$(EXEEXT):
+src/proto/FzRCS.pb.cc$(EXEEXT) src/proto/FzRCS.pb.h$(EXEEXT):
 	protoc src/proto/FzRCS.proto --cpp_out=.
-	mv src/proto/FzRCS.pb.cc src/proto/FzRCS.pb.cpp
 
 clean-local:
-	-rm -f src/proto/*.cpp src/proto/*.h
+	-rm -f src/proto/*.cc src/proto/*.h
 
 deploy$(EXEEXT):
 	ssh daq@fzdaq01 "rm -rf devel/Fazia/miniDAQ-mt/*"
@@ -34,6 +31,3 @@ deploy$(EXEEXT):
 
 remote-install$(EXEEXT):
 	cp FzDAQ-mt /opt/FzDAQ/
-
-ttt$(EXEEXT):
-	@touch gennaro-tortone
