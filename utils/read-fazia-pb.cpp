@@ -60,6 +60,7 @@ int main(int argc, char* argv[]) {
    static char const* const FzDataType_str[] = { "QH1", "I1", "QL1", "Q2", "I2", "Q3", "ADC", "UNK" };
    static char const* const FzTelescope_str[] = { "A", "B" };
    static char const* const FzDetector_str[] = { "Si1", "Si2", "CsI" };
+   static char const* const FzEnergyType_str[] = { "slow", "fast" };
 
    // Verify that the version of the library that we linked against is
    // compatible with the version of the headers we compiled against.
@@ -126,40 +127,64 @@ int main(int argc, char* argv[]) {
 
                cout << " - GTTAG: " << rdhit.gttag();
                cout << " - DETTAG: " << rdhit.dettag() << endl;
-
+               // add trigger pattern 
+               
                for(int m = 0; m < rdhit.data_size(); m++) {
 
                   const DAQ::FzData& rdata = rdhit.data(m);
-                  cout << "\t\t\t\tDATATYPE: " << FzDataType_str[rdata.type()];
+                  cout << "\t\t\t\tDATATYPE: " << FzDataType_str[rdata.type()] << endl;
+                  cout << "\t\t\t\t\t";
 
-                  if(!rdata.has_energy() && !rdata.has_waveform()) {
-                     cout << " [NO DATA]" << endl;
+                  if(!rdata.energy_size() && !rdata.has_waveform()) {
+                     cout << "[NO DATA]" << endl;
                      continue;
                   }
 
-                  if(rdata.has_energy()) {
+                  if(rdata.has_baseline()) {
+                     cout << "BASELINE>> VALUE: " << rdata.baseline() << endl;
+                     cout << "\t\t\t\t\t";
+                  }
 
-	             const DAQ::Energy& ren = rdata.energy();
-		     cout << " - ENERGY: ";
+                  if(rdata.energy_size()) {
 
-                     for(int e=0; e < ren.value_size(); e++)
-                        cout << ren.value(e) << ", ";
+	                  for(int l=0; l<rdata.energy_size(); l++) {
 
-                     cout << " - LEN_ERR: " << ren.len_error();
+                        const DAQ::Energy& ren = rdata.energy(l);
+                        cout << "ENERGY>> ";
+
+                        cout << "TYPE: " << FzEnergyType_str[ren.type()] << " - ";
+
+                        cout << "VALUE: "  << ren.value() << ", ";
+
+                        if(ren.has_risetime()) {   
+                           cout << " - RISETIME: " << ren.risetime();
+                        }
+
+                        if(ren.len_error())
+                           cout << " - EFLAGS: [L]" << endl;
+                        
+                        cout << "\t\t\t\t\t";
+                     }
                   }
 
                   if(rdata.has_waveform()) {
 
                     const DAQ::Waveform& rwf = rdata.waveform();
-                    cout << " - PRETRIG: " << rwf.pretrig();
+                    cout << "PRETRIG>> VALUE: " << rwf.pretrig() << endl;
+                    cout << "\t\t\t\t\t";
 
                     if(rdata.type() == DAQ::FzData::ADC) {
 
-                       cout << " - SINE: " << rdata.sine() << " - COSINE: " << rdata.cosine();
+                       cout << "SINE: " << rdata.sine() << " - COSINE: " << rdata.cosine() << endl;
+                       cout << "\t\t\t\t\t";
                     }
 
-                    cout << " - WAVEFORM: " << " - LEN_ERR: " << rwf.len_error() << " len = " << rwf.sample_size() << endl;
+                    cout << "WAVEFORM[" << rwf.sample_size() << "]>>";
+                    if(rwf.len_error()) {
+                       cout << " - EFLAGS: [L]";
+                    }
                     cout << endl << "\t\t\t\t              ";
+
                     signed int supp;
                     for(int n=0; n < rwf.sample_size(); n++) {
                        if(n%16 == 0 && n) 
@@ -175,9 +200,8 @@ int main(int argc, char* argv[]) {
                        } else supp = rwf.sample(n);
                        
                        cout << supp << ", ";
-                       //cout << hex << "(0x" << rwf.sample(n) << ")";
-                       //cout << hex << "0x" << supp << ", ";
                     }
+                    cout << endl;
                   }
 
    		  cout << endl;
