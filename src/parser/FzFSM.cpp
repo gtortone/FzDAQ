@@ -471,7 +471,7 @@ void FzFSM::trans06(void) {	// S3      ->      (DETID)         -> S4
       d->set_type(DAQ::FzData::QH1);
       if(evformat == FMT_BASIC) {
          en = d->add_energy();
-         en->set_len_error(true);
+         en->set_len_error(false);     // disable check
          wf = d->mutable_waveform();
          wf->set_len_error(true);
       }
@@ -497,7 +497,7 @@ void FzFSM::trans06(void) {	// S3      ->      (DETID)         -> S4
       d->set_type(DAQ::FzData::Q2);
       if(evformat == FMT_BASIC) {
          en = d->add_energy();
-         en->set_len_error(true);
+         en->set_len_error(false);     // disable check
          wf = d->mutable_waveform();
          wf->set_len_error(true);
       }
@@ -515,7 +515,7 @@ void FzFSM::trans06(void) {	// S3      ->      (DETID)         -> S4
       d->set_type(DAQ::FzData::Q3);
       if(evformat == FMT_BASIC) {
          en = d->add_energy();
-         en->set_len_error(true);
+         en->set_len_error(false);     // disable check
          wf = d->mutable_waveform();
          wf->set_len_error(true);
       }
@@ -602,13 +602,13 @@ void FzFSM::trans07_tag(void) {	// S4      ->      (DATA)          -> S5
             //if(d->energy_size() == 0) {
                en = d->add_energy();
                en->set_type(DAQ::Energy::Slow);
-               en->set_len_error(true);
+               en->set_len_error(false);     // disable check
             //}
          } else if(tag == TAG_FAST) { 
             //if(d->energy_size() == 0) {
                en = d->add_energy();
                en->set_type(DAQ::Energy::Fast);
-               en->set_len_error(true);
+               en->set_len_error(false);     // disable check
             //}
          } 
 
@@ -878,13 +878,13 @@ void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
             //if(d->has_energy() == false) {
                en = d->add_energy();
                en->set_type(DAQ::Energy::Slow);
-               en->set_len_error(true);
+               en->set_len_error(false);     // disable check
             //}
          } else if(tag == TAG_FAST) { 
             //if(d->has_energy() == false) {
                en = d->add_energy();
                en->set_type(DAQ::Energy::Fast);
-               en->set_len_error(true);
+               en->set_len_error(false);     // disable check
             //}
          } 
          
