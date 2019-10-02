@@ -1791,50 +1791,60 @@ void FzFSM::read_triggerinfo(DAQ::FzBlock *blk, DAQ::FzEvent *ev) {
    uint32_t supp;
    uint8_t idx;
 
-   for(int i=0; i<wf.sample_size(); i=i+3) {	
+   if(evformat == FMT_BASIC) { 
 
-      supp = 0;
- 
-      tri = ev->add_trinfo();
-      tri->set_id(wf.sample(i));
-      idx = wf.sample(i);
+      for(int i=0; i<wf.sample_size(); i=i+3) {	
 
-      // idx uses overflow - must be declared and used at 8 bits
-      if(wf.sample(i) >= 0x200) {
+         supp = 0;
+   
+         tri = ev->add_trinfo();
+         tri->set_id(wf.sample(i));
+         idx = wf.sample(i);
 
-         if( (idx >= 0) && (idx <= 4) )
-	    tri->set_attr(FzCentrumInfo_str[idx]);
-	 else
-	    tri->set_attr("unknown");
+         // idx uses overflow - must be declared and used at 8 bits
+         if(wf.sample(i) >= 0x200) {
 
-      } else {
+            if( (idx >= 0) && (idx <= 4) )
+         tri->set_attr(FzCentrumInfo_str[idx]);
+      else
+         tri->set_attr("unknown");
 
-         if( (idx >= 0) && (idx <= 15) )
-            tri->set_attr(FzTriggerInfo_str[idx]);
-         else
-            tri->set_attr("unknown");
+         } else {
+
+            if( (idx >= 0) && (idx <= 15) )
+               tri->set_attr(FzTriggerInfo_str[idx]);
+            else
+               tri->set_attr("unknown");
+         }
+
+         supp = wf.sample(i+1) << 15;
+         supp += wf.sample(i+2);
+
+         if(wf.sample(i) == 0x10C) {
+
+            supp = (supp * 4) / 150E6;
+
+         } else if(wf.sample(i) == 0x10D) {
+
+            supp = (supp << 15) + hit.gttag();
+   
+         } else if(wf.sample(i) == 0x10E) {
+
+            supp = (supp << 12) + hit.ec();
+
+         } else if(wf.sample(i) == 0x10F) {
+
+            supp = supp & 0x00FF;
+         }
+
+         tri->set_value(supp);
       }
+   } else if(evformat == FMT_TAG) {
 
-      supp = wf.sample(i+1) << 15;
-      supp += wf.sample(i+2);
+      for(int i=0; i<wf.sample_size(); i=i+3) {
 
-      if(wf.sample(i) == 0x10C) {
-
-         supp = (supp * 4) / 150E6;
-
-      } else if(wf.sample(i) == 0x10D) {
-
-         supp = (supp << 15) + hit.gttag();
- 
-      } else if(wf.sample(i) == 0x10E) {
-
-         supp = (supp << 12) + hit.ec();
-
-      } else if(wf.sample(i) == 0x10F) {
-
-         supp = supp & 0x00FF;
+         printf("%X ", wf.sample(i));
       }
-
-      tri->set_value(supp);
+      
    }     
 }
