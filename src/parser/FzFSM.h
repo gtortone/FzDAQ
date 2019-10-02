@@ -38,6 +38,13 @@
 #define TAG_PRETRIGGER	0x7004
 #define TAG_WAVEFORM		0x7005
 
+#define TAG_RB_COUNTERS 0x7100
+#define TAG_RB_TIME     0x7101
+#define TAG_RB_GTTAG    0x7110
+#define TAG_RB_EC       0x7111
+#define TAG_RB_TRIGPAT  0x7112
+#define TAG_RB_CENTRUM  0x7200
+
 // word type id
 //
 //	 0	DATA
@@ -120,7 +127,7 @@ static char const* const FzFec_str[] = { "FEC#0", "FEC#1", "FEC#2", "FEC#3", "FE
 static char const* const FzDataType_str[] = { "QH1", "I1", "QL1", "Q2", "I2", "Q3", "ADC", "UNK" };
 static char const* const FzTelescope_str[] = { "A", "B", "UNK" };
 static char const* const FzDetector_str[] = { "Si1", "Si2", "CsI", "UNK" };
-static char const* const FzTriggerInfo_str[] = { "validation", "globtrg", "trigger0", "trigger1", "trigger2", "trigger3", "trigger4", "trigger5", "trigger6", "trigger7", \
+static char const* const FzTriggerInfoBasic_str[] = { "validation", "globtrg", "trigger0", "trigger1", "trigger2", "trigger3", "trigger4", "trigger5", "trigger6", "trigger7", \
 						 "mantrig", "exttrig", "totaltime", "gttagmsb", "evtcntrmsb", "trigpattern" }; 
 static char const* const FzCentrumInfo_str[] = { "centrum0", "centrum1", "centrum2", "centrum3" };
 
@@ -174,6 +181,7 @@ private:
    DAQ::FzData *d;
    DAQ::Energy *en;
    DAQ::Waveform *wf;
+   DAQ::FzTrigInfo *t = NULL;
 
    uint16_t tmp_ec;
    uint16_t tmp_rawec;

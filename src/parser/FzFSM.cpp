@@ -610,6 +610,11 @@ void FzFSM::trans07_tag(void) {	// S4      ->      (DATA)          -> S5
                en->set_type(DAQ::Energy::Fast);
                en->set_len_error(false);     // disable check
             //}
+
+            // tag values for RB are >= 0x7100
+
+         } else if( tag >= 0x7100 ) {
+               // t = ev->add_trinfo();
          } 
 
          tag_done = true;
@@ -886,7 +891,12 @@ void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
                en->set_type(DAQ::Energy::Fast);
                en->set_len_error(false);     // disable check
             //}
-         } 
+
+            // tag for RB are >= 0x7100
+
+         } else if( tag >= 0x7100 ) {
+               // t = ev->add_trinfo();
+         }
          
          tag_done = true;
       }
@@ -1020,7 +1030,94 @@ void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
             temp_baseline -= 1073741824;
 
          d->set_baseline((float)temp_baseline / 16.0);
-		}
+
+      } else if(tag == TAG_RB_COUNTERS) {
+
+         for(int i=0; i<rd_wflen; i++) {
+
+            t = ev->add_trinfo();
+            t->set_id(0x100 + i);
+            t->set_attr(FzTriggerInfoBasic_str[i]);
+            t->set_value(event[event_index]);
+            
+            if(i < (rd_wflen-1) ) {
+               event_index++;
+               update_blk();
+               update_fee();
+            }
+         }  // end for
+
+      } else if(tag == TAG_RB_TIME) {
+
+         t = ev->add_trinfo();
+         t->set_id(0x10C);
+         t->set_attr(FzTriggerInfoBasic_str[0xC]);
+         t->set_value(event[event_index]);
+         event_index++;
+         update_blk();
+         update_fee();
+         t->set_value(((t->value() << 15) + event[event_index]) * 4 / 150);    // value in us
+      
+      } else if(tag == TAG_RB_GTTAG) {
+
+         t = ev->add_trinfo();
+         t->set_id(0x10D);
+         t->set_attr(FzTriggerInfoBasic_str[0xD]);
+         t->set_value(event[event_index]);
+         event_index++;
+         update_blk();
+         update_fee();
+         t->set_value((t->value() << 15) + event[event_index]);
+      
+      } else if(tag == TAG_RB_EC) {
+
+         t = ev->add_trinfo();
+         t->set_id(0x10E);
+         t->set_attr(FzTriggerInfoBasic_str[0xE]);
+         t->set_value(event[event_index]);
+         event_index++;
+         update_blk();
+         update_fee();
+         t->set_value((t->value() << 15) + event[event_index]);
+         t->set_value((t->value() << 12) + hit->ec());
+
+      } else if(tag == TAG_RB_TRIGPAT) {
+
+         t = ev->add_trinfo();
+         t->set_id(0x10F);
+         t->set_attr(FzTriggerInfoBasic_str[0xF]);
+         t->set_value(event[event_index]);
+      
+      } else if(tag == TAG_RB_CENTRUM) {
+
+         ev->add_trinfo();
+         t->set_id(0x200);
+         
+         t->set_attr("centrum0");
+         t->set_value( (event[event_index] & 0x003F) + ( (uint64_t)(event[event_index] & 0xF800) << 15) );
+
+         event_index++;
+         update_blk();
+         update_fee();
+
+         uint64_t supp = 0;
+         for(int i=1; i<rd_wflen; i++) {
+
+            if(i % 2) {   
+               supp = event[event_index]<<15;
+            } else {
+               ev->add_trinfo();
+               t->set_id(0x200+i/2);
+               t->set_attr(FzCentrumInfo_str[i/2]);
+               t->set_value(supp + event[event_index]);
+               if( i<rd_wflen-1 ) {
+                  event_index++;
+                  update_blk();
+                  update_fee();
+               }
+            }
+         }  // end for
+      }
 
       // verify waveform length of event just acquired
 
@@ -1812,7 +1909,7 @@ void FzFSM::read_triggerinfo(DAQ::FzBlock *blk, DAQ::FzEvent *ev) {
          } else {
 
             if( (idx >= 0) && (idx <= 15) )
-               tri->set_attr(FzTriggerInfo_str[idx]);
+               tri->set_attr(FzTriggerInfoBasic_str[idx]);
             else
                tri->set_attr("unknown");
          }
@@ -1839,12 +1936,5 @@ void FzFSM::read_triggerinfo(DAQ::FzBlock *blk, DAQ::FzEvent *ev) {
 
          tri->set_value(supp);
       }
-   } else if(evformat == FMT_TAG) {
-
-      for(int i=0; i<wf.sample_size(); i=i+3) {
-
-         printf("%X ", wf.sample(i));
-      }
-      
-   }     
+   }  
 }
