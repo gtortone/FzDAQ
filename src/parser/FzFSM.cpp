@@ -1341,6 +1341,8 @@ void FzFSM::trans09_tag(void) {	   // S5      ->      (DETID)         -> S4
 
    unsigned int gttag;
    unsigned int dettag;
+   unsigned int trigpat;
+
    DAQ::FzFee::FzFec feeid = (DAQ::FzFee::FzFec) ((event[event_index] & FEEID_MASK) >> 1);
    DAQ::FzHit::FzTelescope telid = (DAQ::FzHit::FzTelescope) (event[event_index] & TELID_MASK);
    unsigned short int detid = (event[event_index] & DETID_MASK) >> 5;
@@ -1352,11 +1354,13 @@ void FzFSM::trans09_tag(void) {	   // S5      ->      (DETID)         -> S4
    // copy previous hit values
    gttag = hit->gttag();
    dettag = hit->dettag();
+   trigpat = hit->trigpat();
 
    hit = fee->add_hit();
    hit->set_ec(ev->ec());
    hit->set_gttag(gttag);
    hit->set_dettag(dettag);
+   hit->set_trigpat(trigpat);
 
    // validate range of FEEID
    if( (feeid < DAQ::FzFee::FEC0) || (feeid > DAQ::FzFee::ADCF) )
