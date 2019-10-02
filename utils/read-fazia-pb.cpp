@@ -126,7 +126,8 @@ int main(int argc, char* argv[]) {
                else { cout << "<ERR>" << endl; continue; }
 
                cout << " - GTTAG: " << rdhit.gttag();
-               cout << " - DETTAG: " << rdhit.dettag() << endl;
+               cout << " - DETTAG: " << rdhit.dettag();
+               cout << " - TRIGPAT: " << rdhit.trigpat() << endl;
                // add trigger pattern 
                
                for(int m = 0; m < rdhit.data_size(); m++) {
@@ -155,10 +156,6 @@ int main(int argc, char* argv[]) {
                         cout << "TYPE: " << FzEnergyType_str[ren.type()] << " - ";
 
                         cout << "VALUE: "  << ren.value() << ", ";
-
-                        if(ren.has_risetime()) {   
-                           cout << " - RISETIME: " << ren.risetime();
-                        }
 
                         if(ren.len_error())
                            cout << " - EFLAGS: [L]" << endl;
