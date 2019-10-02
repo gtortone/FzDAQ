@@ -165,6 +165,10 @@ In the table below if a config attribute has a value in "linked to" field it mea
 of linked attribute. Each field provides a default value and, in principle, there is no need to specify these attributes.
  
 ### Global configuration attributes
+
+|cfgfile attribute|mandatory|default|description|
+|---|---|---|---|
+|evformat|yes|-|set to 'basic' or 'tag' event format|
  
 ### FzReader configuration attributes
 
