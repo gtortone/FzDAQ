@@ -470,7 +470,7 @@ void FzFSM::trans06(void) {	// S3      ->      (DETID)         -> S4
    } else if (dtype == DAQ::FzData::QH1) {
       d->set_type(DAQ::FzData::QH1);
       if(evformat == FMT_BASIC) {
-         en = d->add_energy();
+         en = d->mutable_energy();
          en->set_len_error(false);     // disable check
          wf = d->mutable_waveform();
          wf->set_len_error(true);
@@ -496,7 +496,7 @@ void FzFSM::trans06(void) {	// S3      ->      (DETID)         -> S4
 
       d->set_type(DAQ::FzData::Q2);
       if(evformat == FMT_BASIC) {
-         en = d->add_energy();
+         en = d->mutable_energy();
          en->set_len_error(false);     // disable check
          wf = d->mutable_waveform();
          wf->set_len_error(true);
@@ -514,7 +514,7 @@ void FzFSM::trans06(void) {	// S3      ->      (DETID)         -> S4
 
       d->set_type(DAQ::FzData::Q3);
       if(evformat == FMT_BASIC) {
-         en = d->add_energy();
+         en = d->mutable_energy();
          en->set_len_error(false);     // disable check
          wf = d->mutable_waveform();
          wf->set_len_error(true);
@@ -600,14 +600,12 @@ void FzFSM::trans07_tag(void) {	// S4      ->      (DATA)          -> S5
             }
          } else if(tag == TAG_SLOW) { 
             //if(d->energy_size() == 0) {
-               en = d->add_energy();
-               en->set_type(DAQ::Energy::Slow);
+               en = d->mutable_energy();
                en->set_len_error(false);     // disable check
             //}
          } else if(tag == TAG_FAST) { 
             //if(d->energy_size() == 0) {
-               en = d->add_energy();
-               en->set_type(DAQ::Energy::Fast);
+               en = d->mutable_energy();
                en->set_len_error(false);     // disable check
             //}
 
@@ -881,14 +879,12 @@ void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
             }
          } else if(tag == TAG_SLOW) { 
             //if(d->has_energy() == false) {
-               en = d->add_energy();
-               en->set_type(DAQ::Energy::Slow);
+               en = d->mutable_energy();
                en->set_len_error(false);     // disable check
             //}
          } else if(tag == TAG_FAST) { 
             //if(d->has_energy() == false) {
-               en = d->add_energy();
-               en->set_type(DAQ::Energy::Fast);
+               en = d->mutable_energy();
                en->set_len_error(false);     // disable check
             //}
 
@@ -976,17 +972,17 @@ void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
          update_blk();
 	      update_fee();
 
-			en->set_value(event[event_index]);
+			en->add_value(event[event_index]);
 
 			// energy_l
 			event_index++;
          update_blk();
 			update_fee();
 
-			en->set_value((en->value() << 15) + event[event_index]);
+			en->set_value(0, (en->value(0) << 15) + event[event_index]);
 
          // value multiplied 1000 for precision
-         en->set_value((uint32_t)((float)en->value() / (float)risetime * 1000));
+         en->set_value(0, (uint32_t)((float)en->value(0) / (float)risetime * 1000));
 
 		} else if(tag == TAG_FAST) {			// 0x7002
 
@@ -1000,17 +996,17 @@ void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
          update_blk();
          update_fee();
 
-         en->set_value(event[event_index]);
+         en->add_value(event[event_index]);
 
          // energy_l
          event_index++;
          update_blk();
          update_fee();
 
-         en->set_value((en->value() << 15) + event[event_index]);
+         en->set_value(1, (en->value(1) << 15) + event[event_index]);
          
          // value multiplied 1000 for precision
-         en->set_value((uint32_t)((float)en->value() / (float)risetime * 1000));
+         en->set_value(1, (uint32_t)((float)en->value(1) / (float)risetime * 1000));
 
 		} else if(tag == TAG_BASELINE) {		// 0x7003
 

@@ -128,7 +128,6 @@ int main(int argc, char* argv[]) {
                cout << " - GTTAG: " << rdhit.gttag();
                cout << " - DETTAG: " << rdhit.dettag();
                cout << " - TRIGPAT: " << rdhit.trigpat() << endl;
-               // add trigger pattern 
                
                for(int m = 0; m < rdhit.data_size(); m++) {
 
@@ -136,7 +135,7 @@ int main(int argc, char* argv[]) {
                   cout << "\t\t\t\tDATATYPE: " << FzDataType_str[rdata.type()] << endl;
                   cout << "\t\t\t\t\t";
 
-                  if(!rdata.energy_size() && !rdata.has_waveform()) {
+                  if(!rdata.has_energy() && !rdata.has_waveform()) {
                      cout << "[NO DATA]" << endl;
                      continue;
                   }
@@ -146,22 +145,18 @@ int main(int argc, char* argv[]) {
                      cout << "\t\t\t\t\t";
                   }
 
-                  if(rdata.energy_size()) {
+                  if(rdata.has_energy()) {
 
-	                  for(int l=0; l<rdata.energy_size(); l++) {
-
-                        const DAQ::Energy& ren = rdata.energy(l);
+                        const DAQ::Energy& ren = rdata.energy();
                         cout << "ENERGY>> ";
 
-                        cout << "TYPE: " << FzEnergyType_str[ren.type()] << " - ";
+                        for(int e=0; e < ren.value_size(); e++) {
 
-                        cout << "VALUE: "  << ren.value() << ", ";
+                           cout << "TYPE: " << FzEnergyType_str[e] << " - ";
+                           cout << "VALUE: "  << ren.value(e) << ", ";
 
-                        if(ren.len_error())
-                           cout << " - EFLAGS: [L]" << endl;
-                        
-                        cout << "\t\t\t\t\t";
-                     }
+                           cout << endl << "\t\t\t\t\t";
+                        }
                   }
 
                   if(rdata.has_waveform()) {
