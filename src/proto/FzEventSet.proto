@@ -13,7 +13,6 @@ message Energy {
   required uint32 value = 1;
   required bool len_error = 2;  
   optional FzEnergyType type = 3;
-  optional int32 risetime = 4;
 }
 
 message Waveform {
@@ -39,7 +38,7 @@ message FzData {
   required FzDataType type = 1;
   repeated Energy energy = 2;
   optional Waveform waveform = 3;
-  optional int32 baseline = 6;
+  optional float baseline = 6;
   // attributes related to ADC datatype
   optional int64 sine = 4;
   optional int64 cosine = 5;
@@ -80,7 +79,7 @@ message FzHit {
   required uint32 gttag = 5;
   required uint32 dettag = 6;
   repeated FzData data = 7;
-  //optional FzTrigPattern trigpat = 8;
+  optional uint32 trigpat = 8;
 }
 
 message FzFee {

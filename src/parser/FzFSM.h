@@ -181,6 +181,7 @@ private:
    uint16_t tag;
    bool tag_done;
 
+   bool dettag_done;
    bool energy1_done;
    bool energy2_done;
    bool pretrig_done;

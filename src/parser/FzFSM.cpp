@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include "FzFSM.h"
 
-#define FSM_DEBUG
+//#define FSM_DEBUG
 #include <google/protobuf/text_format.h>  // for debug
 
 FzFSM::FzFSM(void) {
@@ -391,6 +391,8 @@ void FzFSM::trans04(void) {	// S2      ->      (DATA)          -> S3
 
    // verify if GTTAG already set
    hit->set_gttag(event[event_index]);
+
+   dettag_done = false;
 }
 
 void FzFSM::trans05(void) {	// S3      ->      (DATA)          -> S3
@@ -404,7 +406,12 @@ void FzFSM::trans05(void) {	// S3      ->      (DATA)          -> S3
 	update_fee();
 
    // verify if DETTAG already set
-   hit->set_dettag(event[event_index]);
+   if(!dettag_done) {
+      hit->set_dettag(event[event_index]);
+      dettag_done = true;
+   } else {
+      hit->set_trigpat(event[event_index]);
+   }
 }
 
 void FzFSM::trans06(void) {	// S3      ->      (DETID)         -> S4
@@ -950,8 +957,9 @@ void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
 
 		} else if(tag == TAG_SLOW) {			// 0x7001
 
-			// filter risetime
-			en->set_risetime(event[event_index]);
+         uint16_t risetime;
+
+			risetime = event[event_index];
 
 			// energy_h
 			event_index++;
@@ -967,10 +975,15 @@ void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
 
 			en->set_value((en->value() << 15) + event[event_index]);
 
+         // value multiplied 1000 for precision
+         en->set_value((uint32_t)((float)en->value() / (float)risetime * 1000));
+
 		} else if(tag == TAG_FAST) {			// 0x7002
 
+         uint16_t risetime;
+
 			// filter risetime
-			en->set_risetime(event[event_index]);
+			risetime = event[event_index];
 
 			// energy_h
          event_index++;
@@ -985,11 +998,28 @@ void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
          update_fee();
 
          en->set_value((en->value() << 15) + event[event_index]);
+         
+         // value multiplied 1000 for precision
+         en->set_value((uint32_t)((float)en->value() / (float)risetime * 1000));
 
 		} else if(tag == TAG_BASELINE) {		// 0x7003
 
-			d->set_baseline(event[event_index]);
-         
+         int32_t temp_baseline;
+
+         // first word
+         temp_baseline = event[event_index] << 15;
+
+         event_index++;
+         update_blk();
+         update_fee();
+
+         // second word
+         temp_baseline += event[event_index];
+
+         if(temp_baseline > 536870911)
+            temp_baseline -= 1073741824;
+
+         d->set_baseline((float)temp_baseline / 16.0);
 		}
 
       // verify waveform length of event just acquired
