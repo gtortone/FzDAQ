@@ -482,10 +482,29 @@ zmq::message_t FzNodeManager::handle_request(zmq::message_t& request) {
            }
       }
 
-
    } else if(req.channel() == RCS::Request::SETUP) {	// SETUP
 
+      if(req.operation() == RCS::Request::READ) {
 
+      } else if(req.operation() == RCS::Request::WRITE) {
+      
+         if( (profile == "storage") || (profile == "all") ) {
+
+            if(req.value() == "store") {
+
+                  wr->write_events(true);
+                  res.set_errorcode(RCS::Response::OK);
+                  res.set_reason("OK");
+
+            } else if(req.value() == "nostore") {
+
+                  wr->write_events(false);
+                  res.set_errorcode(RCS::Response::OK);
+                  res.set_reason("OK");
+
+            }
+         }
+      }
    }
 
    res.SerializeToString(&str);

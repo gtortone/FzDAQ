@@ -65,7 +65,7 @@ void FzController::process_cli(void) {
 
                cmderr = false;
                prepare_rcwrite(req);
-	       req.set_hostname(hostname);
+	            req.set_hostname(hostname);
 
                req.set_value("configure");
                msg_req = to_zmqmsg(req);
@@ -86,7 +86,7 @@ void FzController::process_cli(void) {
 
                cmderr = false;
                prepare_rcwrite(req);
-	       req.set_hostname(hostname);
+	            req.set_hostname(hostname);
 
                req.set_value("configure");
                msg_req = to_zmqmsg(req);
@@ -120,7 +120,7 @@ void FzController::process_cli(void) {
 
                cmderr = false;
                prepare_rcwrite(req);
-	       req.set_hostname(hostname);
+	            req.set_hostname(hostname);
 
                req.set_value("stop");
                msg_req = to_zmqmsg(req);
@@ -141,7 +141,7 @@ void FzController::process_cli(void) {
 
                cmderr = false;
                prepare_rcwrite(req);
-	       req.set_hostname(hostname);
+	            req.set_hostname(hostname);
 
                req.set_value("reset");
                msg_req = to_zmqmsg(req);
@@ -224,21 +224,43 @@ void FzController::process_cli(void) {
              
                cmderr = false;
 
-	       req.set_channel(RCS::Request::RC);
+	            req.set_channel(RCS::Request::RC);
                req.set_operation(RCS::Request::READ);
                req.set_module(RCS::Request::CNT);
                req.set_hostname(hostname);
                req.set_variable("perfdata");
 
-	       msg_req = to_zmqmsg(req);
+	            msg_req = to_zmqmsg(req);
 
                if(send_unicast(msg_req, msg_res, req.hostname(), FZC_RC_PORT) == 0) {
 
-		  report.ParseFromArray(msg_res.data(), msg_res.size());
-	          print_status_table(report);
+		            report.ParseFromArray(msg_res.data(), msg_res.size());
+	               print_status_table(report);
 
-	       } else std::cout << ERRTAG << "send of stats RC command failed" << std::endl;
+	            } else std::cout << ERRTAG << "send of stats RC command failed" << std::endl;
             }
+
+            if(!line.compare("store")) {
+             
+               cmderr = false;
+
+	            req.set_channel(RCS::Request::SETUP);
+               req.set_operation(RCS::Request::WRITE);
+               req.set_module(RCS::Request::CNT);
+               req.set_hostname(hostname);
+               req.set_variable("store");
+
+	            msg_req = to_zmqmsg(req);
+
+               if(send_unicast(msg_req, msg_res, req.hostname(), FZC_RC_PORT) == 0) {
+                  
+                  if(res.errorcode() == RCS::Response::OK) {
+                     std::cout << "Fzwriter set to write events on disk" << std::endl;
+                  }
+
+	            } else std::cout << ERRTAG << "send of SETUP command failed" << std::endl;
+            }
+
 
             if(!line.compare("quit")) {
                cmderr = false;

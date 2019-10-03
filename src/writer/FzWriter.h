@@ -70,6 +70,7 @@ public:
    void setup_newfile(void);
    int setup_newdir();
    int get_max_runid(void);
+   void write_events(bool value);
 
    Report::FzWriter get_report(void);
 

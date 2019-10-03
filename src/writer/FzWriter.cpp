@@ -310,3 +310,7 @@ void FzWriter::set_rcstate(RCstate s) {
 
    rcstate = s;
 }
+
+void FzWriter::write_events(bool value) {
+   
+}
