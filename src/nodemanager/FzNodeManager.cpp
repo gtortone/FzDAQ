@@ -340,16 +340,25 @@ void FzNodeManager::process_perfdata(void) {
          if( (profile == "storage") || (profile == "all" ) ) {
     
             wr_report_t1.CopyFrom( wr->get_report() );
-   
+            
             nodereport.mutable_writer()->set_in_bytes( wr_report_t1.in_bytes() );
             nodereport.mutable_writer()->set_in_bytes_bw( wr_report_t1.in_bytes() - wr_report_t0.in_bytes() );
             nodereport.mutable_writer()->set_in_events( wr_report_t1.in_events() );
             nodereport.mutable_writer()->set_in_events_bw( wr_report_t1.in_events() - wr_report_t0.in_events() );
-	    
+      
             nodereport.mutable_writer()->set_out_bytes( wr_report_t1.out_bytes() );
-            nodereport.mutable_writer()->set_out_bytes_bw( wr_report_t1.out_bytes() - wr_report_t0.out_bytes() );
             nodereport.mutable_writer()->set_out_events( wr_report_t1.out_events() );
-            nodereport.mutable_writer()->set_out_events_bw( wr_report_t1.out_events() - wr_report_t0.out_events() );
+
+            if(wr->get_store()) {
+
+               nodereport.mutable_writer()->set_out_bytes_bw( wr_report_t1.out_bytes() - wr_report_t0.out_bytes() );
+               nodereport.mutable_writer()->set_out_events_bw( wr_report_t1.out_events() - wr_report_t0.out_events() );
+
+            } else {
+
+               nodereport.mutable_writer()->set_out_bytes_bw(0);
+               nodereport.mutable_writer()->set_out_events_bw(0);
+            }
          }
 
          // send report to FzController

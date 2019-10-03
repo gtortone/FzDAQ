@@ -1775,19 +1775,19 @@ void FzFSM::trans16(void) {	// S9      ->      (CRCBL)         -> S10
 
    if( rd_blkcrc == crc_calc ) {		
  
-     blk->set_crc_error(false);
+      blk->set_crc_error(false);
 
-     if(evformat == FMT_BASIC) {
+      // check if this block is a 'fake block' containing trigger info
+      if(blk->blkid() == 0x7FF) {
 
-         // check if this block is a 'fake block' containing trigger info
-         if(blk->blkid() == 0x7FF) {
+         if(evformat == FMT_BASIC) {
 
             if(blk->fee_size() > 0)
                read_triggerinfo(blk, ev);
+            }
 
-            ev->mutable_block()->RemoveLast(); 
-         }
-     }
+         ev->mutable_block()->RemoveLast(); 
+      }
 
    } else {
 
