@@ -661,6 +661,10 @@ int main(int argc, char *argv[]) {
                  out_evbw.str("");
                  out_databw.str("");
 
+                 std::cout << std::left << "event write: ";
+                 wr->get_store() ? std::cout << "ON" : std::cout << "OFF";
+                 std::cout << std::endl;
+
                  std::cout << "---" << std::endl;
               }
            }

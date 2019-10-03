@@ -17,6 +17,9 @@ FzWriter::FzWriter(std::string bdir, std::string run, long int id, std::string c
    int status;
    std::stringstream msg;
 
+   // store events on disk by default
+   store = true; 
+
    basedir = bdir;
    runtag = run;
    dirid = id;
@@ -311,6 +314,10 @@ void FzWriter::set_rcstate(RCstate s) {
    rcstate = s;
 }
 
-void FzWriter::write_events(bool value) {
-   
+void FzWriter::set_store(bool value) {
+   store = value;
+}
+
+bool FzWriter::get_store(void) {
+   return(store);
 }

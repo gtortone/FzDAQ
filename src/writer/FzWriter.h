@@ -43,6 +43,7 @@ private:
    unsigned int fileid;
    unsigned int dirid;
    std::string dirstr;
+   bool store;
 
    std::stringstream filename;
    std::fstream output; 
@@ -70,7 +71,9 @@ public:
    void setup_newfile(void);
    int setup_newdir();
    int get_max_runid(void);
-   void write_events(bool value);
+   
+   void set_store(bool value);
+   bool get_store(void);
 
    Report::FzWriter get_report(void);
 

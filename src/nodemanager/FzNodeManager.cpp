@@ -492,13 +492,13 @@ zmq::message_t FzNodeManager::handle_request(zmq::message_t& request) {
 
             if(req.value() == "store") {
 
-                  wr->write_events(true);
+                  wr->set_store(true);
                   res.set_errorcode(RCS::Response::OK);
                   res.set_reason("OK");
 
             } else if(req.value() == "nostore") {
 
-                  wr->write_events(false);
+                  wr->set_store(false);
                   res.set_errorcode(RCS::Response::OK);
                   res.set_reason("OK");
 
