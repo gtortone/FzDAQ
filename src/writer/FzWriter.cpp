@@ -311,9 +311,12 @@ void FzWriter::set_rcstate(RCstate s) {
          // at every start a new run must be allocated
          // PAUSED -> start -> RUNNING
          // READY  -> start -> RUNNING
-         setup_newdir();
-         setup_newfile();
-         esize = dsize = 0;
+         
+         if(store) {
+            setup_newdir();
+            setup_newfile();
+            esize = dsize = 0;
+         }
       }
 
       start_newdir = false;     // prevent first 'start' create a new run directory
