@@ -173,8 +173,6 @@ int FzWriter::setup_newdir(void) {
 
       dirid = get_max_runid();
       firstrun = false;
-      std::cout << "get_max_runid() = " << dirid << std::endl;
-      exit(0); // FIX
    }
    
    int status = DIR_OK;
