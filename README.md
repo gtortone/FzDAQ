@@ -169,6 +169,7 @@ of linked attribute. Each field provides a default value and, in principle, ther
 |cfgfile attribute|mandatory|default|description|
 |---|---|---|---|
 |evformat|yes|-|set to 'basic' or 'tag' event format|
+|logpropfile|no|/etc/default/fazia/log4cpp.properties|log property file|
  
 ### FzReader configuration attributes
 

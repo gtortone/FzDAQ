@@ -2,6 +2,8 @@
 
 #include <unistd.h>
 
+std::string FzLogger::propfile = "/etc/default/fazia/log4cpp.properties";
+
 FzLogger::FzLogger(void) {
 
    has_filelog = false;
@@ -10,9 +12,13 @@ FzLogger::FzLogger(void) {
 #endif
 }
 
+void FzLogger::setPropertyFile(std::string filename) {
+   propfile = filename;
+}
+
 void FzLogger::setFileConnection(std::string instance, std::string filename) {
 
-   log4cpp::PropertyConfigurator::configure("/etc/default/fazia/log4cpp.properties");
+   log4cpp::PropertyConfigurator::configure(FzLogger::propfile);
    logfile = &(root.getInstance(instance));
    priority = logfile->getChainedPriority();
 

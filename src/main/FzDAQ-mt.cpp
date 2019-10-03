@@ -15,6 +15,7 @@
 #include "parser/FzParser.h"
 #include "writer/FzWriter.h"
 #include "logger/FzJMS.h"
+#include "logger/FzLogger.h"
 #include "utils/zmq.hpp"
 
 namespace po = boost::program_options;
@@ -43,6 +44,7 @@ int main(int argc, char *argv[]) {
    int evformat = 0;
    std::string evformat_str;
    std::string logbasedir;
+   std::string logpropfile;
 
    FzReader *rd = NULL;
    std::vector<FzParser *> psr_array;	// vector of (Fzparser *)
@@ -171,6 +173,13 @@ int main(int argc, char *argv[]) {
       std::cout << INFOTAG << "log server connection successfully" << std::endl;
    }
 #endif
+
+   // configure log property file
+   if(cfg.lookupValue("fzdaq.global.logpropfile", logpropfile)) {
+
+      std::cout << INFOTAG << "log property file: " << logpropfile << std::endl;
+      FzLogger::setPropertyFile(logpropfile);
+   } 
 
    // configure log base directory
    if(cfg.lookupValue("fzdaq.global.log.basedir", logbasedir)) {
