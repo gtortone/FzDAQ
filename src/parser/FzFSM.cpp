@@ -1086,7 +1086,7 @@ void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
       
       } else if(tag == TAG_RB_CENTRUM) {
 
-         ev->add_trinfo();
+         t = ev->add_trinfo();
          t->set_id(0x200);
          t->set_attr("centrum0");
          t->set_value( (event[event_index] & 0x003F) + ( (uint64_t)(event[event_index] & 0xF800) << 15) );
