@@ -2,10 +2,18 @@
 
 void FzController::configure_log(void) {
 
+   std::string logpropfile;
+
+   // configure log property file
+   if(cfg.lookupValue("fzdaq.global.logpropfile", logpropfile)) {
+
+   	std::cout << INFOTAG << "log property file: " << logpropfile << std::endl;
+   	FzLogger::setPropertyFile(logpropfile);
+   } 
+
 #ifdef AMQLOG_ENABLED
 
    // configure ActiveMQ JMS log
-
    if(cfg.lookupValue("fzdaq.global.log.url", brokerURI)) {
 
       std::cout << INFOTAG << "FzDAQ global logging URI: " << brokerURI << "\t[cfg file]" << std::endl;
