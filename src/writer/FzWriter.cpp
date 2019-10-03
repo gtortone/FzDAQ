@@ -243,25 +243,28 @@ void FzWriter::process(void) {
                report.set_in_bytes( report.in_bytes() + message.size() );
                report.set_in_events( report.in_events() + 1 );
 
-               std::string msg_str(static_cast<char*>(message.data()), message.size());
-               pb->WriteDataset(output, msg_str);
+               if(store) {
+               
+                  std::string msg_str(static_cast<char*>(message.data()), message.size());
+                  pb->WriteDataset(output, msg_str);
 
-               report.set_out_bytes( report.out_bytes() + message.size() );
-               report.set_out_events( report.out_events() + 1 );
+                  report.set_out_bytes( report.out_bytes() + message.size() );
+                  report.set_out_events( report.out_events() + 1 );
 
-               esize += message.size();
-               dsize += message.size();
-         
-               if(dsize > event_dir_size) {
+                  esize += message.size();
+                  dsize += message.size();
+            
+                  if(dsize > event_dir_size) {
 
-                  setup_newdir();
-                  setup_newfile();
-                  esize = dsize = 0;
+                     setup_newdir();
+                     setup_newfile();
+                     esize = dsize = 0;
 
-               } else if(esize > event_file_size) {
+                  } else if(esize > event_file_size) {
 
-                  setup_newfile();
-                  esize = 0;
+                     setup_newfile();
+                     esize = 0;
+                  }
                }
 
                // to fazia-spy	-- at this point due to 'move' semantic on message
