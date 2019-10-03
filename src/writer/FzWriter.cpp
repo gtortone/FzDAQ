@@ -265,6 +265,11 @@ void FzWriter::process(void) {
                      setup_newfile();
                      esize = 0;
                   }
+
+               } else {
+                  
+                  report.set_out_bytes(0);
+                  report.set_out_events(0);
                }
 
                // to fazia-spy	-- at this point due to 'move' semantic on message
