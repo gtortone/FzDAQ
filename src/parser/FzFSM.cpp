@@ -532,7 +532,7 @@ void FzFSM::trans06(void) {	// S3      ->      (DETID)         -> S4
 }
 
 void FzFSM::trans07_basic(void) {	// S4      ->      (DATA)          -> S5
-   #if 0
+
    #ifdef FSM_DEBUG
    sprintf(logbuf, "S4      ->      (DATA)          -> S5 - word: %4.4X", event[event_index]);
    log->write(DEBUG, logbuf);
@@ -565,7 +565,6 @@ void FzFSM::trans07_basic(void) {	// S4      ->      (DATA)          -> S5
 
 		} // else error
 	}
-   #endif
 }
 
 void FzFSM::trans07_tag(void) {	// S4      ->      (DATA)          -> S5
@@ -627,7 +626,7 @@ void FzFSM::trans07_tag(void) {	// S4      ->      (DATA)          -> S5
 }
 
 void FzFSM::trans08_basic(void) {	// S5      ->      (DATA)          -> S5
-   #if 0
+
    #ifdef FSM_DEBUG
    sprintf(logbuf, "S5      ->      (DATA)          -> S5 - word: %4.4X", event[event_index]);
    log->write(DEBUG, logbuf);
@@ -848,7 +847,6 @@ void FzFSM::trans08_basic(void) {	// S5      ->      (DATA)          -> S5
 	      //feecrc = save_feecrc;
 	   }
 	}
-   #endif
 }
 
 void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
@@ -1154,7 +1152,7 @@ void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
 }
 
 void FzFSM::trans09_basic(void) {	   // S5      ->      (DETID)         -> S4
-   #if 0
+
    #ifdef FSM_DEBUG
    sprintf(logbuf, "S5      ->      (DETID)         -> S4 - word: %4.4X", event[event_index]);
    log->write(DEBUG, logbuf);
@@ -1341,7 +1339,6 @@ void FzFSM::trans09_basic(void) {	   // S5      ->      (DETID)         -> S4
       wf->set_len_error(true);
       err_in_event = true;
    }
-   #endif
 }
 
 void FzFSM::trans09_tag(void) {	   // S5      ->      (DETID)         -> S4
@@ -1458,7 +1455,6 @@ void FzFSM::trans09_tag(void) {	   // S5      ->      (DETID)         -> S4
 
 void FzFSM::trans10_basic(void) {	   // S5      ->      (TELID)         -> S2
 
-   #if 0
    #ifdef FSM_DEBUG
    sprintf(logbuf, "S5      ->      (TELID)         -> S2 - word: %4.4X", event[event_index]);
    log->write(DEBUG, logbuf);
@@ -1536,7 +1532,6 @@ void FzFSM::trans10_basic(void) {	   // S5      ->      (TELID)         -> S2
 
    //hit->set_telid((DAQ::FzHit::FzTelescope) telid);
    //hit->set_feeid((DAQ::FzHit::FzFec) feeid);
-   #endif
 }
 
 void FzFSM::trans10_tag(void) {	   // S5      ->      (TELID)         -> S2
@@ -1572,7 +1567,6 @@ void FzFSM::trans10_tag(void) {	   // S5      ->      (TELID)         -> S2
 
 void FzFSM::trans11_basic(void) {	   // S5      ->      (LENGTH)        -> S6
   
-   #if 0
    #ifdef FSM_DEBUG
    sprintf(logbuf, "S5      ->      (LENGTH)        -> S6 - word: %4.4X", event[event_index]);
    log->write(DEBUG, logbuf);
@@ -1628,7 +1622,6 @@ void FzFSM::trans11_basic(void) {	   // S5      ->      (LENGTH)        -> S6
          err_in_event = true;
       }
    }
-   #endif
 }
 
 void FzFSM::trans11_tag(void) {	   // S5      ->      (LENGTH)        -> S6
