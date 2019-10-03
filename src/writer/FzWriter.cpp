@@ -4,21 +4,22 @@
 
 #include <fstream>
 #include <sstream>
+#include <dirent.h>
 
 #ifdef AMQLOG_ENABLED
-FzWriter::FzWriter(std::string bdir, std::string run, long int id, bool subid, std::string cfgfile, zmq::context_t &ctx, cms::Connection *JMSconn, std::string logdir) :
+FzWriter::FzWriter(std::string bdir, std::string run, long int id, std::string cfgfile, zmq::context_t &ctx, cms::Connection *JMSconn, std::string logdir) :
    context(ctx), AMQconn(JMSconn), logbase(logdir) {
 #else
-FzWriter::FzWriter(std::string bdir, std::string run, long int id, bool subid, std::string cfgfile, zmq::context_t &ctx, std::string logdir) :
+FzWriter::FzWriter(std::string bdir, std::string run, long int id, std::string cfgfile, zmq::context_t &ctx, std::string logdir) :
    context(ctx), logbase(logdir) {
 #endif
 
    int status;
+   std::stringstream msg;
 
    basedir = bdir;
    runtag = run;
    dirid = id;
-   this->subid = subid;
 
    log.setFileConnection("fzwriter", logbase + "/fzwriter.log");
 
@@ -38,24 +39,15 @@ FzWriter::FzWriter(std::string bdir, std::string run, long int id, bool subid, s
    start_newdir = true;
    status = setup_newdir();
 
-   if(status == DIR_EXISTS) {
+   if(status == DIR_FAIL) {
 
-      std::stringstream msg;
-      msg << "directory " << dirstr << " already exists - searching for new directory name...";
-      log.write(WARN, msg.str());
-
-      while(setup_newdir() == DIR_EXISTS)
-         ;
-      
-      msg.str("");
-      msg << "directory " << dirstr << " successfully allocated for new event files";
-      log.write(INFO, msg.str());
-
-   } else if(status == DIR_FAIL) {
-
-      std::stringstream msg;
       msg << "directory " << dirstr << " filesystem  error";
       log.write(ERROR, msg.str());
+   
+   } else {
+   
+      msg << "directory " << dirstr << " successfully allocated for new event files";
+      log.write(INFO, msg.str());
    }
 
    setup_newfile();
@@ -172,15 +164,23 @@ void FzWriter::setup_newfile(void) {
    fileid++;
 };
 
+// default argument: (firstrun = false)
 int FzWriter::setup_newdir(void) {
 
+   static bool firstrun = true;
+
+   if(firstrun) {
+
+      dirid = get_max_runid();
+      firstrun = false;
+      std::cout << "get_max_runid() = " << dirid << std::endl;
+      exit(0); // FIX
+   }
+   
    int status = DIR_OK;
    std::ostringstream ss;
 
-   if(!subid)
-      ss << runtag << std::setw(6) << std::setfill('0') << dirid;
-   else
-      ss << runtag << std::setw(6) << std::setfill('0') << dirid << '.' << dirsubid;
+   ss << runtag << std::setw(6) << std::setfill('0') << dirid;
 
    dirstr = basedir + '/' + ss.str();
 
@@ -194,12 +194,33 @@ int FzWriter::setup_newdir(void) {
       status = DIR_FAIL;
 
    // prepare for next directory name
-   if(subid)
-      dirsubid++;
-   else
-      dirid++;
+   dirid++;
 
    return(status);
+}
+
+int FzWriter::get_max_runid(void) {
+
+   DIR *dir = opendir(basedir.c_str());
+
+   struct dirent *entry = readdir(dir);
+
+   int num = dirid;
+   int max = dirid;
+   while (entry != NULL) {
+      if (entry->d_type == DT_DIR) {
+         if( strstr(entry->d_name, runtag.c_str()) != NULL) {
+            sscanf(entry->d_name, "%*[^0123456789]%d", &num);
+            if (num > max)
+               max = num;
+         }
+      }
+      entry = readdir(dir);
+   }  // end while
+
+   closedir(dir);
+
+   return max;
 }
 
 void FzWriter::process(void) {

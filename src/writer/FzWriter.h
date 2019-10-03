@@ -39,11 +39,9 @@ private:
 
    std::string basedir;
    std::string runtag;
-   bool subid;
 
    unsigned int fileid;
    unsigned int dirid;
-   unsigned int dirsubid;
    std::string dirstr;
 
    std::stringstream filename;
@@ -58,9 +56,9 @@ private:
 public:
 
 #ifdef AMQLOG_ENABLED
-   FzWriter(std::string bdir, std::string run, long int id, bool subid, std::string cfgfile, zmq::context_t &ctx, cms::Connection *JMSconn, std::string logdir);
+   FzWriter(std::string bdir, std::string run, long int id, std::string cfgfile, zmq::context_t &ctx, cms::Connection *JMSconn, std::string logdir);
 #else
-   FzWriter(std::string bdir, std::string run, long int id, bool subid, std::string cfgfile, zmq::context_t &ctx, std::string logdir);
+   FzWriter(std::string bdir, std::string run, long int id, std::string cfgfile, zmq::context_t &ctx, std::string logdir);
 #endif
 
    void init(void);
@@ -70,7 +68,8 @@ public:
    void set_eventdirsize(unsigned long int size);
 
    void setup_newfile(void);
-   int setup_newdir(void);
+   int setup_newdir();
+   int get_max_runid(void);
 
    Report::FzWriter get_report(void);
 

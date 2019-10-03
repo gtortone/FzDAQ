@@ -29,7 +29,6 @@ int main(int argc, char *argv[]) {
    std::string subdir;
    std::string runtag;
    uint32_t runid;
-   bool subid = false;
    uint32_t esize, dsize;
 
    libconfig::Config cfg;
@@ -363,9 +362,9 @@ int main(int argc, char *argv[]) {
 
 #ifdef AMQLOG_ENABLED
       // create FzWriter thread 
-      wr = new FzWriter(subdir, runtag, runid, subid, cfgfile, context, JMSconn, logbasedir);
+      wr = new FzWriter(subdir, runtag, runid, cfgfile, context, JMSconn, logbasedir);
 #else
-      wr = new FzWriter(subdir, runtag, runid, subid, cfgfile, context, logbasedir);
+      wr = new FzWriter(subdir, runtag, runid, cfgfile, context, logbasedir);
 #endif
 
       if(!wr) {
