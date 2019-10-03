@@ -261,6 +261,27 @@ void FzController::process_cli(void) {
 	            } else std::cout << ERRTAG << "send of SETUP command failed" << std::endl;
             }
 
+            if(!line.compare("nostore")) {
+             
+               cmderr = false;
+
+	            req.set_channel(RCS::Request::SETUP);
+               req.set_operation(RCS::Request::WRITE);
+               req.set_module(RCS::Request::CNT);
+               req.set_hostname(hostname);
+               req.set_variable("nostore");
+
+	            msg_req = to_zmqmsg(req);
+
+               if(send_unicast(msg_req, msg_res, req.hostname(), FZC_RC_PORT) == 0) {
+                  
+                  if(res.errorcode() == RCS::Response::OK) {
+                     std::cout << "Fzwriter set to NOT write events on disk" << std::endl;
+                  }
+
+	            } else std::cout << ERRTAG << "send of SETUP command failed" << std::endl;
+            }
+
 
             if(!line.compare("quit")) {
                cmderr = false;
