@@ -490,13 +490,13 @@ zmq::message_t FzNodeManager::handle_request(zmq::message_t& request) {
       
          if( (profile == "storage") || (profile == "all") ) {
 
-            if(req.value() == "store") {
+            if(req.variable() == "store") {
 
                   wr->set_store(true);
                   res.set_errorcode(RCS::Response::OK);
                   res.set_reason("OK");
 
-            } else if(req.value() == "nostore") {
+            } else if(req.variable() == "nostore") {
 
                   wr->set_store(false);
                   res.set_errorcode(RCS::Response::OK);

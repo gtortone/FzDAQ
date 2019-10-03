@@ -246,7 +246,7 @@ void FzController::process_cli(void) {
 
 	            req.set_channel(RCS::Request::SETUP);
                req.set_operation(RCS::Request::WRITE);
-               req.set_module(RCS::Request::CNT);
+               req.set_module(RCS::Request::NM);
                req.set_hostname(hostname);
                req.set_variable("store");
 
@@ -267,7 +267,7 @@ void FzController::process_cli(void) {
 
 	            req.set_channel(RCS::Request::SETUP);
                req.set_operation(RCS::Request::WRITE);
-               req.set_module(RCS::Request::CNT);
+               req.set_module(RCS::Request::NM);
                req.set_hostname(hostname);
                req.set_variable("nostore");
 
