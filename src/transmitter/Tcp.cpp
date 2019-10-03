@@ -140,6 +140,8 @@ int TcpOpen(int *sid_pt,char *ip_adrs,int SourcePort,int DestPort,int timeout)
 
       return OK;
   }
+
+  return OK;
 }
 
 void TcpClose(int *sid_pt)
