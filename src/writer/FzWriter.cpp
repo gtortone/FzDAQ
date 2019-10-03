@@ -164,14 +164,13 @@ void FzWriter::setup_newfile(void) {
    fileid++;
 };
 
-// default argument: (firstrun = false)
 int FzWriter::setup_newdir(void) {
 
    static bool firstrun = true;
 
    if(firstrun) {
 
-      dirid = get_max_runid();
+      dirid = get_max_runid() + 1;
       firstrun = false;
    }
    
