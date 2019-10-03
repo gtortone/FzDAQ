@@ -1095,49 +1095,13 @@ void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
          update_blk();
          update_fee();
 
-         ev->add_trinfo();
-         t->set_id(0x201);
-         t->set_attr("centrum1");
-         t->set_value(event[event_index]<<15);
-         event_index++;
-         update_blk();
-         update_fee();
-         t->set_value(t->value() + event[event_index]);
-
-         event_index++;
-         update_blk();
-         update_fee();
-
-         ev->add_trinfo();
-         t->set_id(0x202);
-         t->set_attr("centrum2");
-         t->set_value(event[event_index]<<15);
-         event_index++;
-         update_blk();
-         update_fee();
-         t->set_value(t->value() + event[event_index]);
-
-         event_index++;
-         update_blk();
-         update_fee();
-
-         ev->add_trinfo();
-         t->set_id(0x203);
-         t->set_attr("centrum3");
-         t->set_value(event[event_index]<<15);
-         event_index++;
-         update_blk();
-         update_fee();
-         t->set_value(t->value() + event[event_index]);
-
-#if 0
          uint64_t supp = 0;
          for(int i=1; i<rd_wflen; i++) {
 
             if(i % 2) {   
                supp = event[event_index]<<15;
             } else {
-               ev->add_trinfo();
+               t = ev->add_trinfo();
                t->set_id(0x200+i/2);
                t->set_attr(FzCentrumInfo_str[i/2]);
                t->set_value(supp + event[event_index]);
@@ -1148,7 +1112,6 @@ void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
                }
             }
          }  // end for
-#endif
       }
 
       // verify waveform length of event just acquired
