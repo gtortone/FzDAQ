@@ -1088,7 +1088,6 @@ void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
 
          ev->add_trinfo();
          t->set_id(0x200);
-         
          t->set_attr("centrum0");
          t->set_value( (event[event_index] & 0x003F) + ( (uint64_t)(event[event_index] & 0xF800) << 15) );
 
@@ -1096,6 +1095,42 @@ void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
          update_blk();
          update_fee();
 
+         ev->add_trinfo();
+         t->set_id(0x201);
+         t->set_attr("centrum1");
+         t->set_value(event[event_index]<<15);
+         event_index++;
+         update_blk();
+         update_fee();
+         t->set_value(t->value() + event[event_index]);
+
+         event_index++;
+         update_blk();
+         update_fee();
+
+         ev->add_trinfo();
+         t->set_id(0x202);
+         t->set_attr("centrum2");
+         t->set_value(event[event_index]<<15);
+         event_index++;
+         update_blk();
+         update_fee();
+         t->set_value(t->value() + event[event_index]);
+
+         event_index++;
+         update_blk();
+         update_fee();
+
+         ev->add_trinfo();
+         t->set_id(0x203);
+         t->set_attr("centrum3");
+         t->set_value(event[event_index]<<15);
+         event_index++;
+         update_blk();
+         update_fee();
+         t->set_value(t->value() + event[event_index]);
+
+#if 0
          uint64_t supp = 0;
          for(int i=1; i<rd_wflen; i++) {
 
@@ -1113,6 +1148,7 @@ void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
                }
             }
          }  // end for
+#endif
       }
 
       // verify waveform length of event just acquired
@@ -1784,7 +1820,7 @@ void FzFSM::trans16(void) {	// S9      ->      (CRCBL)         -> S10
 
             if(blk->fee_size() > 0)
                read_triggerinfo(blk, ev);
-            }
+         }
 
          ev->mutable_block()->RemoveLast(); 
       }
