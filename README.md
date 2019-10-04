@@ -94,12 +94,11 @@ Build
   ```
   --with-boost-libdir	  directory for Boost libraries
   --enable-weblog         enable WebLog message interface
-  --enable-amqlog         enable ActiveMQ log message interface
   ```
 
 - run configure
   
-  ```./configure --prefix=/opt/FzDAQ --with-boost-libdir=/usr/lib/x86_64-linux-gnu --enable-weblog --enable-amqlog```
+  ```./configure --prefix=/opt/FzDAQ --with-boost-libdir=/usr/lib/x86_64-linux-gnu --enable-weblog ```
   
 - start build
 

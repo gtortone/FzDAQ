@@ -6,13 +6,8 @@
 #include <sstream>
 #include <dirent.h>
 
-#ifdef AMQLOG_ENABLED
-FzWriter::FzWriter(std::string bdir, std::string run, long int id, std::string cfgfile, zmq::context_t &ctx, cms::Connection *JMSconn, std::string logdir) :
-   context(ctx), AMQconn(JMSconn), logbase(logdir) {
-#else
 FzWriter::FzWriter(std::string bdir, std::string run, long int id, std::string cfgfile, zmq::context_t &ctx, std::string logdir) :
    context(ctx), logbase(logdir) {
-#endif
 
    int status;
    std::stringstream msg;
@@ -25,11 +20,6 @@ FzWriter::FzWriter(std::string bdir, std::string run, long int id, std::string c
    dirid = id;
 
    log.setFileConnection("fzwriter", logbase + "/fzwriter.log");
-
-#ifdef AMQLOG_ENABLED
-   if(AMQconn.get())
-      log.setJMSConnection("FzWriter", JMSconn);
-#endif
 
    cfg.readFile(cfgfile.c_str());    // syntax checks on main
 

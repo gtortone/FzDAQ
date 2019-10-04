@@ -1,4 +1,4 @@
-AC_INIT([FzDAQ], [1.5])
+AC_INIT([FzDAQ], [2.0])
 AC_CONFIG_SRCDIR([src/main/FzDAQ-mt.cpp])
 ac_default_prefix=/opt/FzDAQ
 
@@ -81,17 +81,6 @@ AS_IF([test "x$enable_weblog" = "xyes"], [
   ])
   AC_DEFINE([WEBLOG_ENABLED])
   LIBS="$weblog_LIBS $LIBS"
-])
-
-AC_ARG_ENABLE([amqlog],
-    AS_HELP_STRING([--enable-amqlog], [enable ActiveMQ log message interface]))
-AS_IF([test "x$enable_amqlog" = "xyes"], [
-  PKG_CHECK_MODULES([amqlog], [activemq-cpp] ,[], [
-    AC_MSG_ERROR([unable to find ActiveMQ library])
-  ])
-  AC_DEFINE([AMQLOG_ENABLED])
-  LIBS="$amqlog_LIBS $LIBS"
-  CXXFLAGS="$CXXFLAGS $amqlog_CFLAGS"
 ])
 
 AC_OUTPUT(Makefile)

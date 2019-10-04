@@ -37,9 +37,6 @@ private:
    FzWriter *wr;
 
    FzLogger log;
-#ifdef AMQLOG_ENABLED
-   std::unique_ptr<cms::Connection> AMQconn;
-#endif
    boost::mutex logmtx;
 
    std::string hostname;
@@ -60,11 +57,8 @@ private:
 
 public:
 
-#ifdef AMQLOG_ENABLED
-   FzNodeManager(FzReader *rd, std::vector<FzParser *> psr_array, FzWriter *wr, std::string cfgfile, std::string prof, zmq::context_t &ctx, cms::Connection *JMSconn);
-#else
    FzNodeManager(FzReader *rd, std::vector<FzParser *> psr_array, FzWriter *wr, std::string cfgfile, std::string prof, zmq::context_t &ctx);
-#endif
+
    void init(void);
    void close(void);
 

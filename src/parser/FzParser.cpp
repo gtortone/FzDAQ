@@ -2,27 +2,13 @@
 #include "utils/FzProtobuf.h"
 #include "logger/FzLogger.h"
 
-#ifdef AMQLOG_ENABLED
-FzParser::FzParser(unsigned int id, std::string cfgfile, zmq::context_t &ctx, cms::Connection *JMSconn, int evf, std::string logdir) :
-   context(ctx), AMQconn(JMSconn), evformat(evf), logbase(logdir) {
-#else
 FzParser::FzParser(unsigned int id, std::string cfgfile, zmq::context_t &ctx, int evf, std::string logdir) :
    context(ctx), evformat(evf), logbase(logdir) {
-#endif
 
    std::stringstream filename, msg;
    filename << logbase << "/fzparser.log." << id;
 
    log.setFileConnection("fzparser", filename.str());
-
-#ifdef AMQLOG_ENABLED
-   if(AMQconn.get()) {
-
-      msg << "FzParser." << id;
-      log.setJMSConnection(msg.str(), JMSconn);
-      msg.str("");
-   }
-#endif
 
    cfg.readFile(cfgfile.c_str());    // syntax checks on main
 

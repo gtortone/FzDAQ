@@ -4,22 +4,12 @@
 
 #include <boost/algorithm/string.hpp>
 
-#ifdef AMQLOG_ENABLED
-FzNodeManager::FzNodeManager(FzReader *rd, std::vector<FzParser *> psr_array, FzWriter *wr, std::string cfgfile, std::string prof, zmq::context_t &ctx, cms::Connection *JMSconn) :
-   context(ctx), rd(rd), psr_array(psr_array), wr(wr), AMQconn(JMSconn) {
-#else
 FzNodeManager::FzNodeManager(FzReader *rd, std::vector<FzParser *> psr_array, FzWriter *wr, std::string cfgfile, std::string prof, zmq::context_t &ctx) :
    context(ctx), rd(rd), psr_array(psr_array), wr(wr) {
-#endif
 
    cfg.readFile(cfgfile.c_str());    // syntax checks on main
 
    log.setFileConnection("fznodemanager", "/var/log/fzdaq/fznodemanager.log");
-
-#ifdef AMQLOG_ENABLED
-   if(AMQconn.get())
-      log.setJMSConnection("FzNodeManager", JMSconn);
-#endif
 
    profile = prof;
    thread_init = false;

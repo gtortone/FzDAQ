@@ -41,9 +41,6 @@ private:
 
    FzLogger log;
    std::string logbase;
-#ifdef AMQLOG_ENABLED
-   std::unique_ptr<cms::Connection> AMQconn;
-#endif
 
    struct ns_mgr udpserver;
 
@@ -59,11 +56,7 @@ private:
 
 public:
 
-#ifdef AMQLOG_ENABLED
-   FzReader(std::string nurl, std::string cfgfile, zmq::context_t &ctx, cms::Connection *JMSconn, std::string logdir);
-#else
    FzReader(std::string nurl, std::string cfgfile, zmq::context_t &ctx, std::string logdir);
-#endif
 
    int setup(void);
    int init(void);

@@ -8,7 +8,6 @@
 #include "proto/FzNodeReport.pb.h"
 #include "proto/FzRCS.pb.h"
 #include "utils/zmq.hpp"
-#include "logger/FzJMS.h"
 #include "utils/FzTypedef.h"
 #include "rc/RCFSM.h"
 #include "utils/FzUtils.h"
@@ -29,12 +28,6 @@ private:
 
    boost::shared_mutex logmutex;
    boost::mutex mapmutex;
-
-#ifdef AMQLOG_ENABLED
-   activemq::core::ActiveMQConnectionFactory JMSfactory;
-   std::shared_ptr<cms::Connection> JMSconn;
-   std::string brokerURI;
-#endif
 
    boost::thread *thrcol;	// collector thread
    boost::thread *thrrc;	// run control thread

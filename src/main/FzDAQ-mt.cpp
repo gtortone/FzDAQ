@@ -55,12 +55,6 @@ int main(int argc, char *argv[]) {
 
    bool rec = false;
 
-#ifdef AMQLOG_ENABLED
-   activemq::core::ActiveMQConnectionFactory JMSfactory;
-   //std::shared_ptr<cms::Connection> JMSconn;
-   cms::Connection *JMSconn = NULL;
-#endif
-
    // handling of command line parameters
    po::options_description desc("\nFzDAQ - allowed options", 100);
    
@@ -146,33 +140,6 @@ int main(int argc, char *argv[]) {
          }
       }
    }  
-
-#ifdef AMQLOG_ENABLED
-   // configure ActiveMQ JMS log
-   if(cfg.lookupValue("fzdaq.global.log.url", brokerURI)) {
-
-      std::cout << INFOTAG << "FzDAQ global logging URI: " << brokerURI << "\t[cfg file]" << std::endl;
-
-      activemq::library::ActiveMQCPP::initializeLibrary();
-      JMSfactory.setBrokerURI(brokerURI);
-
-      try {
- 
-        JMSconn = JMSfactory.createConnection();
-
-      } catch (cms::CMSException e) {
-
-        std::cout << ERRTAG << "log server error" << std::endl; 
-        JMSconn = NULL;
-      } 
-   } 
-
-   if(JMSconn) {
-    
-      JMSconn->start();
-      std::cout << INFOTAG << "log server connection successfully" << std::endl;
-   }
-#endif
 
    // configure log property file
    if(cfg.lookupValue("fzdaq.global.logpropfile", logpropfile)) {
@@ -332,12 +299,7 @@ int main(int argc, char *argv[]) {
 
    if(iscompute) {
 
-#ifdef AMQLOG_ENABLED
-      // create FzReader thread
-      rd = new FzReader(neturl, cfgfile, context, JMSconn, logbasedir);
-#else
       rd = new FzReader(neturl, cfgfile, context, logbasedir);
-#endif
 
       if(!rd) {
          std::cout << ERRTAG << "FzReader: thread allocation failed" << std::endl;
@@ -349,11 +311,7 @@ int main(int argc, char *argv[]) {
       // create FzParser threads pool
       for(i=0; i < nthreads; i++) {
 
-#ifdef AMQLOG_ENABLED
-         psr_array.push_back(new FzParser(i, cfgfile, context, JMSconn, evformat, logbasedir));
-#else
-         psr_array.push_back(new FzParser(i, cfgfile, context, evformat, logbasedir));       
-#endif
+         psr_array.push_back(new FzParser(i, cfgfile, context, evformat, logbasedir));
 
          if(!psr_array[i]) {
 
@@ -369,12 +327,7 @@ int main(int argc, char *argv[]) {
 
    if(isstorage) {
 
-#ifdef AMQLOG_ENABLED
-      // create FzWriter thread 
-      wr = new FzWriter(subdir, runtag, runid, cfgfile, context, JMSconn, logbasedir);
-#else
       wr = new FzWriter(subdir, runtag, runid, cfgfile, context, logbasedir);
-#endif
 
       if(!wr) {
          std::cout << ERRTAG << "FzWriter: thread allocation failed" << std::endl;
@@ -399,11 +352,7 @@ int main(int argc, char *argv[]) {
 
    // create FzNodeManager thread
 
-#ifdef AMQLOG_ENABLED
-   nm = new FzNodeManager(rd, psr_array, wr, cfgfile, profile, context, JMSconn);
-#else
    nm = new FzNodeManager(rd, psr_array, wr, cfgfile, profile, context);
-#endif
 
    if(!nm) {
       std::cout << ERRTAG << "FzNodeManager: thread allocation failed" << std::endl;
