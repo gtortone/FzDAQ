@@ -14,7 +14,6 @@
 #include "reader/FzReader.h"
 #include "parser/FzParser.h"
 #include "writer/FzWriter.h"
-#include "logger/FzJMS.h"
 #include "logger/FzLogger.h"
 #include "utils/zmq.hpp"
 

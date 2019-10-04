@@ -9,7 +9,6 @@
 #include "proto/FzNodeReport.pb.h"
 #include "utils/zmq.hpp"
 #include "utils/fossa.h"
-#include "logger/FzJMS.h"
 #include "logger/FzLogger.h"
 #include "utils/FzTypedef.h"
 

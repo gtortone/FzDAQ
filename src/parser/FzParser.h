@@ -12,7 +12,6 @@
 #include "logger/FzLogger.h"
 #include "proto/FzNodeReport.pb.h"
 #include "utils/zmq.hpp"
-#include "logger/FzJMS.h"
 #include "logger/FzLogger.h"
 #include "utils/FzTypedef.h" 
 

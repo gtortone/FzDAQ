@@ -7,7 +7,6 @@
 #include "utils/FzTypedef.h"
 #include "utils/FzProtobuf.h"
 #include "proto/FzNodeReport.pb.h"
-#include "logger/FzJMS.h"
 #include "logger/FzLogger.h"
 #include "utils/zmq.hpp"
 #include "utils/FzTypedef.h"

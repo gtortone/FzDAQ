@@ -7,8 +7,6 @@
 #include <log4cpp/Appender.hh>
 #include <log4cpp/FileAppender.hh>
 
-#include "FzJMS.h"
-
 #define EMERG 	 log4cpp::Priority::EMERG
 #define FATAL 	 log4cpp::Priority::FATAL
 #define ALERT 	 log4cpp::Priority::ALERT
