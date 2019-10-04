@@ -225,6 +225,9 @@ int FzWriter::get_max_runid(void) {
 
 void FzWriter::process(void) {
 
+   uint64_t last_out_bytes = 0;
+   uint64_t last_out_events = 0;
+
    while(true) {
 
       try {
@@ -248,8 +251,8 @@ void FzWriter::process(void) {
                   std::string msg_str(static_cast<char*>(message.data()), message.size());
                   pb->WriteDataset(output, msg_str);
 
-                  report.set_out_bytes( report.out_bytes() + message.size() );
-                  report.set_out_events( report.out_events() + 1 );
+                  last_out_bytes = report.out_bytes() + message.size();
+                  last_out_events = report.out_events() + 1;
 
                   esize += message.size();
                   dsize += message.size();
@@ -265,12 +268,10 @@ void FzWriter::process(void) {
                      setup_newfile();
                      esize = 0;
                   }
+               } 
 
-               } else {
-                  
-                  report.set_out_bytes(0);
-                  report.set_out_events(0);
-               }
+               report.set_out_bytes(last_out_bytes);
+               report.set_out_events(last_out_events);
 
                // to fazia-spy	-- at this point due to 'move' semantic on message
                pub->send(message);

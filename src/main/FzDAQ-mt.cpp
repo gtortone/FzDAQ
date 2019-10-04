@@ -448,6 +448,8 @@ int main(int argc, char *argv[]) {
                  std::cout << "start:  \tconfigure and start acquisition" << std::endl;
                  std::cout << "stop:   \tstop acquisition" << std::endl;
                  std::cout << "reset:   \treset acquisition" << std::endl;
+                 std::cout << "store:   \t enable write events on disk" << std::endl;
+                 std::cout << "nostore:   \t disable write events on disk" << std::endl;
               }
 
               std::cout << "stats:  \tprint event data acquisition statistics" << std::endl;
@@ -505,6 +507,20 @@ int main(int argc, char *argv[]) {
                  cmderr = false;
                  nm->rc_process(RCcommand::reset);
                  std::cout << INFOTAG << "Fazia DAQ reset" << std::endl;
+              }
+
+              if( (!line.compare("store") && ( (profile == "all") || (profile == "storage") ) ) ) {
+                 
+                 cmderr = false;
+                 wr->set_store(true);
+                 std::cout << "Fzwriter set to write events on disk" << std::endl;
+              }
+
+              if( (!line.compare("nostore") && ( (profile == "all") || (profile == "storage") ) ) ) {
+                 
+                 cmderr = false;
+                 wr->set_store(false);
+                 std::cout << "Fzwriter set to write events on disk" << std::endl;
               }
 
            }	// RC_MODE_LOCAL

@@ -56,6 +56,8 @@ void FzController::process_cli(void) {
                std::cout << "reset:\t\treset acquisition" << std::endl;
                std::cout << "stats:\t\tprint acquisition statistics" << std::endl;
                std::cout << "status:\t\tprint acquisition status" << std::endl;
+               std::cout << "store:\t\tenable write events on disk" << std::endl;
+               std::cout << "nostore:\t\tdisable write events on disk" << std::endl;
                std::cout << "help:\t\tprint usage" << std::endl;
                std::cout << "quit:\t\tquit from FzController" << std::endl;
                std::cout << std::endl;
