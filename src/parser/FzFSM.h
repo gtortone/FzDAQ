@@ -224,6 +224,8 @@ private:
 	void update_fee_crc(void);
 	void update_fee_len(void);
 
+   void next_event_word(void);
+
 public:
 
    FzFSM(void);

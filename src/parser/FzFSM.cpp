@@ -296,6 +296,12 @@ void FzFSM::update_fee(void) {
 	update_fee_crc();
 }
 
+void FzFSM::next_event_word(void) {
+   event_index++;
+   update_blk();
+   update_fee();
+}
+
 /*
 void FzFSM::trans00(void) {	// transition not valid
 
@@ -939,9 +945,7 @@ void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
 	         log->write(DEBUG, logbuf);
             #endif
 
-				event_index++;
-            update_blk();
-			   update_fee();
+				next_event_word();
 
             nsample++;
 
@@ -966,16 +970,12 @@ void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
 			risetime = event[event_index];
 
 			// energy_h
-			event_index++;
-         update_blk();
-	      update_fee();
+			next_event_word();
 
 			en->add_value(event[event_index]);
 
 			// energy_l
-			event_index++;
-         update_blk();
-			update_fee();
+			next_event_word();
 
 			en->set_value(0, (en->value(0) << 15) + event[event_index]);
 
@@ -990,16 +990,12 @@ void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
 			risetime = event[event_index];
 
 			// energy_h
-         event_index++;
-         update_blk();
-         update_fee();
+         next_event_word();
 
          en->add_value(event[event_index]);
 
          // energy_l
-         event_index++;
-         update_blk();
-         update_fee();
+         next_event_word();
 
          en->set_value(1, (en->value(1) << 15) + event[event_index]);
          
@@ -1013,9 +1009,7 @@ void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
          // first word
          temp_baseline = event[event_index] << 15;
 
-         event_index++;
-         update_blk();
-         update_fee();
+         next_event_word();
 
          // second word
          temp_baseline += event[event_index];
@@ -1035,9 +1029,7 @@ void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
             t->set_value(event[event_index]);
             
             if(i < (rd_wflen-1) ) {
-               event_index++;
-               update_blk();
-               update_fee();
+               next_event_word();
             }
          }  // end for
 
@@ -1047,9 +1039,7 @@ void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
          t->set_id(0x10C);
          t->set_attr(FzTriggerInfoBasic_str[0xC]);
          t->set_value(event[event_index]);
-         event_index++;
-         update_blk();
-         update_fee();
+         next_event_word();
          t->set_value(((t->value() << 15) + event[event_index]) * 4 / 150);    // value in us
       
       } else if(tag == TAG_RB_GTTAG) {
@@ -1058,9 +1048,7 @@ void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
          t->set_id(0x10D);
          t->set_attr(FzTriggerInfoBasic_str[0xD]);
          t->set_value(event[event_index]);
-         event_index++;
-         update_blk();
-         update_fee();
+         next_event_word();
          t->set_value((t->value() << 15) + event[event_index]);
       
       } else if(tag == TAG_RB_EC) {
@@ -1069,9 +1057,7 @@ void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
          t->set_id(0x10E);
          t->set_attr(FzTriggerInfoBasic_str[0xE]);
          t->set_value(event[event_index]);
-         event_index++;
-         update_blk();
-         update_fee();
+         next_event_word();
          t->set_value((t->value() << 15) + event[event_index]);
          t->set_value((t->value() << 12) + hit->ec());
 
@@ -1089,43 +1075,31 @@ void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
          t->set_attr("centrum0");
          t->set_value( (event[event_index] & 0x003F) + ( (uint64_t)(event[event_index] & 0xF800) << 15) );
 
-         event_index++;
-         update_blk();
-         update_fee();
+         next_event_word();
 
          t = ev->add_trinfo();
          t->set_id(0x201);
          t->set_attr("centrum1");
          t->set_value(event[event_index]<<15);
-         event_index++;
-         update_blk();
-         update_fee();
+         next_event_word();
          t->set_value(t->value() + event[event_index]);
 
-         event_index++;
-         update_blk();
-         update_fee();
+         next_event_word();
 
          t = ev->add_trinfo();
          t->set_id(0x202);
          t->set_attr("centrum2");
          t->set_value(event[event_index]<<15);
-         event_index++;
-         update_blk();
-         update_fee();
+         next_event_word();
          t->set_value(t->value() + event[event_index]);
 
-         event_index++;
-         update_blk();
-         update_fee();
+         next_event_word();
 
          t = ev->add_trinfo();
          t->set_id(0x203);
          t->set_attr("centrum3");
          t->set_value(event[event_index]<<15);
-         event_index++;
-         update_blk();
-         update_fee();
+         next_event_word();
          t->set_value(t->value() + event[event_index]);
       }
 
