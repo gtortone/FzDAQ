@@ -1067,6 +1067,13 @@ void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
          t->set_id(0x10F);
          t->set_attr(FzTriggerInfoBasic_str[0xF]);
          t->set_value(event[event_index]);
+
+      } else if(tag == TAG_RB_TEMP) {
+
+         t = ev->add_trinfo();
+         t->set_id(0x110);
+         t->set_attr(FzTriggerInfoBasic_str[0x10]);
+         t->set_value(event[event_index]);
       
       } else if(tag == TAG_RB_CENTRUM) {
 

@@ -43,6 +43,7 @@
 #define TAG_RB_GTTAG    0x7110
 #define TAG_RB_EC       0x7111
 #define TAG_RB_TRIGPAT  0x7112
+#define TAG_RB_TEMP     0x7113
 #define TAG_RB_CENTRUM  0x7200
 
 // word type id
@@ -128,7 +129,7 @@ static char const* const FzDataType_str[] = { "QH1", "I1", "QL1", "Q2", "I2", "Q
 static char const* const FzTelescope_str[] = { "A", "B", "UNK" };
 static char const* const FzDetector_str[] = { "Si1", "Si2", "CsI", "UNK" };
 static char const* const FzTriggerInfoBasic_str[] = { "validation", "globtrg", "trigger0", "trigger1", "trigger2", "trigger3", "trigger4", "trigger5", "trigger6", "trigger7", \
-						 "mantrig", "exttrig", "totaltime", "gttagmsb", "evtcntrmsb", "trigpattern" }; 
+						 "mantrig", "exttrig", "totaltime", "gttagmsb", "evtcntrmsb", "trigpattern", "temperature" }; 
 static char const* const FzCentrumInfo_str[] = { "centrum0", "centrum1", "centrum2", "centrum3" };
 
 class FzFSM {
