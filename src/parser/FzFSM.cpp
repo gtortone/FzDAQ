@@ -1050,6 +1050,7 @@ void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
          t->set_value(event[event_index]);
          next_event_word();
          t->set_value((t->value() << 15) + event[event_index]);
+	 t->set_value((t->value() << 15) + hit->gttag());
       
       } else if(tag == TAG_RB_EC) {
 
