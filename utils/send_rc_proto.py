@@ -39,6 +39,12 @@ requests.append(req)
 req = {'channel': RCS.Request.RC, 'operation': RCS.Request.READ, 'module': RCS.Request.NM, 'variable': "status"}
 requests.append(req)
 
+req = {'channel': RCS.Request.SETUP, 'operation': RCS.Request.WRITE, 'module': RCS.Request.NM, 'variable': "store"}
+requests.append(req)
+
+req = {'channel': RCS.Request.SETUP, 'operation': RCS.Request.WRITE, 'module': RCS.Request.NM, 'variable': "nostore"}
+requests.append(req)
+
 context = zmq.Context()
 print("Connecting to server...")
 socket = context.socket(zmq.REQ)

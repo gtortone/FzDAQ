@@ -1076,6 +1076,22 @@ void FzFSM::trans08_tag(void) {	// S5      ->      (DATA)          -> S5
          t->set_attr(FzTriggerInfoBasic_str[0x10]);
          t->set_value(event[event_index]);
       
+      } else if(tag == TAG_RB_TOT_BUSY) {
+         for(int i = 0; i < 2; i++) {
+            t = ev->add_trinfo();
+            t->set_id(0x120 + i);
+            t->set_attr(FzTriggerInfoBasic_str[0x11 + i]);
+            t->set_value(event[event_index]);
+            event_index++;
+            update_blk();
+            update_fee();
+            t->set_value((t->value() << 15) + event[event_index]);    // value in 100ms unit
+            if(i == 0) {
+               event_index++;
+               update_blk();
+               update_fee();
+            }
+         }
       } else if(tag == TAG_RB_CENTRUM) {
 
          t = ev->add_trinfo();
